@@ -124,6 +124,17 @@
         .thread-animation { position: fixed; height: 3px; background-color: var(--ochre-gold); border-radius: 3px; z-index: 250; pointer-events: none; transform-origin: left center; }
         .back-button { position: fixed; top: 2rem; left: 1.5rem; z-index: 10; width: 44px; height: 44px; background-color: rgba(0, 0, 0, 0.5); backdrop-filter: blur(10px); -webkit-backdrop-filter: blur(10px); border-radius: 50%; display: flex; justify-content: center; align-items: center; font-size: 1.2rem; color: white; cursor: pointer; }
 
+        /* Tapestry Screen Styles */
+        #tapestry-screen { background-color: var(--app-background); z-index: 60; }
+        #tapestry-canvas { width: 100%; height: 100%; position: absolute; top: 0; left: 0; }
+        .tapestry-header { position: absolute; top: 10%; width: 100%; text-align: center; pointer-events: none; }
+        .tapestry-title { font-family: 'Amiri', serif; font-size: 2rem; color: var(--ochre-gold); margin-bottom: 0.5rem; text-shadow: 0 2px 10px rgba(0,0,0,0.5); opacity: 0; transform: translateY(-20px); transition: all 1s ease-out 0.5s; }
+        .tapestry-subtitle { font-family: 'Inter', sans-serif; font-size: 0.9rem; letter-spacing: 0.2em; text-transform: uppercase; color: var(--text-secondary); opacity: 0; transform: translateY(-20px); transition: all 1s ease-out 0.7s; }
+        .tapestry-active .tapestry-title, .tapestry-active .tapestry-subtitle { opacity: 1; transform: translateY(0); }
+        .tapestry-actions { position: absolute; bottom: 10%; width: 100%; display: flex; justify-content: center; gap: 2rem; }
+        .tapestry-btn { background: rgba(255,255,255,0.1); border: 1px solid rgba(255,255,255,0.2); color: var(--text-secondary); padding: 0.8rem 1.5rem; border-radius: 30px; cursor: pointer; font-size: 0.9rem; backdrop-filter: blur(5px); transition: all 0.3s; }
+        .tapestry-btn:hover { background: rgba(255,255,255,0.2); color: var(--text-primary); }
+
     </style>
 </head>
 <body>
@@ -142,6 +153,17 @@
             <div class="astrolabe-center"><span class="center-text">Align the rings</span></div>
         </div>
         <div id="tapestry-icon">❖</div>
+    </div>
+    <div id="tapestry-screen" class="screen">
+        <canvas id="tapestry-canvas"></canvas>
+        <div class="tapestry-header">
+            <div class="tapestry-title">The Tapestry of Time</div>
+            <div class="tapestry-subtitle">Your Woven Journey</div>
+        </div>
+        <div class="back-button" id="tapestry-back">←</div>
+        <div class="tapestry-actions">
+            <button class="tapestry-btn" id="clear-tapestry">Unravel</button>
+        </div>
     </div>
     <div id="riad-screen" class="screen">
         <div id="riad-image-container"><img id="riad-image-element" src="" alt=""></div>
@@ -180,8 +202,150 @@
         // FIX: Step 3 - Create a single, reusable audio player
         const audioPlayer = new Audio();
 
+        // --- Tapestry Service & Renderer Classes ---
+        class TapestryService {
+            constructor(storageKey = 'marq_tapestry_threads') {
+                this.storageKey = storageKey;
+                this.threads = this._load();
+            }
+            _load() {
+                try {
+                    const data = localStorage.getItem(this.storageKey);
+                    return data ? JSON.parse(data) : [];
+                } catch (e) {
+                    console.error("Failed to load tapestry threads", e);
+                    return [];
+                }
+            }
+            _save() {
+                try {
+                    localStorage.setItem(this.storageKey, JSON.stringify(this.threads));
+                } catch (e) { console.error("Failed to save tapestry threads", e); }
+            }
+            addThread(data) {
+                const thread = { id: Date.now().toString(36) + Math.random().toString(36).substr(2), timestamp: Date.now(), ...data };
+                this.threads.push(thread);
+                this._save();
+                return thread;
+            }
+            getThreads() { return [...this.threads]; }
+            clear() { this.threads = []; this._save(); }
+        }
+
+        class TapestryRenderer {
+            constructor(canvas) {
+                this.canvas = canvas;
+                this.ctx = canvas.getContext('2d');
+                this.dpr = window.devicePixelRatio || 1;
+                this.resize();
+            }
+            resize() {
+                const rect = this.canvas.getBoundingClientRect();
+                this.canvas.width = rect.width * this.dpr;
+                this.canvas.height = rect.height * this.dpr;
+                this.ctx.scale(this.dpr, this.dpr);
+                this.width = rect.width;
+                this.height = rect.height;
+            }
+            render(threads) {
+                this.ctx.clearRect(0, 0, this.width, this.height);
+                const cx = this.width / 2;
+                const cy = this.height / 2;
+                this.drawStar(cx, cy, 5, 20, 10, '#c67605'); // Central Star
+
+                if (threads.length === 0) {
+                    this.ctx.fillStyle = "#444";
+                    this.ctx.font = "italic 16px Inter";
+                    this.ctx.textAlign = "center";
+                    this.ctx.fillText("Your tapestry is yet to be woven.", cx, cy + 60);
+                    return;
+                }
+                threads.forEach((thread, index) => {
+                    const radius = 50 + (index * 30);
+                    this.drawThreadRing(cx, cy, radius, thread, index);
+                });
+            }
+            drawThreadRing(cx, cy, radius, thread, index) {
+                this.ctx.save();
+                this.ctx.translate(cx, cy);
+                const colors = { 'serenity': '#4a7c82', 'vibrancy': '#c67605', 'awe': '#b85b47', 'legacy': '#5d4037' };
+                const color = colors[thread.intention] || '#888';
+                this.ctx.strokeStyle = color;
+                this.ctx.lineWidth = 1.5;
+                this.ctx.globalAlpha = 0.8;
+                const rotations = { 'dawn': 0, 'midday': Math.PI/2, 'dusk': Math.PI, 'night': -Math.PI/2 };
+                this.ctx.rotate(rotations[thread.time] || 0);
+                this.ctx.beginPath();
+                if (thread.intention === 'serenity') {
+                    this.ctx.arc(0, 0, radius, 0, Math.PI * 2);
+                    this.ctx.stroke();
+                    for(let i=0; i<8; i++) {
+                        let ang = (i / 8) * Math.PI * 2;
+                        this.ctx.fillStyle = color;
+                        this.ctx.beginPath();
+                        this.ctx.arc(Math.cos(ang)*radius, Math.sin(ang)*radius, 3, 0, Math.PI*2);
+                        this.ctx.fill();
+                    }
+                } else if (thread.intention === 'vibrancy') {
+                    const points = 16;
+                    for (let i = 0; i <= points; i++) {
+                        const angle = (i / points) * Math.PI * 2;
+                        const r = i % 2 === 0 ? radius : radius + 10;
+                        const x = Math.cos(angle) * r;
+                        const y = Math.sin(angle) * r;
+                        if (i === 0) this.ctx.moveTo(x, y);
+                        else this.ctx.lineTo(x, y);
+                    }
+                    this.ctx.closePath();
+                    this.ctx.stroke();
+                } else if (thread.intention === 'awe') {
+                    this.ctx.setLineDash([5, 5]);
+                    this.ctx.arc(0, 0, radius, 0, Math.PI * 2);
+                    this.ctx.stroke();
+                    this.ctx.setLineDash([]);
+                } else {
+                     const sides = 6;
+                     for (let i = 0; i <= sides; i++) {
+                        const angle = (i / sides) * Math.PI * 2;
+                        const x = Math.cos(angle) * radius;
+                        const y = Math.sin(angle) * radius;
+                        if (i === 0) this.ctx.moveTo(x, y);
+                        else this.ctx.lineTo(x, y);
+                    }
+                    this.ctx.closePath();
+                    this.ctx.stroke();
+                }
+                this.ctx.restore();
+            }
+            drawStar(cx, cy, spikes, outerRadius, innerRadius, color) {
+                let rot = Math.PI / 2 * 3;
+                let x = cx;
+                let y = cy;
+                let step = Math.PI / spikes;
+                this.ctx.beginPath();
+                this.ctx.moveTo(cx, cy - outerRadius);
+                for (let i = 0; i < spikes; i++) {
+                    x = cx + Math.cos(rot) * outerRadius;
+                    y = cy + Math.sin(rot) * outerRadius;
+                    this.ctx.lineTo(x, y);
+                    rot += step;
+                    x = cx + Math.cos(rot) * innerRadius;
+                    y = cy + Math.sin(rot) * innerRadius;
+                    this.ctx.lineTo(x, y);
+                    rot += step;
+                }
+                this.ctx.lineTo(cx, cy - outerRadius);
+                this.ctx.closePath();
+                this.ctx.fillStyle = color;
+                this.ctx.fill();
+            }
+        }
+
+        const tapestryService = new TapestryService();
+        let tapestryRenderer = null;
+
         // [DOM Element cache remains unchanged]
-        const elements = { screens: { splash: document.getElementById('splash-screen'), astrolabe: document.getElementById('astrolabe-screen'), riad: document.getElementById('riad-screen') }, splash: { surface: document.querySelector('.tadelakt-surface'), calligraphy: document.querySelector('.calligraphy') }, astrolabe: { rings: { intention: document.getElementById('ring-intention'), region: document.getElementById('ring-region'), time: document.getElementById('ring-time') }, markers: { intention: document.querySelectorAll('#ring-intention .astrolabe-marker'), time: document.querySelectorAll('#ring-time .astrolabe-marker'), }, center: document.querySelector('.astrolabe-center'), centerText: document.querySelector('.center-text'), tapestryIcon: document.getElementById('tapestry-icon') }, riad: { imageContainer: document.getElementById('riad-image-container'), imageElement: document.getElementById('riad-image-element'), title: document.getElementById('riad-title'), subtitle: document.getElementById('riad-subtitle'), narrative: document.getElementById('riad-narrative'), sensory: { sight: document.getElementById('sensory-sight'), sightDesc: document.getElementById('sensory-sight-desc'), sound: document.getElementById('sensory-sound'), soundDesc: document.getElementById('sensory-sound-desc'), scent: document.getElementById('sensory-scent'), scentDesc: document.getElementById('sensory-scent-desc'), touch: document.getElementById('sensory-touch'), touchDesc: document.getElementById('sensory-touch-desc') }, foundation: { toggle: document.querySelector('.foundation-toggle'), plusIcon: document.querySelector('.plus-icon'), details: document.querySelector('.foundation-details'), text: document.getElementById('foundation-text') }, backButton: document.getElementById('back-button'), weaveButton: document.getElementById('weave-button') }, colorWash: document.querySelector('.color-wash') };
+        const elements = { screens: { splash: document.getElementById('splash-screen'), astrolabe: document.getElementById('astrolabe-screen'), riad: document.getElementById('riad-screen'), tapestry: document.getElementById('tapestry-screen') }, splash: { surface: document.querySelector('.tadelakt-surface'), calligraphy: document.querySelector('.calligraphy') }, astrolabe: { rings: { intention: document.getElementById('ring-intention'), region: document.getElementById('ring-region'), time: document.getElementById('ring-time') }, markers: { intention: document.querySelectorAll('#ring-intention .astrolabe-marker'), time: document.querySelectorAll('#ring-time .astrolabe-marker'), }, center: document.querySelector('.astrolabe-center'), centerText: document.querySelector('.center-text'), tapestryIcon: document.getElementById('tapestry-icon') }, riad: { imageContainer: document.getElementById('riad-image-container'), imageElement: document.getElementById('riad-image-element'), title: document.getElementById('riad-title'), subtitle: document.getElementById('riad-subtitle'), narrative: document.getElementById('riad-narrative'), sensory: { sight: document.getElementById('sensory-sight'), sightDesc: document.getElementById('sensory-sight-desc'), sound: document.getElementById('sensory-sound'), soundDesc: document.getElementById('sensory-sound-desc'), scent: document.getElementById('sensory-scent'), scentDesc: document.getElementById('sensory-scent-desc'), touch: document.getElementById('sensory-touch'), touchDesc: document.getElementById('sensory-touch-desc') }, foundation: { toggle: document.querySelector('.foundation-toggle'), plusIcon: document.querySelector('.plus-icon'), details: document.querySelector('.foundation-details'), text: document.getElementById('foundation-text') }, backButton: document.getElementById('back-button'), weaveButton: document.getElementById('weave-button') }, tapestry: { canvas: document.getElementById('tapestry-canvas'), backButton: document.getElementById('tapestry-back'), clearBtn: document.getElementById('clear-tapestry') }, colorWash: document.querySelector('.color-wash') };
         
         // FIX: Step 2 - Implement the interaction lock
         function lockTransition(duration) {
@@ -198,6 +362,18 @@
                 elements.screens[key].classList.remove('active');
             }
             elements.screens[screenName].classList.add('active');
+
+            if (screenName === 'tapestry') {
+                 elements.screens.tapestry.classList.add('tapestry-active');
+                 if (!tapestryRenderer) {
+                     tapestryRenderer = new TapestryRenderer(elements.tapestry.canvas);
+                 } else {
+                     tapestryRenderer.resize();
+                 }
+                 tapestryRenderer.render(tapestryService.getThreads());
+            } else {
+                elements.screens.tapestry.classList.remove('tapestry-active');
+            }
         }
 
         // --- Splash Screen Logic ---
@@ -357,6 +533,14 @@
             if (state.isWeaving) return;
             state.isWeaving = true;
 
+            // Persist the thread
+            tapestryService.addThread({
+                intention: state.intention,
+                time: state.time,
+                region: state.region,
+                title: state.activeLocation.title
+            });
+
             const thread = document.createElement('div');
             thread.className = 'thread-animation';
             const startRect = elements.riad.weaveButton.getBoundingClientRect();
@@ -387,10 +571,35 @@
             };
         }
 
+        function setupTapestryInteractions() {
+            elements.astrolabe.tapestryIcon.addEventListener('click', () => {
+                showScreen('tapestry');
+            });
+
+            elements.tapestry.backButton.addEventListener('click', () => {
+                showScreen('astrolabe');
+            });
+
+            elements.tapestry.clearBtn.addEventListener('click', () => {
+                if(confirm('Are you sure you want to unravel your tapestry? This cannot be undone.')) {
+                    tapestryService.clear();
+                    tapestryRenderer.render([]);
+                }
+            });
+
+            window.addEventListener('resize', () => {
+                if (state.activeScreen === 'tapestry' && tapestryRenderer) {
+                    tapestryRenderer.resize();
+                    tapestryRenderer.render(tapestryService.getThreads());
+                }
+            });
+        }
+
         // --- Initialization ---
         initSplash();
         updateAstrolabeState();
         setupRiadInteractions();
+        setupTapestryInteractions();
 
         elements.astrolabe.center.addEventListener('click', () => {
             const path = `${state.intention}.${state.region}.${state.time}`;
