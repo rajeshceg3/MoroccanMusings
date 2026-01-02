@@ -1,5 +1,6 @@
 import { locations } from './data.js';
 import { TapestryService, TapestryRenderer } from './tapestry.js';
+import { ResonanceEngine } from './audio-engine.js';
 
 document.addEventListener('DOMContentLoaded', () => {
 
@@ -9,7 +10,7 @@ document.addEventListener('DOMContentLoaded', () => {
         isWeaving: false,
     };
 
-    const audioPlayer = new Audio();
+    const resonanceEngine = new ResonanceEngine();
 
     const tapestryService = new TapestryService();
     let tapestryRenderer = null;
@@ -52,15 +53,14 @@ document.addEventListener('DOMContentLoaded', () => {
             elements.splash.calligraphy.style.transform = 'scale(1)';
         }, 2000); // Reduced from 3000
 
-        // Allow interaction as soon as the calligraphy fades in (or earlier)
-        // User is no longer locked out for 4.5s
-        setTimeout(() => {
-             elements.screens.splash.style.cursor = 'pointer';
-             elements.screens.splash.addEventListener('click', () => {
-                elements.splash.calligraphy.style.opacity = '0';
-                showScreen('astrolabe');
-            }, { once: true });
-        }, 500);
+        // Allow interaction immediately
+        elements.screens.splash.style.cursor = 'pointer';
+        elements.screens.splash.addEventListener('click', () => {
+            resonanceEngine.init(); // Initialize audio context on first gesture
+            resonanceEngine.resume();
+            elements.splash.calligraphy.style.opacity = '0';
+            showScreen('astrolabe');
+        }, { once: true });
     }
 
     // --- Astrolabe Logic ---
@@ -95,6 +95,7 @@ document.addEventListener('DOMContentLoaded', () => {
             currentRotation = finalRotation;
             ringElement.style.transform = `rotate(${currentRotation}deg)`;
             if (navigator.vibrate) navigator.vibrate(10);
+            resonanceEngine.playInteractionSound('click');
             onSnap(closestSnap);
 
             window.removeEventListener('mousemove', drag);
@@ -194,11 +195,10 @@ document.addEventListener('DOMContentLoaded', () => {
         });
 
         elements.riad.sensory.sound.addEventListener('click', (e) => {
-            const audioSrc = e.currentTarget.dataset.audio;
-            if (audioSrc) {
-                audioPlayer.src = audioSrc;
-                audioPlayer.play();
-            }
+             // Replaced static audio with engine, or keep as texture?
+             // For this strategic update, we trigger the generative ambience explicitly if not running
+             resonanceEngine.resume();
+             resonanceEngine.playInteractionSound('snap');
         });
 
         elements.riad.foundation.toggle.addEventListener('click', () => {
@@ -244,6 +244,8 @@ document.addEventListener('DOMContentLoaded', () => {
     function weaveThread() {
         if (state.isWeaving) return;
         state.isWeaving = true;
+
+        resonanceEngine.playInteractionSound('weave');
 
         // Persist the thread
         tapestryService.addThread({
@@ -324,11 +326,18 @@ document.addEventListener('DOMContentLoaded', () => {
         const path = `${state.intention}.${state.region}.${state.time}`;
         const targetLocation = locations[path];
         if (targetLocation) {
+            resonanceEngine.startAmbience(state.intention, state.time);
+            showScreen('riad');
             showRiad(targetLocation);
         } else {
             elements.astrolabe.center.animate([{ transform: 'translateX(0px)' }, { transform: 'translateX(-5px)' }, { transform: 'translateX(5px)' }, { transform: 'translateX(0px)' }], { duration: 300, iterations: 1 });
             elements.astrolabe.centerText.textContent = 'No path found';
             setTimeout(updateCenterText, 2000);
         }
+    });
+
+    // Stop ambience when going back to astrolabe
+    elements.riad.backButton.addEventListener('click', () => {
+        resonanceEngine.stopAmbience();
     });
 });
