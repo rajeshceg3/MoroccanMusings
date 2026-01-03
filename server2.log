@@ -1,0 +1,15 @@
+127.0.0.1 - - [03/Jan/2026 15:37:29] "GET / HTTP/1.1" 200 -
+127.0.0.1 - - [03/Jan/2026 15:37:29] "GET /js/app.js HTTP/1.1" 200 -
+127.0.0.1 - - [03/Jan/2026 15:37:29] "GET /css/styles.css HTTP/1.1" 200 -
+127.0.0.1 - - [03/Jan/2026 15:37:29] "GET /js/data.js HTTP/1.1" 200 -
+127.0.0.1 - - [03/Jan/2026 15:37:29] "GET /js/audio-engine.js HTTP/1.1" 200 -
+127.0.0.1 - - [03/Jan/2026 15:37:29] "GET /js/tapestry.js HTTP/1.1" 200 -
+127.0.0.1 - - [03/Jan/2026 15:37:40] "GET / HTTP/1.1" 200 -
+127.0.0.1 - - [03/Jan/2026 15:37:40] "GET /css/styles.css HTTP/1.1" 200 -
+127.0.0.1 - - [03/Jan/2026 15:37:40] "GET /js/app.js HTTP/1.1" 200 -
+127.0.0.1 - - [03/Jan/2026 15:37:40] "GET /js/audio-engine.js HTTP/1.1" 200 -
+127.0.0.1 - - [03/Jan/2026 15:37:40] "GET /js/data.js HTTP/1.1" 200 -
+127.0.0.1 - - [03/Jan/2026 15:37:40] "GET /js/tapestry.js HTTP/1.1" 200 -
+127.0.0.1 - - [03/Jan/2026 15:37:58] code 404, message File not found
+127.0.0.1 - - [03/Jan/2026 15:37:58] "GET /robots.txt HTTP/1.1" 404 -
+127.0.0.1 - - [03/Jan/2026 15:37:59] "GET /js/app.js HTTP/1.0" 200 -

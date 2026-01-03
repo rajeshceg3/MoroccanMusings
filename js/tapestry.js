@@ -1,45 +1,181 @@
-export class TapestryService {
+
+async function sha256(message) {
+    const msgBuffer = new TextEncoder().encode(message);
+    const hashBuffer = await crypto.subtle.digest('SHA-256', msgBuffer);
+    const hashArray = Array.from(new Uint8Array(hashBuffer));
+    return hashArray.map(b => b.toString(16).padStart(2, '0')).join('');
+}
+
+export class TapestryLedger {
     constructor(storageKey = 'marq_tapestry_threads') {
         this.storageKey = storageKey;
-        this.threads = this._load();
+        this.threads = this._loadLocal();
+        this.isIntegrityVerified = false;
+        // Migration and verification must be called explicitly via initialize()
     }
-    _load() {
+
+    _loadLocal() {
         try {
             const data = localStorage.getItem(this.storageKey);
             if (!data) return [];
-
             const parsed = JSON.parse(data);
             if (!Array.isArray(parsed)) throw new Error("Invalid storage format");
-
-            // Validate structure of each thread
-            return parsed.filter(t => t && t.intention && t.time && t.region && t.title && t.timestamp);
+            return parsed;
         } catch (e) {
             console.error("Failed to load tapestry threads", e);
             return [];
         }
     }
+
     _save() {
         try {
             localStorage.setItem(this.storageKey, JSON.stringify(this.threads));
         } catch (e) { console.error("Failed to save tapestry threads", e); }
     }
-    addThread(data) {
-        const thread = { id: Date.now().toString(36) + Math.random().toString(36).substr(2), timestamp: Date.now(), ...data };
+
+    async initialize() {
+        // Check for legacy data (threads without hash)
+        const needsMigration = this.threads.some(t => !t.hash);
+
+        if (needsMigration) {
+            console.log("Migrating legacy tapestry data to ledger format...");
+            await this._migrateData();
+        }
+
+        await this.verifyIntegrity();
+    }
+
+    async _migrateData() {
+        const migratedThreads = [];
+        let previousHash = 'GENESIS_HASH';
+
+        for (const thread of this.threads) {
+            // Ensure thread has required fields, default if missing
+            const timestamp = thread.timestamp || Date.now();
+            const intention = thread.intention || 'unknown';
+
+            const payload = {
+                intention: intention,
+                time: thread.time || 'midday',
+                region: thread.region || 'unknown',
+                title: thread.title || 'Legacy Thread',
+                timestamp: timestamp,
+                previousHash: previousHash
+            };
+
+            const hash = await sha256(JSON.stringify(payload));
+
+            migratedThreads.push({
+                id: hash.substring(0, 12),
+                ...payload,
+                hash: hash
+            });
+
+            previousHash = hash;
+        }
+
+        this.threads = migratedThreads;
+        this._save();
+        console.log("Migration complete.");
+    }
+
+    async verifyIntegrity() {
+        if (this.threads.length === 0) {
+            this.isIntegrityVerified = true;
+            return true;
+        }
+
+        let previousHash = 'GENESIS_HASH';
+        for (let i = 0; i < this.threads.length; i++) {
+            const thread = this.threads[i];
+
+            // Reconstruct payload to verify
+            const dataString = JSON.stringify({
+                intention: thread.intention,
+                time: thread.time,
+                region: thread.region,
+                title: thread.title,
+                timestamp: thread.timestamp,
+                previousHash: previousHash
+            });
+            const calculatedHash = await sha256(dataString);
+
+            if (calculatedHash !== thread.hash) {
+                console.warn(`Integrity failure at thread ${i}. Expected ${calculatedHash}, got ${thread.hash}`);
+                thread.integrityStatus = 'corrupted';
+                this.isIntegrityVerified = false;
+                return false;
+            }
+            previousHash = thread.hash;
+        }
+        this.isIntegrityVerified = true;
+        return true;
+    }
+
+    async addThread(data) {
+        const previousHash = this.threads.length > 0 ? this.threads[this.threads.length - 1].hash : 'GENESIS_HASH';
+        const timestamp = Date.now();
+
+        const payload = {
+            intention: data.intention,
+            time: data.time,
+            region: data.region,
+            title: data.title,
+            timestamp: timestamp,
+            previousHash: previousHash
+        };
+
+        const hash = await sha256(JSON.stringify(payload));
+
+        const thread = {
+            id: hash.substring(0, 12), // Short ID for UI
+            ...payload,
+            hash: hash
+        };
+
         this.threads.push(thread);
         this._save();
         return thread;
     }
+
     getThreads() { return [...this.threads]; }
+
+    async importScroll(jsonString) {
+        try {
+            const imported = JSON.parse(jsonString);
+            if (!Array.isArray(imported)) throw new Error("Invalid format");
+
+            // verify the imported chain
+            const tempLedger = new TapestryLedger('temp');
+            tempLedger.threads = imported;
+            const valid = await tempLedger.verifyIntegrity();
+
+            if (!valid) throw new Error("Integrity check failed for imported scroll");
+
+            this.threads = imported;
+            this._save();
+            return true;
+        } catch (e) {
+            console.error("Import failed", e);
+            return false;
+        }
+    }
+
+    exportScroll() {
+        return JSON.stringify(this.threads, null, 2);
+    }
+
     clear() { this.threads = []; this._save(); }
 }
 
-export class TapestryRenderer {
+export class MandalaRenderer {
     constructor(canvas) {
         this.canvas = canvas;
         this.ctx = canvas.getContext('2d');
         this.dpr = window.devicePixelRatio || 1;
         this.resize();
     }
+
     resize() {
         const rect = this.canvas.getBoundingClientRect();
         this.canvas.width = rect.width * this.dpr;
@@ -48,96 +184,80 @@ export class TapestryRenderer {
         this.width = rect.width;
         this.height = rect.height;
     }
+
     render(threads) {
         this.ctx.clearRect(0, 0, this.width, this.height);
+
+        // Background Gradient based on thread count
         const cx = this.width / 2;
         const cy = this.height / 2;
-        this.drawStar(cx, cy, 5, 20, 10, '#c67605'); // Central Star
+
+        const gradient = this.ctx.createRadialGradient(cx, cy, 10, cx, cy, this.width / 1.5);
+        gradient.addColorStop(0, '#1a1a1a');
+        gradient.addColorStop(1, '#000000');
+        this.ctx.fillStyle = gradient;
+        this.ctx.fillRect(0, 0, this.width, this.height);
 
         if (threads.length === 0) {
             this.ctx.fillStyle = "#444";
             this.ctx.font = "italic 16px Inter";
             this.ctx.textAlign = "center";
-            this.ctx.fillText("Your tapestry is yet to be woven.", cx, cy + 60);
+            this.ctx.fillText("The Loom awaits your thread.", cx, cy);
             return;
         }
-        threads.forEach((thread, index) => {
-            const radius = 50 + (index * 30);
-            this.drawThreadRing(cx, cy, radius, thread, index);
-        });
-    }
-    drawThreadRing(cx, cy, radius, thread, index) {
+
         this.ctx.save();
         this.ctx.translate(cx, cy);
-        const colors = { 'serenity': '#4a7c82', 'vibrancy': '#c67605', 'awe': '#b85b47', 'legacy': '#5d4037' };
-        const color = colors[thread.intention] || '#888';
-        this.ctx.strokeStyle = color;
-        this.ctx.lineWidth = 1.5;
-        this.ctx.globalAlpha = 0.8;
-        const rotations = { 'dawn': 0, 'midday': Math.PI/2, 'dusk': Math.PI, 'night': -Math.PI/2 };
-        this.ctx.rotate(rotations[thread.time] || 0);
-        this.ctx.beginPath();
-        if (thread.intention === 'serenity') {
-            this.ctx.arc(0, 0, radius, 0, Math.PI * 2);
-            this.ctx.stroke();
-            for(let i=0; i<8; i++) {
-                let ang = (i / 8) * Math.PI * 2;
-                this.ctx.fillStyle = color;
-                this.ctx.beginPath();
-                this.ctx.arc(Math.cos(ang)*radius, Math.sin(ang)*radius, 3, 0, Math.PI*2);
-                this.ctx.fill();
-            }
-        } else if (thread.intention === 'vibrancy') {
-            const points = 16;
-            for (let i = 0; i <= points; i++) {
-                const angle = (i / points) * Math.PI * 2;
-                const r = i % 2 === 0 ? radius : radius + 10;
-                const x = Math.cos(angle) * r;
-                const y = Math.sin(angle) * r;
-                if (i === 0) this.ctx.moveTo(x, y);
-                else this.ctx.lineTo(x, y);
-            }
-            this.ctx.closePath();
-            this.ctx.stroke();
-        } else if (thread.intention === 'awe') {
-            this.ctx.setLineDash([5, 5]);
-            this.ctx.arc(0, 0, radius, 0, Math.PI * 2);
-            this.ctx.stroke();
-            this.ctx.setLineDash([]);
-        } else {
-             const sides = 6;
-             for (let i = 0; i <= sides; i++) {
-                const angle = (i / sides) * Math.PI * 2;
-                const x = Math.cos(angle) * radius;
-                const y = Math.sin(angle) * radius;
-                if (i === 0) this.ctx.moveTo(x, y);
-                else this.ctx.lineTo(x, y);
-            }
-            this.ctx.closePath();
-            this.ctx.stroke();
-        }
+
+        // Base geometry
+        threads.forEach((thread, i) => {
+            // Safety check for hash
+            if (!thread.hash) return;
+            this.drawMandalaLayer(thread, i, threads.length);
+        });
+
         this.ctx.restore();
     }
-    drawStar(cx, cy, spikes, outerRadius, innerRadius, color) {
-        let rot = Math.PI / 2 * 3;
-        let x = cx;
-        let y = cy;
-        let step = Math.PI / spikes;
+
+    drawMandalaLayer(thread, index, total) {
+        // Use hash to determine geometric properties
+        // Hash is hex string. We can parse parts of it.
+        const hashVal = parseInt(thread.hash.substring(0, 8), 16);
+        const sides = 3 + (hashVal % 12); // 3 to 14 sides
+        const radius = 40 + (index * 20); // Growing radius
+
+        const colors = { 'serenity': '#4a7c82', 'vibrancy': '#c67605', 'awe': '#b85b47', 'legacy': '#5d4037' };
+        const baseColor = colors[thread.intention] || '#888';
+
+        this.ctx.strokeStyle = baseColor;
+        this.ctx.lineWidth = 1 + (index * 0.1);
+        this.ctx.globalAlpha = 0.6 + (0.4 * (index / total)); // Outer layers more opaque
+
+        const rotationOffset = (hashVal % 360) * (Math.PI / 180);
+
         this.ctx.beginPath();
-        this.ctx.moveTo(cx, cy - outerRadius);
-        for (let i = 0; i < spikes; i++) {
-            x = cx + Math.cos(rot) * outerRadius;
-            y = cy + Math.sin(rot) * outerRadius;
-            this.ctx.lineTo(x, y);
-            rot += step;
-            x = cx + Math.cos(rot) * innerRadius;
-            y = cy + Math.sin(rot) * innerRadius;
-            this.ctx.lineTo(x, y);
-            rot += step;
+        for (let i = 0; i <= sides; i++) {
+            const theta = (i / sides) * 2 * Math.PI + rotationOffset;
+            const x = radius * Math.cos(theta);
+            const y = radius * Math.sin(theta);
+
+            if (i === 0) this.ctx.moveTo(x, y);
+            else this.ctx.lineTo(x, y);
         }
-        this.ctx.lineTo(cx, cy - outerRadius);
         this.ctx.closePath();
-        this.ctx.fillStyle = color;
-        this.ctx.fill();
+        this.ctx.stroke();
+
+        // Decoration points
+        const decor = (hashVal >> 4) % 3;
+        if (decor === 0) {
+            // Dots at vertices
+            for (let i = 0; i < sides; i++) {
+                const theta = (i / sides) * 2 * Math.PI + rotationOffset;
+                this.ctx.fillStyle = baseColor;
+                this.ctx.beginPath();
+                this.ctx.arc(radius * Math.cos(theta), radius * Math.sin(theta), 2, 0, Math.PI * 2);
+                this.ctx.fill();
+            }
+        }
     }
 }
