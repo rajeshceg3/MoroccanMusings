@@ -53,14 +53,25 @@ document.addEventListener('DOMContentLoaded', () => {
             elements.splash.calligraphy.style.transform = 'scale(1)';
         }, 2000); // Reduced from 3000
 
-        // Allow interaction immediately
-        elements.screens.splash.style.cursor = 'pointer';
-        elements.screens.splash.addEventListener('click', () => {
+        const dismissSplash = () => {
             resonanceEngine.init(); // Initialize audio context on first gesture
             resonanceEngine.resume();
             elements.splash.calligraphy.style.opacity = '0';
             showScreen('astrolabe');
-        }, { once: true });
+            // Remove listener to prevent multiple calls
+            window.removeEventListener('keydown', handleSplashKey);
+        };
+
+        const handleSplashKey = (e) => {
+            if (e.key === 'Enter' || e.key === ' ') {
+                dismissSplash();
+            }
+        };
+
+        // Allow interaction immediately
+        elements.screens.splash.style.cursor = 'pointer';
+        elements.screens.splash.addEventListener('click', dismissSplash, { once: true });
+        window.addEventListener('keydown', handleSplashKey);
     }
 
     // --- Astrolabe Logic ---
@@ -142,16 +153,30 @@ document.addEventListener('DOMContentLoaded', () => {
     }
 
     function updateAstrolabeState() { const keys = { intention: ['serenity', 'vibrancy', 'awe', 'legacy'], time: ['dawn', 'midday', 'dusk', 'night'] }; const updateSelection = (ring, angle) => { const index = (Math.round(angle / 90) + 4) % 4; state[ring] = keys[ring][index]; const markers = elements.astrolabe.markers[ring]; markers.forEach((m, i) => m.classList.toggle('selected-marker', i === index)); updateCenterText(); }; setupRing(elements.astrolabe.rings.intention, [0, -90, -180, -270], (angle) => updateSelection('intention', angle)); setupRing(elements.astrolabe.rings.time, [0, -90, -180, -270], (angle) => updateSelection('time', angle)); }
-    function updateCenterText() { if (state.intention && state.time) { const regionMap = { serenity: 'coast', vibrancy: 'medina', awe: 'sahara', legacy: 'kasbah' }; state.region = regionMap[state.intention]; elements.astrolabe.centerText.textContent = `Find a path for ${state.intention} at ${state.time}`; } else { elements.astrolabe.centerText.textContent = 'Align the rings'; } }
+    function updateCenterText() {
+        if (state.intention && state.time) {
+            const regionMap = { serenity: 'coast', vibrancy: 'medina', awe: 'sahara', legacy: 'kasbah' };
+            state.region = regionMap[state.intention];
+            elements.astrolabe.centerText.textContent = `Find a path for ${state.intention} at ${state.time}`;
+        } else {
+            elements.astrolabe.centerText.textContent = 'Align the rings';
+        }
+        // Accessibility: Announce change
+        elements.astrolabe.centerText.setAttribute('aria-live', 'polite');
+    }
 
     // --- Riad Screen Logic ---
     function showRiad(locationData) {
         state.activeLocation = locationData;
 
+        // Reset
+        elements.riad.imageContainer.style.display = 'block';
+        document.querySelector('.riad-content').style.marginTop = '100vh';
+
         elements.riad.imageElement.onerror = () => {
             elements.riad.imageContainer.style.display = 'none'; // Hide the container on failure
+            document.querySelector('.riad-content').style.marginTop = '0'; // Adjust layout
         };
-        elements.riad.imageContainer.style.display = 'block'; // Reset display property
         elements.riad.imageElement.loading = "lazy"; // Native lazy loading
         elements.riad.imageElement.src = locationData.image;
 
@@ -209,8 +234,9 @@ document.addEventListener('DOMContentLoaded', () => {
         // "Weave a Thread" gesture
         let pressTimer;
         const startWeave = (e) => {
-            if (e.type === 'click') return; // Handled by separate listener if needed, but here we use mousedown
-            e.preventDefault();
+            // Prevent default to stop mouseup from firing click if needed, but we want click fallback
+            // e.preventDefault(); // Removed to allow click event if it's a short press
+
             // Add visual feedback class
             elements.riad.weaveButton.classList.add('pressing');
             pressTimer = setTimeout(() => {
@@ -223,11 +249,28 @@ document.addEventListener('DOMContentLoaded', () => {
             elements.riad.weaveButton.classList.remove('pressing');
         };
 
+        // Click fallback for non-hold interaction
+        const clickWeave = (e) => {
+            // Prevent double firing if long press was successful (state.isWeaving handles logic lock,
+            // but visual feedback might duplicate if not careful).
+            // Since weaveThread checks state.isWeaving, we are mostly safe from logic duplication,
+            // but the animation might trigger twice if we are not careful.
+            // Wait, weaveThread has `if (state.isWeaving) return;`.
+            // So if long press triggered it, isWeaving is true for 600ms+200ms = 800ms.
+            // A click event fires after mouseup.
+            // So weaveThread will be called again. But it will return early.
+            // HOWEVER, we should rely on a cleaner flag or prevent default?
+            // Actually, simply relying on `weaveThread`'s guard clause is sufficient
+            // provided the animation duration covers the click event timing.
+            weaveThread();
+        };
+
         elements.riad.weaveButton.addEventListener('mousedown', startWeave);
-        elements.riad.weaveButton.addEventListener('touchstart', startWeave);
+        elements.riad.weaveButton.addEventListener('touchstart', startWeave, { passive: true });
         elements.riad.weaveButton.addEventListener('mouseup', cancelWeave);
         elements.riad.weaveButton.addEventListener('mouseleave', cancelWeave);
         elements.riad.weaveButton.addEventListener('touchend', cancelWeave);
+        elements.riad.weaveButton.addEventListener('click', clickWeave);
 
         // Accessibility fallback: Shift+Click or double click to weave instantly?
         // Or just make a long press accessible via keyboard?
@@ -268,7 +311,11 @@ document.addEventListener('DOMContentLoaded', () => {
         const distance = Math.sqrt(deltaX * deltaX + deltaY * deltaY);
         const angle = Math.atan2(deltaY, deltaX) * (180 / Math.PI);
 
-        thread.style.cssText = `left: ${startX}px; top: ${startY}px; width: ${distance}px; transform: rotate(${angle}deg); background-color: ${elements.riad.weaveButton.dataset.color || 'var(--ochre-gold)'};`;
+        thread.style.left = `${startX}px`;
+        thread.style.top = `${startY}px`;
+        thread.style.width = `${distance}px`;
+        thread.style.transform = `rotate(${angle}deg)`;
+        thread.style.backgroundColor = elements.riad.weaveButton.dataset.color || 'var(--ochre-gold)';
         document.body.appendChild(thread);
 
         thread.animate([{ transform: `rotate(${angle}deg) scaleX(0)` }, { transform: `rotate(${angle}deg) scaleX(1)` }], { duration: 600, easing: 'cubic-bezier(0.7, 0, 0.3, 1)' })
