@@ -143,3 +143,62 @@ body.transition-locked {
 .tapestry-btn:hover { background: rgba(255,255,255,0.2); color: var(--text-primary); }
 
 .hidden-input { display: none !important; }
+
+/* Alchemist / Synthesis UI */
+.alchemy-ui {
+    position: absolute;
+    bottom: 20%;
+    left: 50%;
+    transform: translateX(-50%);
+    display: flex;
+    gap: 1rem;
+    align-items: center;
+    pointer-events: none;
+    opacity: 0;
+    transition: opacity 0.5s;
+    z-index: 100;
+}
+.alchemy-ui.visible {
+    opacity: 1;
+    pointer-events: auto;
+}
+.alchemy-slot {
+    width: 50px;
+    height: 50px;
+    border: 1px dashed rgba(255,255,255,0.3);
+    border-radius: 50%;
+    display: flex;
+    justify-content: center;
+    align-items: center;
+    font-size: 0.8rem;
+    color: #555;
+    background: rgba(0,0,0,0.5);
+    transition: all 0.3s;
+}
+.alchemy-slot.filled {
+    border: 1px solid var(--ochre-gold);
+    color: var(--ochre-gold);
+    box-shadow: 0 0 10px rgba(198, 118, 5, 0.3);
+}
+.alchemy-fuse-btn {
+    padding: 0.8rem 1.5rem;
+    background: var(--ochre-gold);
+    color: #000;
+    border: none;
+    border-radius: 30px;
+    font-weight: bold;
+    cursor: pointer;
+    box-shadow: 0 0 15px rgba(198, 118, 5, 0.5);
+    transform: scale(0.9);
+    transition: transform 0.2s, background 0.2s;
+}
+.alchemy-fuse-btn:hover {
+    transform: scale(1.0);
+    background: #e08e15;
+}
+.alchemy-fuse-btn:disabled {
+    background: #444;
+    color: #777;
+    cursor: not-allowed;
+    box-shadow: none;
+}

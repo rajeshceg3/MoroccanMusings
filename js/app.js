@@ -1,6 +1,7 @@
 import { locations } from './data.js';
 import { TapestryLedger, MandalaRenderer } from './tapestry.js';
 import { ResonanceEngine } from './audio-engine.js';
+import { SynthesisEngine } from './alchemy.js';
 
 document.addEventListener('DOMContentLoaded', async () => {
 
@@ -8,6 +9,7 @@ document.addEventListener('DOMContentLoaded', async () => {
         intention: null, region: null, time: null,
         activeScreen: 'splash', activeLocation: null,
         isWeaving: false,
+        selectedThreads: [] // Array of indices
     };
 
     const resonanceEngine = new ResonanceEngine();
@@ -72,10 +74,16 @@ document.addEventListener('DOMContentLoaded', async () => {
             clearBtn: document.getElementById('clear-tapestry'),
             exportBtn: document.getElementById('export-scroll'),
             importBtn: document.getElementById('import-btn'),
-            importInput: document.getElementById('import-scroll')
+            importInput: document.getElementById('import-scroll'),
+            alchemyUI: document.getElementById('alchemy-ui'),
+            slot1: document.getElementById('alchemy-slot-1'),
+            slot2: document.getElementById('alchemy-slot-2'),
+            fuseBtn: document.getElementById('alchemy-fuse-btn')
         },
         colorWash: document.querySelector('.color-wash')
     };
+
+    const alchemy = new SynthesisEngine();
 
     function lockTransition(duration) {
         document.body.classList.add('transition-locked');
@@ -99,10 +107,38 @@ document.addEventListener('DOMContentLoaded', async () => {
              } else {
                  mandalaRenderer.resize();
              }
+             mandalaRenderer.setSelection(state.selectedThreads);
              mandalaRenderer.render(tapestryLedger.getThreads());
+             updateAlchemyUI();
         } else {
             elements.screens.tapestry.classList.remove('tapestry-active');
         }
+    }
+
+    function updateAlchemyUI() {
+        const slots = [elements.tapestry.slot1, elements.tapestry.slot2];
+        const threads = tapestryLedger.getThreads();
+
+        state.selectedThreads.forEach((threadIndex, i) => {
+             slots[i].classList.add('filled');
+             // Just show first letter of intention as a glyph/symbol placeholder
+             const t = threads[threadIndex];
+             slots[i].textContent = t ? t.intention[0].toUpperCase() : '?';
+        });
+
+        // Clear empty slots
+        for(let i = state.selectedThreads.length; i < 2; i++) {
+             slots[i].classList.remove('filled');
+             slots[i].textContent = (i + 1);
+        }
+
+        if (state.selectedThreads.length === 2) {
+             elements.tapestry.fuseBtn.disabled = false;
+        } else {
+             elements.tapestry.fuseBtn.disabled = true;
+        }
+
+        elements.tapestry.alchemyUI.classList.toggle('visible', threads.length >= 2);
     }
 
     // --- Splash Screen Logic ---
@@ -212,7 +248,24 @@ document.addEventListener('DOMContentLoaded', async () => {
         });
     }
 
-    function updateAstrolabeState() { const keys = { intention: ['serenity', 'vibrancy', 'awe', 'legacy'], time: ['dawn', 'midday', 'dusk', 'night'] }; const updateSelection = (ring, angle) => { const index = (Math.round(angle / 90) + 4) % 4; state[ring] = keys[ring][index]; const markers = elements.astrolabe.markers[ring]; markers.forEach((m, i) => m.classList.toggle('selected-marker', i === index)); updateCenterText(); }; setupRing(elements.astrolabe.rings.intention, [0, -90, -180, -270], (angle) => updateSelection('intention', angle)); setupRing(elements.astrolabe.rings.time, [0, -90, -180, -270], (angle) => updateSelection('time', angle)); }
+    function updateAstrolabeState() {
+        const keys = { intention: ['serenity', 'vibrancy', 'awe', 'legacy'], time: ['dawn', 'midday', 'dusk', 'night'] };
+
+        const updateSelection = (ring, angle) => {
+            const index = (Math.round(angle / 90) + 4) % 4;
+            state[ring] = keys[ring][index];
+            const markers = elements.astrolabe.markers[ring];
+            markers.forEach((m, i) => m.classList.toggle('selected-marker', i === index));
+            updateCenterText();
+        };
+
+        setupRing(elements.astrolabe.rings.intention, [0, -90, -180, -270], (angle) => updateSelection('intention', angle));
+        setupRing(elements.astrolabe.rings.time, [0, -90, -180, -270], (angle) => updateSelection('time', angle));
+
+        // Initialize state
+        updateSelection('intention', 0);
+        updateSelection('time', 0);
+    }
     function updateCenterText() {
         if (state.intention && state.time) {
             const regionMap = { serenity: 'coast', vibrancy: 'medina', awe: 'sahara', legacy: 'kasbah' };
@@ -474,6 +527,59 @@ document.addEventListener('DOMContentLoaded', async () => {
                 mandalaRenderer.resize();
                 mandalaRenderer.render(tapestryLedger.getThreads());
             }
+        });
+
+        // Mandala Click Interaction
+        elements.tapestry.canvas.addEventListener('click', (e) => {
+             if (!mandalaRenderer) return;
+             const index = mandalaRenderer.getThreadIndexAt(e.clientX, e.clientY);
+             const threads = tapestryLedger.getThreads();
+
+             if (index >= 0 && index < threads.length) {
+                 // Toggle selection
+                 const selectedIndex = state.selectedThreads.indexOf(index);
+                 if (selectedIndex >= 0) {
+                     state.selectedThreads.splice(selectedIndex, 1);
+                 } else {
+                     if (state.selectedThreads.length < 2) {
+                         state.selectedThreads.push(index);
+                     } else {
+                         // FIFO replacement if full
+                         state.selectedThreads.shift();
+                         state.selectedThreads.push(index);
+                     }
+                 }
+                 mandalaRenderer.setSelection(state.selectedThreads);
+                 mandalaRenderer.render(threads);
+                 resonanceEngine.playInteractionSound('click');
+                 updateAlchemyUI();
+             }
+        });
+
+        elements.tapestry.fuseBtn.addEventListener('click', async () => {
+             const threads = tapestryLedger.getThreads();
+             if (state.selectedThreads.length !== 2) return;
+
+             const t1 = threads[state.selectedThreads[0]];
+             const t2 = threads[state.selectedThreads[1]];
+
+             const phantom = await alchemy.fuse(t1, t2);
+
+             // Transition to Riad with phantom data
+             // We need to slightly hack showRiad to accept this non-standard object or ensure it conforms
+             // Phantom object matches structure: { title, subtitle, image, narrative, sensory, foundation }
+             // But we should visually distinguish it.
+
+             resonanceEngine.playInteractionSound('weave'); // Magical sound
+             showScreen('riad');
+             showRiad(phantom);
+
+             // Inject a special visual cue for Phantom mode
+             elements.riad.title.style.color = '#c67605'; // Gold title
+             elements.riad.subtitle.textContent = "✧ A PHANTOM REALM ✧";
+
+             // Clear selection
+             state.selectedThreads = [];
         });
     }
 
