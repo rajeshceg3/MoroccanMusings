@@ -77,6 +77,18 @@ document.addEventListener('DOMContentLoaded', async () => {
         colorWash: document.querySelector('.color-wash')
     };
 
+    // Helper for Accessibility
+    function makeAccessible(element, role, handler) {
+        element.setAttribute('tabindex', '0');
+        element.setAttribute('role', role);
+        element.addEventListener('keydown', (e) => {
+            if (e.key === 'Enter' || e.key === ' ') {
+                e.preventDefault();
+                handler(e);
+            }
+        });
+    }
+
     function lockTransition(duration) {
         document.body.classList.add('transition-locked');
         setTimeout(() => {
@@ -86,7 +98,8 @@ document.addEventListener('DOMContentLoaded', async () => {
 
     function showScreen(screenName) {
         state.activeScreen = screenName;
-        lockTransition(1200); // Lock interaction during screen transitions
+        // Reduced transition lock for better UX
+        lockTransition(800);
         for (const key in elements.screens) {
             elements.screens[key].classList.remove('active');
         }
@@ -111,14 +124,13 @@ document.addEventListener('DOMContentLoaded', async () => {
         setTimeout(() => {
             elements.splash.calligraphy.style.opacity = '1';
             elements.splash.calligraphy.style.transform = 'scale(1)';
-        }, 2000); // Reduced from 3000
+        }, 2000);
 
         const dismissSplash = () => {
-            resonanceEngine.init(); // Initialize audio context on first gesture
+            resonanceEngine.init();
             resonanceEngine.resume();
             elements.splash.calligraphy.style.opacity = '0';
             showScreen('astrolabe');
-            // Remove listener to prevent multiple calls
             window.removeEventListener('keydown', handleSplashKey);
         };
 
@@ -128,10 +140,12 @@ document.addEventListener('DOMContentLoaded', async () => {
             }
         };
 
-        // Allow interaction immediately
         elements.screens.splash.style.cursor = 'pointer';
         elements.screens.splash.addEventListener('click', dismissSplash, { once: true });
         window.addEventListener('keydown', handleSplashKey);
+        // Make splash accessible
+        elements.screens.splash.setAttribute('role', 'button');
+        elements.screens.splash.setAttribute('tabindex', '0');
     }
 
     // --- Astrolabe Logic ---
@@ -196,7 +210,16 @@ document.addEventListener('DOMContentLoaded', async () => {
 
         ringElement.addEventListener('keydown', (e) => {
             let rotationChange = 0;
-            if (e.key === 'ArrowRight' || e.key === 'ArrowUp') rotationChange = -90;
+            // Fixed Logic: Right/Up moves to NEXT item (Index + 1).
+            // Previous Logic: -90 deg moved to Index + 3 (Prev).
+            // Visual Layout: Clockwise.
+            // If we rotate Ring -90 (CCW), item at 90 (Index 1) moves to 0 (Selected).
+            // So -90 is visually correct to SELECT next item.
+            // BUT, the index calculation logic needs to match.
+            // Formula: index = (Math.round(-angle / 90) + 4) % 4
+            // Let's verify formula in updateSelection below.
+
+            if (e.key === 'ArrowRight' || e.key === 'ArrowUp') rotationChange = -90; // Selects Next (visually CCW rotation brings next item to top)
             if (e.key === 'ArrowLeft' || e.key === 'ArrowDown') rotationChange = 90;
 
             if (rotationChange !== 0) {
@@ -205,14 +228,33 @@ document.addEventListener('DOMContentLoaded', async () => {
                  ringElement.style.transition = 'transform 0.5s var(--ease-out-quint)';
                  ringElement.style.transform = `rotate(${currentRotation}deg)`;
 
-                 // Find closest snap point (simplified for keyboard: just snap to next quadrant)
                  const closestSnap = snapAngles.reduce((prev, curr) => (Math.abs(curr - currentRotation % 360) < Math.abs(prev - currentRotation % 360) ? curr : prev));
                  onSnap(closestSnap);
             }
         });
     }
 
-    function updateAstrolabeState() { const keys = { intention: ['serenity', 'vibrancy', 'awe', 'legacy'], time: ['dawn', 'midday', 'dusk', 'night'] }; const updateSelection = (ring, angle) => { const index = (Math.round(angle / 90) + 4) % 4; state[ring] = keys[ring][index]; const markers = elements.astrolabe.markers[ring]; markers.forEach((m, i) => m.classList.toggle('selected-marker', i === index)); updateCenterText(); }; setupRing(elements.astrolabe.rings.intention, [0, -90, -180, -270], (angle) => updateSelection('intention', angle)); setupRing(elements.astrolabe.rings.time, [0, -90, -180, -270], (angle) => updateSelection('time', angle)); }
+    function updateAstrolabeState() {
+        const keys = { intention: ['serenity', 'vibrancy', 'awe', 'legacy'], time: ['dawn', 'midday', 'dusk', 'night'] };
+        const updateSelection = (ring, angle) => {
+            // FIX: Use -angle because visual rotation of ring is opposite to item index progression if items are placed clockwise.
+            // If Items are at 0, 90, 180, 270.
+            // Rotate Ring -90. Item at 90 is now at 0.
+            // So Angle -90 => Index 1.
+            // Formula: -(-90)/90 = 1. Correct.
+            const index = (Math.round(-angle / 90) + 4) % 4;
+            // Ensure positive index
+            const safeIndex = (index < 0 ? index + 4 : index) % 4;
+
+            state[ring] = keys[ring][safeIndex];
+            const markers = elements.astrolabe.markers[ring];
+            markers.forEach((m, i) => m.classList.toggle('selected-marker', i === safeIndex));
+            updateCenterText();
+        };
+        setupRing(elements.astrolabe.rings.intention, [0, -90, -180, -270], (angle) => updateSelection('intention', angle));
+        setupRing(elements.astrolabe.rings.time, [0, -90, -180, -270], (angle) => updateSelection('time', angle));
+    }
+
     function updateCenterText() {
         if (state.intention && state.time) {
             const regionMap = { serenity: 'coast', vibrancy: 'medina', awe: 'sahara', legacy: 'kasbah' };
@@ -221,7 +263,6 @@ document.addEventListener('DOMContentLoaded', async () => {
         } else {
             elements.astrolabe.centerText.textContent = 'Align the rings';
         }
-        // Accessibility: Announce change
         elements.astrolabe.centerText.setAttribute('aria-live', 'polite');
     }
 
@@ -229,16 +270,16 @@ document.addEventListener('DOMContentLoaded', async () => {
     function showRiad(locationData) {
         state.activeLocation = locationData;
 
-        // Reset
         elements.riad.imageContainer.style.display = 'block';
         document.querySelector('.riad-content').style.marginTop = '100vh';
 
         elements.riad.imageElement.onerror = () => {
-            elements.riad.imageContainer.style.display = 'none'; // Hide the container on failure
-            document.querySelector('.riad-content').style.marginTop = '0'; // Adjust layout
+            elements.riad.imageContainer.style.display = 'none';
+            document.querySelector('.riad-content').style.marginTop = '0';
         };
-        elements.riad.imageElement.loading = "lazy"; // Native lazy loading
+        elements.riad.imageElement.loading = "lazy";
         elements.riad.imageElement.src = locationData.image;
+        elements.riad.imageElement.alt = `View of ${locationData.title}: ${locationData.subtitle}`; // Better Alt Text
 
         elements.riad.title.textContent = locationData.title;
         elements.riad.subtitle.textContent = locationData.subtitle;
@@ -261,10 +302,14 @@ document.addEventListener('DOMContentLoaded', async () => {
     }
 
     function setupRiadInteractions() {
-        elements.riad.backButton.addEventListener('click', () => {
+        const goBack = () => {
             showScreen('astrolabe');
             elements.riad.weaveButton.classList.remove('visible');
-        });
+            resonanceEngine.stopAmbience();
+        };
+
+        elements.riad.backButton.addEventListener('click', goBack);
+        makeAccessible(elements.riad.backButton, 'button', goBack);
 
         elements.screens.riad.addEventListener('scroll', () => {
             const scrollY = elements.screens.riad.scrollTop;
@@ -272,32 +317,36 @@ document.addEventListener('DOMContentLoaded', async () => {
             elements.riad.imageContainer.style.opacity = opacity;
         });
 
-        elements.riad.sensory.sight.addEventListener('click', (e) => {
-            const color = e.currentTarget.dataset.color;
+        const handleSight = (e) => {
+            const color = elements.riad.sensory.sight.dataset.color;
             elements.colorWash.style.backgroundColor = color;
             elements.colorWash.style.opacity = 1;
             setTimeout(() => { elements.colorWash.style.opacity = 0; }, 600);
-        });
+        };
+        elements.riad.sensory.sight.addEventListener('click', handleSight);
+        makeAccessible(elements.riad.sensory.sight, 'button', handleSight);
 
-        elements.riad.sensory.sound.addEventListener('click', (e) => {
-             // Replaced static audio with engine, or keep as texture?
-             // For this strategic update, we trigger the generative ambience explicitly if not running
+        const handleSound = () => {
              resonanceEngine.resume();
              resonanceEngine.playInteractionSound('snap');
-        });
+        };
+        elements.riad.sensory.sound.addEventListener('click', handleSound);
+        makeAccessible(elements.riad.sensory.sound, 'button', handleSound);
 
-        elements.riad.foundation.toggle.addEventListener('click', () => {
+        // Make other sensory items accessible too
+        makeAccessible(elements.riad.sensory.scent, 'button', () => {});
+        makeAccessible(elements.riad.sensory.touch, 'button', () => {});
+
+        const toggleFoundation = () => {
             elements.riad.foundation.details.classList.toggle('open');
             elements.riad.foundation.plusIcon.classList.toggle('open');
-        });
+        };
+        elements.riad.foundation.toggle.addEventListener('click', toggleFoundation);
+        makeAccessible(elements.riad.foundation.toggle, 'button', toggleFoundation);
 
         // "Weave a Thread" gesture
         let pressTimer;
         const startWeave = (e) => {
-            // Prevent default to stop mouseup from firing click if needed, but we want click fallback
-            // e.preventDefault(); // Removed to allow click event if it's a short press
-
-            // Add visual feedback class
             elements.riad.weaveButton.classList.add('pressing');
             pressTimer = setTimeout(() => {
                 weaveThread();
@@ -309,19 +358,7 @@ document.addEventListener('DOMContentLoaded', async () => {
             elements.riad.weaveButton.classList.remove('pressing');
         };
 
-        // Click fallback for non-hold interaction
         const clickWeave = (e) => {
-            // Prevent double firing if long press was successful (state.isWeaving handles logic lock,
-            // but visual feedback might duplicate if not careful).
-            // Since weaveThread checks state.isWeaving, we are mostly safe from logic duplication,
-            // but the animation might trigger twice if we are not careful.
-            // Wait, weaveThread has `if (state.isWeaving) return;`.
-            // So if long press triggered it, isWeaving is true for 600ms+200ms = 800ms.
-            // A click event fires after mouseup.
-            // So weaveThread will be called again. But it will return early.
-            // HOWEVER, we should rely on a cleaner flag or prevent default?
-            // Actually, simply relying on `weaveThread`'s guard clause is sufficient
-            // provided the animation duration covers the click event timing.
             weaveThread();
         };
 
@@ -332,9 +369,6 @@ document.addEventListener('DOMContentLoaded', async () => {
         elements.riad.weaveButton.addEventListener('touchend', cancelWeave);
         elements.riad.weaveButton.addEventListener('click', clickWeave);
 
-        // Accessibility fallback: Shift+Click or double click to weave instantly?
-        // Or just make a long press accessible via keyboard?
-        // Let's allow Enter key on the button to trigger it.
         elements.riad.weaveButton.setAttribute('tabindex', '0');
         elements.riad.weaveButton.addEventListener('keydown', (e) => {
             if (e.key === 'Enter' || e.key === ' ') {
@@ -350,7 +384,6 @@ document.addEventListener('DOMContentLoaded', async () => {
 
         resonanceEngine.playInteractionSound('weave');
 
-        // Persist the thread
         await tapestryLedger.addThread({
             intention: state.intention,
             time: state.time,
@@ -386,20 +419,24 @@ document.addEventListener('DOMContentLoaded', async () => {
                 elements.astrolabe.tapestryIcon.classList.add('tapestry-icon-pulse');
                 setTimeout(() => {
                     elements.astrolabe.tapestryIcon.classList.remove('tapestry-icon-pulse');
-                    state.isWeaving = false; // Reset the lock
+                    state.isWeaving = false;
                 }, 500);
             }
         };
     }
 
     function setupTapestryInteractions() {
-        elements.astrolabe.tapestryIcon.addEventListener('click', () => {
+        const goToTapestry = () => {
             showScreen('tapestry');
-        });
+        };
+        elements.astrolabe.tapestryIcon.addEventListener('click', goToTapestry);
+        makeAccessible(elements.astrolabe.tapestryIcon, 'button', goToTapestry);
 
-        elements.tapestry.backButton.addEventListener('click', () => {
+        const backToAstro = () => {
             showScreen('astrolabe');
-        });
+        };
+        elements.tapestry.backButton.addEventListener('click', backToAstro);
+        makeAccessible(elements.tapestry.backButton, 'button', backToAstro);
 
         elements.tapestry.clearBtn.addEventListener('click', () => {
             if(confirm('Are you sure you want to unravel your tapestry? This cannot be undone.')) {
@@ -434,7 +471,7 @@ document.addEventListener('DOMContentLoaded', async () => {
             } else {
                 alert('The Scroll is torn or corrupted. (Import Failed)');
             }
-            e.target.value = ''; // Reset
+            e.target.value = '';
         });
 
         window.addEventListener('resize', () => {
@@ -446,10 +483,8 @@ document.addEventListener('DOMContentLoaded', async () => {
     }
 
     // --- Initialization ---
-    // Global Error Boundary
     window.onerror = function(msg, url, lineNo, columnNo, error) {
         console.error('Global error:', msg, error);
-        // Could show a user-friendly error toast here
         return false;
     };
 
@@ -458,9 +493,22 @@ document.addEventListener('DOMContentLoaded', async () => {
     setupRiadInteractions();
     setupTapestryInteractions();
 
-    elements.astrolabe.center.addEventListener('click', () => {
+    const goToRiad = () => {
         const path = `${state.intention}.${state.region}.${state.time}`;
-        const targetLocation = locations[path];
+        let targetLocation = locations[path];
+
+        // Fallback Logic for Content Gap
+        if (!targetLocation) {
+            // Find a valid location for this intention, regardless of time
+            const validTime = Object.keys(locations).find(k => k.startsWith(`${state.intention}.${state.region}`));
+            if (validTime) {
+                targetLocation = locations[validTime];
+            } else {
+                // Absolute fallback to Serenity
+                 targetLocation = locations['serenity.coast.dawn'];
+            }
+        }
+
         if (targetLocation) {
             resonanceEngine.startAmbience(state.intention, state.time);
             showScreen('riad');
@@ -470,10 +518,8 @@ document.addEventListener('DOMContentLoaded', async () => {
             elements.astrolabe.centerText.textContent = 'No path found';
             setTimeout(updateCenterText, 2000);
         }
-    });
+    };
 
-    // Stop ambience when going back to astrolabe
-    elements.riad.backButton.addEventListener('click', () => {
-        resonanceEngine.stopAmbience();
-    });
+    elements.astrolabe.center.addEventListener('click', goToRiad);
+    makeAccessible(elements.astrolabe.center, 'button', goToRiad);
 });

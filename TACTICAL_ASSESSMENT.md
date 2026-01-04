@@ -1,80 +1,91 @@
-# TACTICAL ASSESSMENT: MOROCCAN MUSINGS (MARQ)
+# TACTICAL INTELLIGENCE BRIEFING: PROJECT MARQ
+**DATE:** 2026-01-04
+**OFFICER:** JULES (QA/SEC OPS)
+**SUBJECT:** COMPREHENSIVE VULNERABILITY & BUG ASSESSMENT
 
-**DATE:** [CURRENT_DATE]
-**OFFICER:** JULES (Code Name)
-**SUBJECT:** Repository Audit & Production Readiness Roadmap
+## EXECUTIVE SUMMARY
+A high-intensity audit of the "MoroccanMusings" (Marq) application has revealed critical architectural weak points, security violations, and severe accessibility gaps that compromise mission integrity. While the cryptographic ledger and generative rendering subsystems are operational, the user interface layer is fraught with friction points and dead ends.
 
-## 1. SITUATION ANALYSIS
-
-The target is a single-page web application ("Marq") designed to provide an immersive, interactive narrative experience. The current state is a "Monolithic Prototype" — a single `index.html` file containing all structural, stylistic, and logic components. While functional, it is functionally fragile, unmaintainable, and lacks critical production-grade safeguards.
-
-**Mission Critical Status:** **UNSTABLE** / **PROTOTYPE**
-
-## 2. THREAT ASSESSMENT & GAP ANALYSIS
-
-### 2.1 Code Quality & Architecture
-*   **Critical Failure**: Monolithic architecture (HTML/CSS/JS in one file). Zero separation of concerns.
-*   **Risk**: High probability of regression during updates. Unmaintainable by teams.
-*   **Metric**: Cyclomatic complexity is artificially low due to simplicity but will skyrocket with any feature add.
-*   **Production Gap**: Requires modularization (ES6 Modules, CSS separation).
-
-### 2.2 Security Vulnerabilities (OWASP)
-*   **Vulnerability**: Missing Content Security Policy (CSP).
-    *   *Risk*: Susceptible to XSS if external dependencies are compromised.
-*   **Vulnerability**: Unsanitized `localStorage` consumption.
-    *   *Risk*: Logic injection if local storage is tampered with (e.g., crashing the renderer).
-*   **Vulnerability**: External Asset Dependency (Unsplash/Pixabay).
-    *   *Risk*: Broken UI if third-party services fail or change API/paths. No SRI (Subresource Integrity).
-
-### 2.3 User Experience (UX) & Accessibility
-*   **CRITICAL UX FAILURE**: Splash screen forces a **4.5-second lockout**.
-    *   *Impact*: Frustration, high bounce rate. User agency is violated.
-*   **Accessibility (a11y) Failure**: Astrolabe rings are drag-only.
-    *   *Impact*: Complete inaccessibility for keyboard users and screen readers. Non-compliant with WCAG 2.1 AA.
-*   **Hidden Interactions**: "Hold to Weave" (1 second press) has no affordance.
-    *   *Impact*: Feature undiscoverable for 80% of users.
-
-### 2.4 Performance
-*   **Inefficiency**: Full resolution images (width=1200) loaded on mobile.
-*   **Bottleneck**: All assets declared in main bundle (even if lazy loaded by browser, the definitions are blocking).
-*   **Animation**: Heavy use of `box-shadow` and gradients during transitions can cause frame drops on low-end devices.
-
-## 3. STRATEGIC ROADMAP
-
-### PHASE 1: ARCHITECTURAL RESTRUCTURING (Priority: IMMEDIATE)
-**Objective**: Decouple systems to ensure stability and maintainability.
-1.  **Extract Styles**: Move CSS to `css/style.css`.
-2.  **Extract Logic**: Move JS to `js/app.js` and `js/data.js` (using ES6 modules).
-3.  **Sanitize HTML**: Clean `index.html` to purely semantic structure.
-
-### PHASE 2: SECURITY HARDENING (Priority: HIGH)
-**Objective**: Secure the perimeter.
-1.  **Implement CSP**: Add strict `<meta http-equiv="Content-Security-Policy">`.
-2.  **Input Sanitization**: Validate all data read from `localStorage` before passing to `TapestryRenderer`.
-3.  **Error Boundaries**: Wrap critical paths (Renderer, Audio) in `try-catch` blocks with user feedback.
-
-### PHASE 3: UX & ACCESSIBILITY ELEVATION (Priority: CRITICAL)
-**Objective**: Maximize engagement and compliance.
-1.  **Splash Screen Optimization**:
-    *   *Tactic*: Allow "Click to Enter" immediately. Keep animation as background, but do not block input.
-2.  **Astrolabe Accessibility**:
-    *   *Tactic*: Map Arrow Keys (Left/Right) to rotate active ring. Add `tabindex` to rings. Add ARIA live regions for current selection.
-3.  **Interaction Feedback**:
-    *   *Tactic*: Visual progress bar for "Hold to Weave". Fallback "Click" interaction for accessibility.
-
-### PHASE 4: PERFORMANCE OPTIMIZATION (Priority: MEDIUM)
-**Objective**: Sub-second interactions.
-1.  **Asset Strategy**: Preload critical fonts/icons. Lazy load Riad images.
-2.  **Animation Tuning**: Ensure `transform` and `opacity` are strictly used (hardware acceleration).
-
-## 4. EXECUTION ORDER
-
-**Authorization**: Proceeding with Phases 1, 2, and 3 immediately.
-
-1.  **Refactor**: Split files.
-2.  **Fix**: Splash screen & Keyboard support.
-3.  **Secure**: Add CSP & Validation.
-4.  **Verify**: Manual testing of critical paths.
+**TOTAL FINDINGS:** 8
+**SEVERITY BREAKDOWN:**
+- CRITICAL: 1
+- HIGH: 3
+- MEDIUM: 2
+- LOW: 2
 
 ---
-**END OF REPORT**
+
+## 1. SECURITY VULNERABILITIES
+
+### [SEC-01] CSP VIOLATION: INLINE STYLES
+**SEVERITY:** CRITICAL
+**LOCATION:** `index.html` (Line 38)
+**DESCRIPTION:** The application enforces a strict Content Security Policy (`style-src 'self'`), yet contains an inline style attribute on the hidden file input element (`style="display: none !important;"`).
+**IMPACT:** Violates security policy, potential browser console errors, and undermines the integrity of the CSP strategy.
+**RECOMMENDATION:** Move the style to `css/styles.css` using a utility class (e.g., `.hidden-input`).
+
+---
+
+## 2. FUNCTIONAL & ARCHITECTURAL FLAWS
+
+### [FUNC-01] MASSIVE CONTENT GAP (BROKEN PATHS)
+**SEVERITY:** HIGH
+**LOCATION:** `js/data.js` vs `js/app.js`
+**DESCRIPTION:** The Astrolabe navigation system permits 16 unique state combinations (4 Intentions × 4 Times). However, the data layer only defines **3** valid locations (`serenity.coast.dawn`, `vibrancy.medina.midday`, `awe.sahara.dusk`).
+**IMPACT:** 81% of potential user navigation attempts result in a "No path found" error (shaking animation), creating a broken and frustrating user experience.
+**RECOMMENDATION:**
+1. Implement a fallback mechanism or "wildcard" matching in `js/app.js` to map multiple combinations to available content.
+2. Alternatively, populate `js/data.js` with placeholders for missing combinations.
+
+### [FUNC-02] COUNTER-INTUITIVE NAVIGATION LOGIC
+**SEVERITY:** MEDIUM
+**LOCATION:** `js/app.js` (`setupRing` function)
+**DESCRIPTION:** The keyboard navigation for rings (`ArrowRight` / `ArrowUp`) rotates the ring by -90 degrees. Due to the modular arithmetic logic, this selects the *previous* item (Index 3) rather than the expected *next* item (Index 1), assuming a clockwise visual layout.
+**IMPACT:** Confusing navigation for keyboard users.
+**RECOMMENDATION:** Invert the rotation direction or the index calculation logic to match standard directional expectations (Right = Next/Clockwise).
+
+---
+
+## 3. ACCESSIBILITY FAILURES (A11Y)
+
+### [A11Y-01] KEYBOARD NAVIGATION DEAD ZONES
+**SEVERITY:** HIGH
+**LOCATION:** `index.html`, `js/app.js`
+**DESCRIPTION:** Critical interactive elements are inaccessible to keyboard users (no `tabindex`, no `role`, no key handlers):
+- **Tapestry Icon (`#tapestry-icon`):** Users cannot navigate to the Tapestry screen.
+- **Back Buttons (`.back-button`, `#back-button`):** Users cannot return to the main menu.
+- **Astrolabe Center (`.astrolabe-center`):** The primary "Go" action is unreachable.
+- **Sensory Palette Items:** Interactive elements in the Riad screen are unreachable.
+**IMPACT:** Complete exclusion of keyboard-only and screen-reader users from core application flows.
+**RECOMMENDATION:**
+1. Convert `div` elements to `<button>` where possible.
+2. Or, add `tabindex="0"`, `role="button"`, and `keydown` event listeners (Enter/Space).
+
+### [A11Y-02] VIEWPORT SCALING LOCK
+**SEVERITY:** MEDIUM
+**LOCATION:** `index.html`
+**DESCRIPTION:** `<meta name="viewport" ... user-scalable=no">`
+**IMPACT:** Prevents visually impaired users from zooming in on text/details.
+**RECOMMENDATION:** Remove `user-scalable=no`.
+
+---
+
+## 4. UX & PERFORMANCE
+
+### [UX-01] AGGRESSIVE TRANSITION LOCKING
+**SEVERITY:** LOW
+**LOCATION:** `js/app.js` (`lockTransition`)
+**DESCRIPTION:** The UI locks all interaction for 1200ms during screen transitions.
+**IMPACT:** User perception of sluggishness if the visual transition finishes earlier.
+**RECOMMENDATION:** Reduce lock duration to match CSS transition times (e.g., 600-800ms) or remove if unnecessary.
+
+### [UX-02] MISSING ALT TEXT DYNAMICS
+**SEVERITY:** LOW
+**LOCATION:** `js/app.js`
+**DESCRIPTION:** The `alt` attribute for the Riad image is updated, but might be generic.
+**RECOMMENDATION:** Ensure `alt` text is descriptive (using the `narrative` or a specific field if available).
+
+---
+
+## MISSION PLAN
+The remediation phase will commence immediately, prioritizing Security and Accessibility fixes to restore operational baseline.
