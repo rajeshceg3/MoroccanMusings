@@ -111,6 +111,23 @@ body.transition-locked {
 .weave-button { position: fixed; bottom: 2rem; left: 50%; transform: translateX(-50%); z-index: 10; padding: 1rem 1.5rem; background-color: rgba(0, 0, 0, 0.7); backdrop-filter: blur(10px); -webkit-backdrop-filter: blur(10px); border-radius: 50px; color: white; font-weight: 500; cursor: pointer; border: 1px solid rgba(255,255,255,0.2); transition: all 0.3s; opacity: 0; visibility: hidden; }
 .weave-button.visible { opacity: 1; visibility: visible; }
 .weave-button:active, .weave-button.pressing { background-color: rgba(0,0,0,0.9); transform: translateX(-50%) scale(0.95); }
+
+/* Progress Ring for Weave Button */
+.weave-progress {
+    position: absolute;
+    top: 0; left: 0; right: 0; bottom: 0;
+    border-radius: 50px;
+    border: 2px solid var(--ochre-gold);
+    clip-path: inset(0 100% 0 0);
+    transition: clip-path 0s;
+    pointer-events: none;
+    opacity: 0.8;
+}
+.weave-button.pressing .weave-progress {
+    clip-path: inset(0 0 0 0);
+    transition: clip-path 1s linear;
+}
+
 .thread-animation { position: fixed; height: 3px; background-color: var(--ochre-gold); border-radius: 3px; z-index: 250; pointer-events: none; transform-origin: left center; }
 .back-button { position: fixed; top: 2rem; left: 1.5rem; z-index: 10; width: 44px; height: 44px; background-color: rgba(0, 0, 0, 0.5); backdrop-filter: blur(10px); -webkit-backdrop-filter: blur(10px); border-radius: 50%; display: flex; justify-content: center; align-items: center; font-size: 1.2rem; color: white; cursor: pointer; }
 
@@ -124,3 +141,5 @@ body.transition-locked {
 .tapestry-actions { position: absolute; bottom: 10%; width: 100%; display: flex; justify-content: center; gap: 2rem; }
 .tapestry-btn { background: rgba(255,255,255,0.1); border: 1px solid rgba(255,255,255,0.2); color: var(--text-secondary); padding: 0.8rem 1.5rem; border-radius: 30px; cursor: pointer; font-size: 0.9rem; backdrop-filter: blur(5px); transition: all 0.3s; }
 .tapestry-btn:hover { background: rgba(255,255,255,0.2); color: var(--text-primary); }
+
+.hidden-input { display: none !important; }

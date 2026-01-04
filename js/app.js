@@ -272,23 +272,55 @@ document.addEventListener('DOMContentLoaded', async () => {
             elements.riad.imageContainer.style.opacity = opacity;
         });
 
-        elements.riad.sensory.sight.addEventListener('click', (e) => {
+        // Setup accessibility helper for sensory items
+        const setupSensoryItem = (element, action) => {
+            element.setAttribute('tabindex', '0');
+            element.setAttribute('role', 'button');
+            const handler = (e) => {
+                if (e.type === 'click' || e.key === 'Enter' || e.key === ' ') {
+                    if (e.key === ' ') e.preventDefault();
+                    action(e);
+                }
+            };
+            element.addEventListener('click', handler);
+            element.addEventListener('keydown', handler);
+        };
+
+        setupSensoryItem(elements.riad.sensory.sight, (e) => {
             const color = e.currentTarget.dataset.color;
             elements.colorWash.style.backgroundColor = color;
             elements.colorWash.style.opacity = 1;
             setTimeout(() => { elements.colorWash.style.opacity = 0; }, 600);
+            resonanceEngine.playInteractionSound('click');
         });
 
-        elements.riad.sensory.sound.addEventListener('click', (e) => {
-             // Replaced static audio with engine, or keep as texture?
-             // For this strategic update, we trigger the generative ambience explicitly if not running
+        setupSensoryItem(elements.riad.sensory.sound, (e) => {
              resonanceEngine.resume();
              resonanceEngine.playInteractionSound('snap');
         });
 
-        elements.riad.foundation.toggle.addEventListener('click', () => {
-            elements.riad.foundation.details.classList.toggle('open');
+        // Placeholder actions for scent/touch to ensure they are at least focusable
+        setupSensoryItem(elements.riad.sensory.scent, () => resonanceEngine.playInteractionSound('click'));
+        setupSensoryItem(elements.riad.sensory.touch, () => resonanceEngine.playInteractionSound('click'));
+
+        // Foundation toggle accessibility
+        elements.riad.foundation.toggle.setAttribute('tabindex', '0');
+        elements.riad.foundation.toggle.setAttribute('role', 'button');
+        elements.riad.foundation.toggle.setAttribute('aria-expanded', 'false');
+
+        const toggleFoundation = () => {
+            const isOpen = elements.riad.foundation.details.classList.toggle('open');
             elements.riad.foundation.plusIcon.classList.toggle('open');
+            elements.riad.foundation.toggle.setAttribute('aria-expanded', isOpen);
+            resonanceEngine.playInteractionSound('click');
+        };
+
+        elements.riad.foundation.toggle.addEventListener('click', toggleFoundation);
+        elements.riad.foundation.toggle.addEventListener('keydown', (e) => {
+            if (e.key === 'Enter' || e.key === ' ') {
+                e.preventDefault();
+                toggleFoundation();
+            }
         });
 
         // "Weave a Thread" gesture
