@@ -1,8 +1,8 @@
 import { locations } from './data.js';
-import { TapestryService, TapestryRenderer } from './tapestry.js';
+import { TapestryLedger, MandalaRenderer } from './tapestry.js';
 import { ResonanceEngine } from './audio-engine.js';
 
-document.addEventListener('DOMContentLoaded', () => {
+document.addEventListener('DOMContentLoaded', async () => {
 
     const state = {
         intention: null, region: null, time: null,
@@ -12,10 +12,70 @@ document.addEventListener('DOMContentLoaded', () => {
 
     const resonanceEngine = new ResonanceEngine();
 
-    const tapestryService = new TapestryService();
-    let tapestryRenderer = null;
+    const tapestryLedger = new TapestryLedger();
+    await tapestryLedger.initialize();
+    let mandalaRenderer = null;
 
-    const elements = { screens: { splash: document.getElementById('splash-screen'), astrolabe: document.getElementById('astrolabe-screen'), riad: document.getElementById('riad-screen'), tapestry: document.getElementById('tapestry-screen') }, splash: { surface: document.querySelector('.tadelakt-surface'), calligraphy: document.querySelector('.calligraphy') }, astrolabe: { rings: { intention: document.getElementById('ring-intention'), region: document.getElementById('ring-region'), time: document.getElementById('ring-time') }, markers: { intention: document.querySelectorAll('#ring-intention .astrolabe-marker'), time: document.querySelectorAll('#ring-time .astrolabe-marker'), }, center: document.querySelector('.astrolabe-center'), centerText: document.querySelector('.center-text'), tapestryIcon: document.getElementById('tapestry-icon') }, riad: { imageContainer: document.getElementById('riad-image-container'), imageElement: document.getElementById('riad-image-element'), title: document.getElementById('riad-title'), subtitle: document.getElementById('riad-subtitle'), narrative: document.getElementById('riad-narrative'), sensory: { sight: document.getElementById('sensory-sight'), sightDesc: document.getElementById('sensory-sight-desc'), sound: document.getElementById('sensory-sound'), soundDesc: document.getElementById('sensory-sound-desc'), scent: document.getElementById('sensory-scent'), scentDesc: document.getElementById('sensory-scent-desc'), touch: document.getElementById('sensory-touch'), touchDesc: document.getElementById('sensory-touch-desc') }, foundation: { toggle: document.querySelector('.foundation-toggle'), plusIcon: document.querySelector('.plus-icon'), details: document.querySelector('.foundation-details'), text: document.getElementById('foundation-text') }, backButton: document.getElementById('back-button'), weaveButton: document.getElementById('weave-button') }, tapestry: { canvas: document.getElementById('tapestry-canvas'), backButton: document.getElementById('tapestry-back'), clearBtn: document.getElementById('clear-tapestry') }, colorWash: document.querySelector('.color-wash') };
+    const elements = {
+        screens: {
+            splash: document.getElementById('splash-screen'),
+            astrolabe: document.getElementById('astrolabe-screen'),
+            riad: document.getElementById('riad-screen'),
+            tapestry: document.getElementById('tapestry-screen')
+        },
+        splash: {
+            surface: document.querySelector('.tadelakt-surface'),
+            calligraphy: document.querySelector('.calligraphy')
+        },
+        astrolabe: {
+            rings: {
+                intention: document.getElementById('ring-intention'),
+                region: document.getElementById('ring-region'),
+                time: document.getElementById('ring-time')
+            },
+            markers: {
+                intention: document.querySelectorAll('#ring-intention .astrolabe-marker'),
+                time: document.querySelectorAll('#ring-time .astrolabe-marker'),
+            },
+            center: document.querySelector('.astrolabe-center'),
+            centerText: document.querySelector('.center-text'),
+            tapestryIcon: document.getElementById('tapestry-icon')
+        },
+        riad: {
+            imageContainer: document.getElementById('riad-image-container'),
+            imageElement: document.getElementById('riad-image-element'),
+            title: document.getElementById('riad-title'),
+            subtitle: document.getElementById('riad-subtitle'),
+            narrative: document.getElementById('riad-narrative'),
+            sensory: {
+                sight: document.getElementById('sensory-sight'),
+                sightDesc: document.getElementById('sensory-sight-desc'),
+                sound: document.getElementById('sensory-sound'),
+                soundDesc: document.getElementById('sensory-sound-desc'),
+                scent: document.getElementById('sensory-scent'),
+                scentDesc: document.getElementById('sensory-scent-desc'),
+                touch: document.getElementById('sensory-touch'),
+                touchDesc: document.getElementById('sensory-touch-desc')
+            },
+            foundation: {
+                toggle: document.querySelector('.foundation-toggle'),
+                plusIcon: document.querySelector('.plus-icon'),
+                details: document.querySelector('.foundation-details'),
+                text: document.getElementById('foundation-text')
+            },
+            backButton: document.getElementById('back-button'),
+            weaveButton: document.getElementById('weave-button')
+        },
+        tapestry: {
+            canvas: document.getElementById('tapestry-canvas'),
+            backButton: document.getElementById('tapestry-back'),
+            clearBtn: document.getElementById('clear-tapestry'),
+            exportBtn: document.getElementById('export-scroll'),
+            importBtn: document.getElementById('import-btn'),
+            importInput: document.getElementById('import-scroll')
+        },
+        colorWash: document.querySelector('.color-wash')
+    };
 
     function lockTransition(duration) {
         document.body.classList.add('transition-locked');
@@ -34,12 +94,12 @@ document.addEventListener('DOMContentLoaded', () => {
 
         if (screenName === 'tapestry') {
              elements.screens.tapestry.classList.add('tapestry-active');
-             if (!tapestryRenderer) {
-                 tapestryRenderer = new TapestryRenderer(elements.tapestry.canvas);
+             if (!mandalaRenderer) {
+                 mandalaRenderer = new MandalaRenderer(elements.tapestry.canvas);
              } else {
-                 tapestryRenderer.resize();
+                 mandalaRenderer.resize();
              }
-             tapestryRenderer.render(tapestryService.getThreads());
+             mandalaRenderer.render(tapestryLedger.getThreads());
         } else {
             elements.screens.tapestry.classList.remove('tapestry-active');
         }
@@ -284,14 +344,14 @@ document.addEventListener('DOMContentLoaded', () => {
         });
     }
 
-    function weaveThread() {
+    async function weaveThread() {
         if (state.isWeaving) return;
         state.isWeaving = true;
 
         resonanceEngine.playInteractionSound('weave');
 
         // Persist the thread
-        tapestryService.addThread({
+        await tapestryLedger.addThread({
             intention: state.intention,
             time: state.time,
             region: state.region,
@@ -343,15 +403,44 @@ document.addEventListener('DOMContentLoaded', () => {
 
         elements.tapestry.clearBtn.addEventListener('click', () => {
             if(confirm('Are you sure you want to unravel your tapestry? This cannot be undone.')) {
-                tapestryService.clear();
-                tapestryRenderer.render([]);
+                tapestryLedger.clear();
+                mandalaRenderer.render([]);
             }
         });
 
+        elements.tapestry.exportBtn.addEventListener('click', () => {
+            const data = tapestryLedger.exportScroll();
+            const blob = new Blob([data], { type: 'application/json' });
+            const url = URL.createObjectURL(blob);
+            const a = document.createElement('a');
+            a.href = url;
+            a.download = `marq_scroll_${Date.now()}.json`;
+            a.click();
+            URL.revokeObjectURL(url);
+        });
+
+        elements.tapestry.importBtn.addEventListener('click', () => {
+            elements.tapestry.importInput.click();
+        });
+
+        elements.tapestry.importInput.addEventListener('change', async (e) => {
+            const file = e.target.files[0];
+            if (!file) return;
+            const text = await file.text();
+            const success = await tapestryLedger.importScroll(text);
+            if (success) {
+                alert('Scroll imported successfully.');
+                mandalaRenderer.render(tapestryLedger.getThreads());
+            } else {
+                alert('The Scroll is torn or corrupted. (Import Failed)');
+            }
+            e.target.value = ''; // Reset
+        });
+
         window.addEventListener('resize', () => {
-            if (state.activeScreen === 'tapestry' && tapestryRenderer) {
-                tapestryRenderer.resize();
-                tapestryRenderer.render(tapestryService.getThreads());
+            if (state.activeScreen === 'tapestry' && mandalaRenderer) {
+                mandalaRenderer.resize();
+                mandalaRenderer.render(tapestryLedger.getThreads());
             }
         });
     }
