@@ -173,6 +173,7 @@ export class MandalaRenderer {
         this.canvas = canvas;
         this.ctx = canvas.getContext('2d');
         this.dpr = window.devicePixelRatio || 1;
+        this.selectedIndices = []; // Added for selection state
         this.resize();
     }
 
@@ -183,6 +184,10 @@ export class MandalaRenderer {
         this.ctx.scale(this.dpr, this.dpr);
         this.width = rect.width;
         this.height = rect.height;
+    }
+
+    setSelection(indices) {
+        this.selectedIndices = indices || [];
     }
 
     render(threads) {
@@ -226,12 +231,14 @@ export class MandalaRenderer {
         const sides = 3 + (hashVal % 12); // 3 to 14 sides
         const radius = 40 + (index * 20); // Growing radius
 
+        const isSelected = this.selectedIndices.includes(index);
+
         const colors = { 'serenity': '#4a7c82', 'vibrancy': '#c67605', 'awe': '#b85b47', 'legacy': '#5d4037' };
         const baseColor = colors[thread.intention] || '#888';
 
-        this.ctx.strokeStyle = baseColor;
-        this.ctx.lineWidth = 1 + (index * 0.1);
-        this.ctx.globalAlpha = 0.6 + (0.4 * (index / total)); // Outer layers more opaque
+        this.ctx.strokeStyle = isSelected ? '#ffffff' : baseColor;
+        this.ctx.lineWidth = isSelected ? 3 + (index * 0.1) : 1 + (index * 0.1);
+        this.ctx.globalAlpha = isSelected ? 1.0 : 0.6 + (0.4 * (index / total));
 
         const rotationOffset = (hashVal % 360) * (Math.PI / 180);
 
@@ -249,15 +256,39 @@ export class MandalaRenderer {
 
         // Decoration points
         const decor = (hashVal >> 4) % 3;
-        if (decor === 0) {
+        if (decor === 0 || isSelected) {
             // Dots at vertices
             for (let i = 0; i < sides; i++) {
                 const theta = (i / sides) * 2 * Math.PI + rotationOffset;
-                this.ctx.fillStyle = baseColor;
+                this.ctx.fillStyle = isSelected ? '#ffffff' : baseColor;
                 this.ctx.beginPath();
-                this.ctx.arc(radius * Math.cos(theta), radius * Math.sin(theta), 2, 0, Math.PI * 2);
+                this.ctx.arc(radius * Math.cos(theta), radius * Math.sin(theta), isSelected ? 4 : 2, 0, Math.PI * 2);
                 this.ctx.fill();
             }
         }
+    }
+
+    getThreadIndexAt(x, y) {
+        // Transform client coords to canvas space
+        const rect = this.canvas.getBoundingClientRect();
+        // Since we scale by DPR in resize, but event coords are CSS pixels, and context is scaled:
+        // We just need the position relative to center in CSS pixels.
+        const cx = rect.width / 2;
+        const cy = rect.height / 2;
+
+        const dx = x - rect.left - cx;
+        const dy = y - rect.top - cy;
+        const distance = Math.sqrt(dx * dx + dy * dy);
+
+        // Reverse the radius logic: radius = 40 + (index * 20)
+        // index = (distance - 40) / 20
+        // We add a tolerance (e.g. +/- 10px)
+        const estimatedIndex = (distance - 40) / 20;
+        const roundedIndex = Math.round(estimatedIndex);
+
+        if (Math.abs(estimatedIndex - roundedIndex) < 0.5 && roundedIndex >= 0) {
+            return roundedIndex;
+        }
+        return -1;
     }
 }
