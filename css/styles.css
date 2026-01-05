@@ -37,6 +37,11 @@ html, body {
     touch-action: manipulation;
 }
 
+:focus-visible {
+    outline: 2px solid var(--ochre-gold);
+    outline-offset: 2px;
+}
+
 .screen {
     position: absolute;
     top: 0;
@@ -113,6 +118,7 @@ body.transition-locked {
 .weave-button:active, .weave-button.pressing { background-color: rgba(0,0,0,0.9); transform: translateX(-50%) scale(0.95); }
 
 /* Progress Ring for Weave Button */
+/* Animates the border fill to indicate hold duration */
 .weave-progress {
     position: absolute;
     top: 0; left: 0; right: 0; bottom: 0;
