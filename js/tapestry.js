@@ -190,7 +190,7 @@ export class MandalaRenderer {
         this.selectedIndices = indices || [];
     }
 
-    render(threads) {
+    render(threads, projections = []) {
         this.ctx.clearRect(0, 0, this.width, this.height);
 
         // Background Gradient based on thread count
@@ -203,7 +203,7 @@ export class MandalaRenderer {
         this.ctx.fillStyle = gradient;
         this.ctx.fillRect(0, 0, this.width, this.height);
 
-        if (threads.length === 0) {
+        if (threads.length === 0 && projections.length === 0) {
             this.ctx.fillStyle = "#444";
             this.ctx.font = "italic 16px Inter";
             this.ctx.textAlign = "center";
@@ -221,6 +221,14 @@ export class MandalaRenderer {
             this.drawMandalaLayer(thread, i, threads.length);
         });
 
+        // Projection geometry
+        if (projections.length > 0) {
+            projections.forEach((ghost, i) => {
+                // Ghost index continues from last real thread
+                this.drawMandalaLayer(ghost, threads.length + i, threads.length + projections.length);
+            });
+        }
+
         this.ctx.restore();
     }
 
@@ -232,13 +240,21 @@ export class MandalaRenderer {
         const radius = 40 + (index * 20); // Growing radius
 
         const isSelected = this.selectedIndices.includes(index);
+        const isGhost = thread.isGhost === true;
 
         const colors = { 'serenity': '#4a7c82', 'vibrancy': '#c67605', 'awe': '#b85b47', 'legacy': '#5d4037' };
         const baseColor = colors[thread.intention] || '#888';
 
         this.ctx.strokeStyle = isSelected ? '#ffffff' : baseColor;
-        this.ctx.lineWidth = isSelected ? 3 + (index * 0.1) : 1 + (index * 0.1);
-        this.ctx.globalAlpha = isSelected ? 1.0 : 0.6 + (0.4 * (index / total));
+        this.ctx.lineWidth = isSelected ? 3 + (index * 0.1) : (isGhost ? 1 : 1 + (index * 0.1));
+
+        if (isGhost) {
+             this.ctx.setLineDash([5, 5]); // Dashed line for ghosts
+             this.ctx.globalAlpha = 0.5 + (Math.sin(Date.now() / 500) * 0.2); // Pulsing
+        } else {
+             this.ctx.setLineDash([]);
+             this.ctx.globalAlpha = isSelected ? 1.0 : 0.6 + (0.4 * (index / total));
+        }
 
         const rotationOffset = (hashVal % 360) * (Math.PI / 180);
 
