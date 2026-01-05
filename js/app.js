@@ -2,6 +2,7 @@ import { locations } from './data.js';
 import { TapestryLedger, MandalaRenderer } from './tapestry.js';
 import { ResonanceEngine } from './audio-engine.js';
 import { SynthesisEngine } from './alchemy.js';
+import { HorizonEngine } from './horizon.js';
 
 document.addEventListener('DOMContentLoaded', async () => {
 
@@ -9,10 +10,12 @@ document.addEventListener('DOMContentLoaded', async () => {
         intention: null, region: null, time: null,
         activeScreen: 'splash', activeLocation: null,
         isWeaving: false,
-        selectedThreads: [] // Array of indices
+        selectedThreads: [], // Array of indices
+        isHorizonActive: false
     };
 
     const resonanceEngine = new ResonanceEngine();
+    const horizonEngine = new HorizonEngine();
 
     const tapestryLedger = new TapestryLedger();
     await tapestryLedger.initialize();
@@ -78,7 +81,12 @@ document.addEventListener('DOMContentLoaded', async () => {
             alchemyUI: document.getElementById('alchemy-ui'),
             slot1: document.getElementById('alchemy-slot-1'),
             slot2: document.getElementById('alchemy-slot-2'),
-            fuseBtn: document.getElementById('alchemy-fuse-btn')
+            fuseBtn: document.getElementById('alchemy-fuse-btn'),
+            horizonToggle: document.getElementById('horizon-toggle'),
+            horizonDashboard: document.getElementById('horizon-dashboard'),
+            horizonDominance: document.getElementById('horizon-dominance'),
+            horizonBalanceBar: document.getElementById('horizon-balance-bar'),
+            horizonInsight: document.getElementById('horizon-insight')
         },
         colorWash: document.querySelector('.color-wash')
     };
@@ -108,10 +116,18 @@ document.addEventListener('DOMContentLoaded', async () => {
                  mandalaRenderer.resize();
              }
              mandalaRenderer.setSelection(state.selectedThreads);
-             mandalaRenderer.render(tapestryLedger.getThreads());
+
+             // Initial render
+             renderTapestry();
              updateAlchemyUI();
+
+             // Start animation loop if horizon is active
+             if (state.isHorizonActive) {
+                 startHorizonLoop();
+             }
         } else {
             elements.screens.tapestry.classList.remove('tapestry-active');
+            stopHorizonLoop();
         }
     }
 
@@ -582,6 +598,81 @@ document.addEventListener('DOMContentLoaded', async () => {
              // Clear selection
              state.selectedThreads = [];
         });
+
+        // Horizon Interaction
+        elements.tapestry.horizonToggle.addEventListener('click', () => {
+            state.isHorizonActive = !state.isHorizonActive;
+            elements.tapestry.horizonToggle.classList.toggle('active', state.isHorizonActive);
+            elements.tapestry.horizonDashboard.classList.toggle('visible', state.isHorizonActive);
+
+            if (state.isHorizonActive) {
+                updateHorizonDashboard();
+                startHorizonLoop();
+            } else {
+                stopHorizonLoop();
+                renderTapestry(); // One last render to clear ghosts
+            }
+            resonanceEngine.playInteractionSound('click');
+        });
+    }
+
+    // --- Horizon Logic ---
+    let horizonAnimationFrame = null;
+
+    function startHorizonLoop() {
+        if (horizonAnimationFrame) return;
+
+        const loop = () => {
+            renderTapestry();
+            if (state.activeScreen === 'tapestry' && state.isHorizonActive) {
+                horizonAnimationFrame = requestAnimationFrame(loop);
+            } else {
+                horizonAnimationFrame = null;
+            }
+        };
+        loop();
+    }
+
+    function stopHorizonLoop() {
+        if (horizonAnimationFrame) {
+            cancelAnimationFrame(horizonAnimationFrame);
+            horizonAnimationFrame = null;
+        }
+    }
+
+    function updateHorizonDashboard() {
+        const threads = tapestryLedger.getThreads();
+        const analysis = horizonEngine.analyze(threads);
+
+        elements.tapestry.horizonDominance.textContent = analysis.dominance.intention !== 'None' ? `${analysis.dominance.intention} (${analysis.dominance.percent}%)` : 'None';
+        elements.tapestry.horizonBalanceBar.style.width = `${analysis.balanceScore}%`;
+
+        // Dynamic Insight
+        if (threads.length < 3) {
+            elements.tapestry.horizonInsight.textContent = "More data needed for strategic projection.";
+        } else if (analysis.balanceScore < 40) {
+            elements.tapestry.horizonInsight.textContent = `Pattern is heavily skewed. Consider seeking ${findLeastCommon(analysis.counts)} to restore equilibrium.`;
+        } else if (analysis.streak > 2) {
+             elements.tapestry.horizonInsight.textContent = `Strong momentum in ${analysis.lastIntention}. Continuing this path will deepen the groove.`;
+        } else {
+            elements.tapestry.horizonInsight.textContent = "The pattern is balanced. You are weaving a diverse tapestry.";
+        }
+    }
+
+    function findLeastCommon(counts) {
+        return Object.entries(counts).sort((a,b) => a[1] - b[1])[0][0];
+    }
+
+    function renderTapestry() {
+        if (!mandalaRenderer) return;
+        const threads = tapestryLedger.getThreads();
+        let projections = [];
+
+        if (state.isHorizonActive) {
+            projections = horizonEngine.project(threads);
+        }
+
+        mandalaRenderer.render(threads, projections);
     }
 
     // --- Initialization ---

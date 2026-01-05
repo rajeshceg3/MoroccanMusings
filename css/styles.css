@@ -147,8 +147,89 @@ body.transition-locked {
 .tapestry-actions { position: absolute; bottom: 10%; width: 100%; display: flex; justify-content: center; gap: 2rem; }
 .tapestry-btn { background: rgba(255,255,255,0.1); border: 1px solid rgba(255,255,255,0.2); color: var(--text-secondary); padding: 0.8rem 1.5rem; border-radius: 30px; cursor: pointer; font-size: 0.9rem; backdrop-filter: blur(5px); transition: all 0.3s; }
 .tapestry-btn:hover { background: rgba(255,255,255,0.2); color: var(--text-primary); }
+.tapestry-btn.active { background: var(--ochre-gold); color: #000; border-color: var(--ochre-gold); box-shadow: 0 0 10px rgba(198, 118, 5, 0.5); }
 
 .hidden-input { display: none !important; }
+
+/* Horizon Dashboard */
+.horizon-dashboard {
+    position: absolute;
+    top: 50%;
+    right: 2rem;
+    transform: translateY(-50%) translateX(20px);
+    width: 250px;
+    background: rgba(0, 0, 0, 0.6);
+    backdrop-filter: blur(10px);
+    -webkit-backdrop-filter: blur(10px);
+    border: 1px solid rgba(255, 255, 255, 0.1);
+    border-radius: 12px;
+    padding: 1.5rem;
+    opacity: 0;
+    visibility: hidden;
+    transition: all 0.5s var(--ease-out-quint);
+    pointer-events: none;
+    box-shadow: 0 10px 30px rgba(0,0,0,0.5);
+}
+
+.horizon-dashboard.visible {
+    opacity: 1;
+    visibility: visible;
+    transform: translateY(-50%) translateX(0);
+    pointer-events: auto;
+}
+
+.horizon-header {
+    font-size: 0.8rem;
+    text-transform: uppercase;
+    letter-spacing: 0.2em;
+    color: var(--ochre-gold);
+    margin-bottom: 1.5rem;
+    border-bottom: 1px solid rgba(255,255,255,0.1);
+    padding-bottom: 0.5rem;
+}
+
+.horizon-stat {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    margin-bottom: 1rem;
+    font-size: 0.9rem;
+}
+
+.horizon-stat .stat-label {
+    color: var(--text-secondary);
+}
+
+.horizon-stat .stat-value {
+    color: var(--text-primary);
+    font-family: 'Amiri', serif;
+    font-weight: bold;
+}
+
+.stat-bar {
+    width: 100px;
+    height: 6px;
+    background: rgba(255,255,255,0.1);
+    border-radius: 3px;
+    overflow: hidden;
+}
+
+.stat-fill {
+    height: 100%;
+    background: var(--ochre-gold);
+    width: 0%;
+    transition: width 1s ease-out;
+}
+
+.horizon-insight {
+    margin-top: 1.5rem;
+    font-size: 0.85rem;
+    line-height: 1.5;
+    color: var(--text-primary);
+    font-style: italic;
+    border-left: 2px solid var(--majorelle-blue);
+    padding-left: 10px;
+}
 
 /* Alchemist / Synthesis UI */
 .alchemy-ui {

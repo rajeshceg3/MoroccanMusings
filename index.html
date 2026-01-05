@@ -37,10 +37,23 @@
             <div class="alchemy-slot" id="alchemy-slot-2">2</div>
         </div>
         <div class="tapestry-actions">
+            <button class="tapestry-btn" id="horizon-toggle">Horizon Mode</button>
             <button class="tapestry-btn" id="export-scroll">Export Scroll</button>
              <input type="file" id="import-scroll" accept=".json" class="hidden-input" hidden>
             <button class="tapestry-btn" id="import-btn">Import Scroll</button>
             <button class="tapestry-btn" id="clear-tapestry">Unravel</button>
+        </div>
+        <div class="horizon-dashboard" id="horizon-dashboard">
+            <div class="horizon-header">Strategic Analysis</div>
+            <div class="horizon-stat">
+                <span class="stat-label">Dominance</span>
+                <span class="stat-value" id="horizon-dominance">--</span>
+            </div>
+            <div class="horizon-stat">
+                <span class="stat-label">Balance</span>
+                <div class="stat-bar"><div class="stat-fill" id="horizon-balance-bar"></div></div>
+            </div>
+            <div class="horizon-insight" id="horizon-insight">Analyzing trajectory...</div>
         </div>
     </div>
     <div id="riad-screen" class="screen">
