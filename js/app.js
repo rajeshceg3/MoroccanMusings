@@ -272,7 +272,7 @@ document.addEventListener('DOMContentLoaded', async () => {
             state.region = regionMap[state.intention];
             elements.astrolabe.centerText.textContent = `Find a path for ${state.intention} at ${state.time}`;
         } else {
-            elements.astrolabe.centerText.textContent = 'Align the rings';
+            elements.astrolabe.centerText.textContent = 'Use arrows or drag to align rings';
         }
         // Accessibility: Announce change
         elements.astrolabe.centerText.setAttribute('aria-live', 'polite');
@@ -326,6 +326,7 @@ document.addEventListener('DOMContentLoaded', async () => {
         });
 
         // Setup accessibility helper for sensory items
+        // Ensures keyboard users can focus and activate sensory details
         const setupSensoryItem = (element, action) => {
             element.setAttribute('tabindex', '0');
             element.setAttribute('role', 'button');
