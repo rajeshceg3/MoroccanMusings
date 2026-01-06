@@ -3,6 +3,7 @@ import { TapestryLedger, MandalaRenderer } from './tapestry.js';
 import { ResonanceEngine } from './audio-engine.js';
 import { SynthesisEngine } from './alchemy.js';
 import { HorizonEngine } from './horizon.js';
+import { TerminalSystem } from './terminal.js';
 
 document.addEventListener('DOMContentLoaded', async () => {
 
@@ -16,6 +17,7 @@ document.addEventListener('DOMContentLoaded', async () => {
 
     const resonanceEngine = new ResonanceEngine();
     const horizonEngine = new HorizonEngine();
+    const terminal = new TerminalSystem();
 
     const tapestryLedger = new TapestryLedger();
     await tapestryLedger.initialize();
@@ -94,6 +96,7 @@ document.addEventListener('DOMContentLoaded', async () => {
     const alchemy = new SynthesisEngine();
 
     function lockTransition(duration) {
+        // Reduced lock time for better responsiveness
         document.body.classList.add('transition-locked');
         setTimeout(() => {
             document.body.classList.remove('transition-locked');
@@ -102,7 +105,7 @@ document.addEventListener('DOMContentLoaded', async () => {
 
     function showScreen(screenName) {
         state.activeScreen = screenName;
-        lockTransition(1200); // Lock interaction during screen transitions
+        lockTransition(300); // Minimal lock to prevent accidental double-taps
         for (const key in elements.screens) {
             elements.screens[key].classList.remove('active');
         }
@@ -682,6 +685,146 @@ document.addEventListener('DOMContentLoaded', async () => {
         // Could show a user-friendly error toast here
         return false;
     };
+
+    // --- Neural Link Integration ---
+    terminal.mount('terminal-container');
+
+    // Global toggle
+    window.addEventListener('keydown', (e) => {
+        if (e.key === '`' || (e.ctrlKey && e.code === 'Space')) {
+            e.preventDefault();
+            terminal.toggle();
+        }
+    });
+
+    // Register Commands
+    terminal.registerCommand('help', 'List available commands', () => {
+        terminal.log("Available Commands:", "system");
+        Object.entries(terminal.commandRegistry).forEach(([name, cmd]) => {
+            terminal.log(`  ${name.padEnd(10)} - ${cmd.description}`, "info");
+        });
+    });
+
+    terminal.registerCommand('clear', 'Clear terminal output', () => {
+        terminal.output.innerHTML = '';
+    });
+
+    terminal.registerCommand('status', 'Show system status', () => {
+        terminal.log("SYSTEM STATUS: NOMINAL", "success");
+        terminal.log(`Active Screen: ${state.activeScreen}`, "info");
+        terminal.log(`Ledger Integrity: ${tapestryLedger.isIntegrityVerified ? 'VERIFIED' : 'UNKNOWN'}`, tapestryLedger.isIntegrityVerified ? "success" : "warning");
+        const threadCount = tapestryLedger.getThreads().length;
+        terminal.log(`Thread Count: ${threadCount}`, "info");
+    });
+
+    terminal.registerCommand('jump', 'Navigate to a location (e.g., jump serenity dawn)', (args) => {
+        if (args.length < 2) {
+            terminal.log("Usage: jump <intention> <time>", "warning");
+            return;
+        }
+        const intention = args[0].toLowerCase();
+        const time = args[1].toLowerCase();
+
+        // Find region
+        const regionMap = { serenity: 'coast', vibrancy: 'medina', awe: 'sahara', legacy: 'kasbah' };
+        const region = regionMap[intention];
+
+        if (!region) {
+            terminal.log(`Invalid intention: ${intention}`, "error");
+            return;
+        }
+
+        const path = `${intention}.${region}.${time}`;
+        const targetLocation = locations[path];
+
+        if (targetLocation) {
+            terminal.log(`Initiating jump to ${targetLocation.title}...`, "success");
+            state.intention = intention;
+            state.region = region;
+            state.time = time;
+
+            resonanceEngine.startAmbience(intention, time);
+            showScreen('riad');
+            showRiad(targetLocation);
+            terminal.toggle(); // Close terminal on success
+        } else {
+            terminal.log(`Location not found: ${path}`, "error");
+        }
+    });
+
+    terminal.registerCommand('weave', 'Weave current location into tapestry', async () => {
+        if (state.activeScreen !== 'riad') {
+            terminal.log("Error: Must be at a Riad location to weave.", "error");
+            return;
+        }
+        terminal.log("Initiating weave protocol...", "info");
+        await weaveThread();
+        terminal.log("Thread woven successfully.", "success");
+    });
+
+    terminal.registerCommand('analyze', 'Run strategic horizon analysis', () => {
+         const threads = tapestryLedger.getThreads();
+         const analysis = horizonEngine.analyze(threads);
+
+         terminal.log("--- HORIZON ANALYSIS ---", "system");
+         terminal.log(`Dominance: ${analysis.dominance.intention} (${analysis.dominance.percent}%)`, "info");
+         terminal.log(`Balance Score: ${analysis.balanceScore}/100`, analysis.balanceScore > 70 ? "success" : "warning");
+         terminal.log(`Trajectory: ${analysis.lastIntention || 'None'} (Streak: ${analysis.streak})`, "info");
+
+         const insights = horizonEngine.project(threads);
+         if (insights.length > 0) {
+             terminal.log("Projected Vectors:", "system");
+             insights.forEach(ghost => {
+                 terminal.log(`  [${ghost.type.toUpperCase()}] ${ghost.intention} @ ${ghost.time}`, "info");
+             });
+         }
+    });
+
+    terminal.registerCommand('history', 'List woven threads', () => {
+        const threads = tapestryLedger.getThreads();
+        if (threads.length === 0) {
+            terminal.log("The Tapestry is empty.", "info");
+            return;
+        }
+        terminal.log(`--- TAPESTRY LEDGER (${threads.length} threads) ---`, "system");
+        threads.forEach((t, i) => {
+            terminal.log(`[${i}] ${t.id} | ${t.intention.toUpperCase()} | ${t.title}`, "info");
+        });
+    });
+
+    terminal.registerCommand('synthesize', 'Fuse two threads (e.g., synthesize 0 1)', async (args) => {
+        if (args.length < 2) {
+            terminal.log("Usage: synthesize <index1> <index2>", "warning");
+            return;
+        }
+        const i1 = parseInt(args[0]);
+        const i2 = parseInt(args[1]);
+        const threads = tapestryLedger.getThreads();
+
+        if (isNaN(i1) || isNaN(i2) || !threads[i1] || !threads[i2]) {
+            terminal.log("Invalid thread indices.", "error");
+            return;
+        }
+
+        terminal.log(`Fusing threads ${threads[i1].id} and ${threads[i2].id}...`, "info");
+
+        try {
+            const phantom = await alchemy.fuse(threads[i1], threads[i2]);
+            resonanceEngine.playInteractionSound('weave');
+
+            showScreen('riad');
+            showRiad(phantom);
+
+            // Visual cues (copied from UI logic)
+            elements.riad.title.style.color = '#c67605';
+            elements.riad.subtitle.textContent = "✧ A PHANTOM REALM ✧";
+
+            terminal.log("Synthesis Complete. Visualizing Phantom Realm.", "success");
+            terminal.toggle();
+        } catch (e) {
+            terminal.log(`Synthesis failed: ${e.message}`, "error");
+        }
+    });
 
     initSplash();
     updateAstrolabeState();

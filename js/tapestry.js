@@ -143,7 +143,22 @@ export class TapestryLedger {
     async importScroll(jsonString) {
         try {
             const imported = JSON.parse(jsonString);
-            if (!Array.isArray(imported)) throw new Error("Invalid format");
+            if (!Array.isArray(imported)) throw new Error("Invalid format: Root must be an array");
+
+            // Schema Validation
+            const validSchema = imported.every(thread => {
+                return (
+                    typeof thread.id === 'string' &&
+                    typeof thread.intention === 'string' &&
+                    ['serenity', 'vibrancy', 'awe', 'legacy', 'unknown'].includes(thread.intention) &&
+                    typeof thread.time === 'string' &&
+                    typeof thread.hash === 'string' &&
+                    typeof thread.timestamp === 'number'
+                    // Add more checks as needed
+                );
+            });
+
+            if (!validSchema) throw new Error("Invalid schema in imported threads");
 
             // verify the imported chain
             const tempLedger = new TapestryLedger('temp');
