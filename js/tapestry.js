@@ -189,6 +189,14 @@ export class MandalaRenderer {
         this.ctx = canvas.getContext('2d');
         this.dpr = window.devicePixelRatio || 1;
         this.selectedIndices = []; // Added for selection state
+
+        // Shadow DOM for Accessibility
+        this.a11yContainer = document.createElement('div');
+        this.a11yContainer.id = 'tapestry-a11y-layer';
+        this.a11yContainer.style.cssText = 'position:absolute; top:0; left:0; width:100%; height:100%; pointer-events:none; overflow:hidden; z-index:10;';
+        this.canvas.parentElement.appendChild(this.a11yContainer);
+        this.canvas.parentElement.style.position = 'relative'; // Ensure parent is positioned
+
         this.resize();
     }
 
@@ -206,6 +214,8 @@ export class MandalaRenderer {
     }
 
     render(threads, projections = []) {
+        this.updateAccessibilityTree(threads); // Sync DOM
+
         this.ctx.clearRect(0, 0, this.width, this.height);
 
         // Background Gradient based on thread count
@@ -245,6 +255,60 @@ export class MandalaRenderer {
         }
 
         this.ctx.restore();
+    }
+
+    updateAccessibilityTree(threads) {
+        // Clear existing buttons
+        this.a11yContainer.innerHTML = '';
+        const cx = this.width / 2;
+        const cy = this.height / 2;
+
+        threads.forEach((thread, index) => {
+             const btn = document.createElement('button');
+             btn.setAttribute('type', 'button');
+             btn.setAttribute('aria-label', `Thread ${index + 1}: ${thread.title} (${thread.intention}, ${thread.time})`);
+             btn.setAttribute('aria-pressed', this.selectedIndices.includes(index) ? 'true' : 'false');
+
+             // Calculate approximate position for visual focus indicator (optional, mostly for tabbing)
+             // We can position them centrally or in a stack, but absolute positioning over the ring
+             // helps context if a screen reader user uses a touch explore mode.
+             // Radius = 40 + (index * 20);
+             // Since it's a ring, we just center it and give it the dimension of the ring?
+             // Or just make them 0-size at the center.
+             // Let's make them cover the ring area roughly.
+             const radius = 40 + (index * 20);
+             // Position at center, but we can't easily make a ring-shaped button.
+             // Best practice: Stack them logically or make them small targets at the "start" of the ring.
+
+             btn.style.cssText = `
+                position: absolute;
+                left: ${cx / this.dpr}px;
+                top: ${(cy / this.dpr) - radius}px;
+                width: 20px;
+                height: 20px;
+                transform: translate(-50%, -50%);
+                pointer-events: auto; /* Allow interaction */
+                opacity: 0; /* Visually hidden but interactive */
+             `;
+
+             // When focused, show a ring focus via canvas or DOM?
+             // The canvas already handles selection visual.
+
+             btn.addEventListener('focus', () => {
+                 // Trigger canvas selection visual without full selection toggle logic if we just want focus highlight
+                 // But for now, let's just allow activation.
+             });
+
+             btn.addEventListener('click', (e) => {
+                 // Simulate canvas click logic
+                 // We need to notify the parent app.
+                 // Since we don't have a direct callback here, we dispatch a custom event on the canvas.
+                 const event = new CustomEvent('tapestry-thread-click', { detail: { index } });
+                 this.canvas.dispatchEvent(event);
+             });
+
+             this.a11yContainer.appendChild(btn);
+        });
     }
 
     drawMandalaLayer(thread, index, total) {
@@ -300,24 +364,26 @@ export class MandalaRenderer {
     }
 
     getThreadIndexAt(x, y) {
-        // Transform client coords to canvas space
         const rect = this.canvas.getBoundingClientRect();
-        // Since we scale by DPR in resize, but event coords are CSS pixels, and context is scaled:
-        // We just need the position relative to center in CSS pixels.
         const cx = rect.width / 2;
         const cy = rect.height / 2;
-
         const dx = x - rect.left - cx;
         const dy = y - rect.top - cy;
+
+        // Correct distance calculation matches the drawing logic (drawing is independent of DPR scale visually in CSS pixels)
+        // The drawing logic: radius = 40 + (index * 20)
         const distance = Math.sqrt(dx * dx + dy * dy);
 
-        // Reverse the radius logic: radius = 40 + (index * 20)
-        // index = (distance - 40) / 20
-        // We add a tolerance (e.g. +/- 10px)
+        // Tolerance: +/- 10 pixels (half the gap between rings)
         const estimatedIndex = (distance - 40) / 20;
         const roundedIndex = Math.round(estimatedIndex);
 
-        if (Math.abs(estimatedIndex - roundedIndex) < 0.5 && roundedIndex >= 0) {
+        // Check if within the valid "stroke width" area of the ring
+        // The ring is at 40 + i*20. We want to accept if distance is between radius - 5 and radius + 5?
+        // Actually, previous logic < 0.5 meant +/- 10px (0.5 * 20).
+        // Let's tighten it slightly to prevent mis-clicks, but +/- 8px is good.
+        // 0.4 * 20 = 8px.
+        if (Math.abs(estimatedIndex - roundedIndex) < 0.4 && roundedIndex >= 0) {
             return roundedIndex;
         }
         return -1;

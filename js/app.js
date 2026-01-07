@@ -396,50 +396,59 @@ document.addEventListener('DOMContentLoaded', async () => {
             }
         });
 
-        // "Weave a Thread" gesture
-        let pressTimer;
-        const startWeave = (e) => {
-            // Prevent default to stop mouseup from firing click if needed, but we want click fallback
-            // e.preventDefault(); // Removed to allow click event if it's a short press
+        // "Weave a Thread" Interaction (Robust Long Press with Click Fallback)
+        let pressTimer = null;
+        let isLongPress = false;
 
-            // Add visual feedback class
+        const startPress = (e) => {
+            if (state.isWeaving) return;
+            // Only left click or touch
+            if (e.type === 'mousedown' && e.button !== 0) return;
+
+            isLongPress = false;
             elements.riad.weaveButton.classList.add('pressing');
+
             pressTimer = setTimeout(() => {
+                isLongPress = true;
                 weaveThread();
-                elements.riad.weaveButton.classList.remove('pressing');
+                // Visual cleanup happens in weaveThread or endPress
+                // But if long press triggers, we want to ensure endPress doesn't re-trigger
             }, 1000);
         };
-        const cancelWeave = () => {
-            clearTimeout(pressTimer);
+
+        const endPress = (e) => {
+            if (pressTimer) {
+                clearTimeout(pressTimer);
+                pressTimer = null;
+            }
             elements.riad.weaveButton.classList.remove('pressing');
+
+            // If it wasn't a long press (timer cleared before execution), treat as click
+            // However, we must ensure we don't double fire if the user just clicked normally.
+            // The 'click' event will fire after mouseup/touchend.
+            // So we can actually rely on the 'click' event for the short press,
+            // and use this handler ONLY to cancel the visual state and the timer.
         };
 
-        // Click fallback for non-hold interaction
-        const clickWeave = (e) => {
-            // Prevent double firing if long press was successful (state.isWeaving handles logic lock,
-            // but visual feedback might duplicate if not careful).
-            // Since weaveThread checks state.isWeaving, we are mostly safe from logic duplication,
-            // but the animation might trigger twice if we are not careful.
-            // Wait, weaveThread has `if (state.isWeaving) return;`.
-            // So if long press triggered it, isWeaving is true for 600ms+200ms = 800ms.
-            // A click event fires after mouseup.
-            // So weaveThread will be called again. But it will return early.
-            // HOWEVER, we should rely on a cleaner flag or prevent default?
-            // Actually, simply relying on `weaveThread`'s guard clause is sufficient
-            // provided the animation duration covers the click event timing.
+        const handleClick = (e) => {
+            // If long press occurred, we suppress the click action
+            if (isLongPress) {
+                isLongPress = false; // Reset
+                e.preventDefault();
+                e.stopPropagation();
+                return;
+            }
             weaveThread();
         };
 
-        elements.riad.weaveButton.addEventListener('mousedown', startWeave);
-        elements.riad.weaveButton.addEventListener('touchstart', startWeave, { passive: true });
-        elements.riad.weaveButton.addEventListener('mouseup', cancelWeave);
-        elements.riad.weaveButton.addEventListener('mouseleave', cancelWeave);
-        elements.riad.weaveButton.addEventListener('touchend', cancelWeave);
-        elements.riad.weaveButton.addEventListener('click', clickWeave);
+        // Pointer Events for unified touch/mouse handling
+        // Note: 'click' fires after pointerup
+        elements.riad.weaveButton.addEventListener('pointerdown', startPress);
+        elements.riad.weaveButton.addEventListener('pointerup', endPress);
+        elements.riad.weaveButton.addEventListener('pointerleave', endPress);
+        elements.riad.weaveButton.addEventListener('click', handleClick);
 
-        // Accessibility fallback: Shift+Click or double click to weave instantly?
-        // Or just make a long press accessible via keyboard?
-        // Let's allow Enter key on the button to trigger it.
+        // Accessibility fallback: Enter key
         elements.riad.weaveButton.setAttribute('tabindex', '0');
         elements.riad.weaveButton.addEventListener('keydown', (e) => {
             if (e.key === 'Enter' || e.key === ' ') {
@@ -531,13 +540,17 @@ document.addEventListener('DOMContentLoaded', async () => {
         elements.tapestry.importInput.addEventListener('change', async (e) => {
             const file = e.target.files[0];
             if (!file) return;
-            const text = await file.text();
-            const success = await tapestryLedger.importScroll(text);
-            if (success) {
-                alert('Scroll imported successfully.');
-                mandalaRenderer.render(tapestryLedger.getThreads());
-            } else {
-                alert('The Scroll is torn or corrupted. (Import Failed)');
+            try {
+                const text = await file.text();
+                const success = await tapestryLedger.importScroll(text);
+                if (success) {
+                    showNotification('Scroll imported successfully.', 'success');
+                    mandalaRenderer.render(tapestryLedger.getThreads());
+                } else {
+                    showNotification('The Scroll is torn or corrupted. (Import Failed)', 'error');
+                }
+            } catch (err) {
+                showNotification(`Import error: ${err.message}`, 'error');
             }
             e.target.value = ''; // Reset
         });
@@ -549,12 +562,9 @@ document.addEventListener('DOMContentLoaded', async () => {
             }
         });
 
-        // Mandala Click Interaction
-        elements.tapestry.canvas.addEventListener('click', (e) => {
-             if (!mandalaRenderer) return;
-             const index = mandalaRenderer.getThreadIndexAt(e.clientX, e.clientY);
+        // Mandala Interaction (Click & Accessibility)
+        const handleThreadInteraction = (index) => {
              const threads = tapestryLedger.getThreads();
-
              if (index >= 0 && index < threads.length) {
                  // Toggle selection
                  const selectedIndex = state.selectedThreads.indexOf(index);
@@ -574,6 +584,17 @@ document.addEventListener('DOMContentLoaded', async () => {
                  resonanceEngine.playInteractionSound('click');
                  updateAlchemyUI();
              }
+        };
+
+        elements.tapestry.canvas.addEventListener('click', (e) => {
+             if (!mandalaRenderer) return;
+             const index = mandalaRenderer.getThreadIndexAt(e.clientX, e.clientY);
+             handleThreadInteraction(index);
+        });
+
+        // Listen for accessibility events from Shadow DOM
+        elements.tapestry.canvas.addEventListener('tapestry-thread-click', (e) => {
+            handleThreadInteraction(e.detail.index);
         });
 
         elements.tapestry.fuseBtn.addEventListener('click', async () => {
@@ -678,11 +699,57 @@ document.addEventListener('DOMContentLoaded', async () => {
         mandalaRenderer.render(threads, projections);
     }
 
+    // --- Notification / Error System ---
+    function showNotification(message, type = 'info') {
+        let container = document.getElementById('notification-container');
+        if (!container) {
+            container = document.createElement('div');
+            container.id = 'notification-container';
+            container.style.cssText = 'position:fixed; top:20px; right:20px; z-index:9999; display:flex; flex-direction:column; gap:10px; pointer-events:none;';
+            document.body.appendChild(container);
+        }
+
+        const toast = document.createElement('div');
+        toast.className = `toast toast-${type}`;
+        toast.textContent = message;
+        // Basic styles injected here to ensure reliability without CSS file changes for now, though CSS file is preferred.
+        // We'll rely on a basic style but add inline for safety.
+        toast.style.cssText = `
+            background: ${type === 'error' ? '#8a2be2' : '#1a1a1a'}; /* Deep Purple for error (Cyberpunk aesthetic) or Dark */
+            color: #fff;
+            padding: 12px 20px;
+            border-left: 4px solid ${type === 'error' ? '#ff0055' : '#c67605'};
+            font-family: 'Inter', sans-serif;
+            font-size: 0.9rem;
+            box-shadow: 0 4px 12px rgba(0,0,0,0.5);
+            opacity: 0;
+            transform: translateX(20px);
+            transition: all 0.3s ease;
+            pointer-events: auto;
+            max-width: 300px;
+        `;
+
+        container.appendChild(toast);
+
+        // Animate in
+        requestAnimationFrame(() => {
+            toast.style.opacity = '1';
+            toast.style.transform = 'translateX(0)';
+        });
+
+        // Auto dismiss
+        setTimeout(() => {
+            toast.style.opacity = '0';
+            toast.style.transform = 'translateX(20px)';
+            setTimeout(() => toast.remove(), 300);
+        }, 5000);
+    }
+
     // --- Initialization ---
     // Global Error Boundary
     window.onerror = function(msg, url, lineNo, columnNo, error) {
         console.error('Global error:', msg, error);
-        // Could show a user-friendly error toast here
+        showNotification(`System Error: ${msg}`, 'error');
         return false;
     };
 
@@ -706,7 +773,7 @@ document.addEventListener('DOMContentLoaded', async () => {
     });
 
     terminal.registerCommand('clear', 'Clear terminal output', () => {
-        terminal.output.innerHTML = '';
+        terminal.output.textContent = '';
     });
 
     terminal.registerCommand('status', 'Show system status', () => {
@@ -849,4 +916,13 @@ document.addEventListener('DOMContentLoaded', async () => {
     elements.riad.backButton.addEventListener('click', () => {
         resonanceEngine.stopAmbience();
     });
+
+    // --- DEBUG / TESTING EXPOSURE ---
+    window.tapestryLedger = tapestryLedger;
+    window.state = state;
+    // We need a getter for renderer since it's lazy loaded
+    Object.defineProperty(window, 'mandalaRenderer', {
+        get: () => mandalaRenderer
+    });
+    window.showNotification = showNotification;
 });
