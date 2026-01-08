@@ -142,23 +142,19 @@ export class TapestryLedger {
 
     async importScroll(jsonString) {
         try {
+            // MAX SIZE CHECK (e.g., 5MB)
+            if (jsonString.length > 5 * 1024 * 1024) throw new Error("File too large");
+
             const imported = JSON.parse(jsonString);
             if (!Array.isArray(imported)) throw new Error("Invalid format: Root must be an array");
 
-            // Schema Validation
-            const validSchema = imported.every(thread => {
-                return (
-                    typeof thread.id === 'string' &&
-                    typeof thread.intention === 'string' &&
-                    ['serenity', 'vibrancy', 'awe', 'legacy', 'unknown'].includes(thread.intention) &&
-                    typeof thread.time === 'string' &&
-                    typeof thread.hash === 'string' &&
-                    typeof thread.timestamp === 'number'
-                    // Add more checks as needed
-                );
-            });
+            // Limit number of threads to prevent memory exhaustion
+            if (imported.length > 1000) throw new Error("Too many threads in scroll (Limit: 1000)");
 
-            if (!validSchema) throw new Error("Invalid schema in imported threads");
+            // Strict Schema Validation
+            const validSchema = imported.every(thread => this._validateThreadSchema(thread));
+
+            if (!validSchema) throw new Error("Invalid schema or data types in imported threads");
 
             // verify the imported chain
             const tempLedger = new TapestryLedger('temp');
@@ -172,8 +168,39 @@ export class TapestryLedger {
             return true;
         } catch (e) {
             console.error("Import failed", e);
-            return false;
+            // Propagate error message to UI if needed, or return false
+            throw e;
         }
+    }
+
+    _validateThreadSchema(thread) {
+        // Type checks
+        if (typeof thread.id !== 'string') return false;
+        if (typeof thread.intention !== 'string') return false;
+        if (typeof thread.time !== 'string') return false;
+        if (typeof thread.region !== 'string') return false;
+        if (typeof thread.title !== 'string') return false;
+        if (typeof thread.hash !== 'string') return false;
+        if (typeof thread.timestamp !== 'number') return false;
+
+        // Content checks (Sanitization / Whitelisting)
+        if (thread.id.length > 32) return false;
+        if (thread.title.length > 100) return false;
+        if (thread.region.length > 50) return false;
+
+        // Enum checks
+        const validIntentions = ['serenity', 'vibrancy', 'awe', 'legacy', 'unknown'];
+        const validTimes = ['dawn', 'midday', 'dusk', 'night', 'unknown'];
+
+        if (!validIntentions.includes(thread.intention)) return false;
+        // We allow loose time check as it might be 'unknown' or legacy, but better to restrict if possible.
+        // Assuming current data.js uses strict times.
+        if (!validTimes.includes(thread.time)) return false;
+
+        // Hash format check (Hex)
+        if (!/^[a-f0-9]{64}$/i.test(thread.hash)) return false;
+
+        return true;
     }
 
     exportScroll() {
@@ -288,7 +315,8 @@ export class MandalaRenderer {
                 height: 20px;
                 transform: translate(-50%, -50%);
                 pointer-events: auto; /* Allow interaction */
-                opacity: 0; /* Visually hidden but interactive */
+                opacity: 0.01; /* Almost invisible but clickable for debugging/mouse */
+                cursor: pointer;
              `;
 
              // When focused, show a ring focus via canvas or DOM?

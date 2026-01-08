@@ -6,6 +6,15 @@ import { HorizonEngine } from './horizon.js';
 import { TerminalSystem } from './terminal.js';
 
 document.addEventListener('DOMContentLoaded', async () => {
+    // Service Worker Registration
+    if ('serviceWorker' in navigator) {
+        try {
+            await navigator.serviceWorker.register('./sw.js');
+            console.log('Service Worker registered');
+        } catch (e) {
+            console.log('Service Worker registration failed', e);
+        }
+    }
 
     const state = {
         intention: null, region: null, time: null,
@@ -103,13 +112,27 @@ document.addEventListener('DOMContentLoaded', async () => {
         }, duration);
     }
 
-    function showScreen(screenName) {
+    function showScreen(screenName, addToHistory = true) {
+        if (addToHistory && state.activeScreen !== screenName) {
+            history.pushState({ screen: screenName }, '', `#${screenName}`);
+        }
+
         state.activeScreen = screenName;
-        lockTransition(300); // Minimal lock to prevent accidental double-taps
+        lockTransition(50); // Micro-lock to prevent event ghosting, essentially instant
         for (const key in elements.screens) {
             elements.screens[key].classList.remove('active');
         }
         elements.screens[screenName].classList.add('active');
+
+        // Accessibility Focus Management
+        // Focus on a logical starting element for the new screen
+        if (screenName === 'astrolabe') {
+            elements.astrolabe.rings.intention.focus();
+        } else if (screenName === 'riad') {
+            elements.riad.backButton.focus();
+        } else if (screenName === 'tapestry') {
+            elements.tapestry.backButton.focus();
+        }
 
         if (screenName === 'tapestry') {
              elements.screens.tapestry.classList.add('tapestry-active');
@@ -162,11 +185,15 @@ document.addEventListener('DOMContentLoaded', async () => {
 
     // --- Splash Screen Logic ---
     function initSplash() {
-        setTimeout(() => { elements.splash.surface.style.opacity = '1'; }, 500);
+        // Immediate visual entry
+        requestAnimationFrame(() => {
+             elements.splash.surface.style.opacity = '1';
+        });
+
         setTimeout(() => {
             elements.splash.calligraphy.style.opacity = '1';
             elements.splash.calligraphy.style.transform = 'scale(1)';
-        }, 2000); // Reduced from 3000
+        }, 800);
 
         const dismissSplash = () => {
             resonanceEngine.init(); // Initialize audio context on first gesture
@@ -399,6 +426,7 @@ document.addEventListener('DOMContentLoaded', async () => {
         // "Weave a Thread" Interaction (Robust Long Press with Click Fallback)
         let pressTimer = null;
         let isLongPress = false;
+        const LONG_PRESS_DURATION = 400; // Reduced for better responsiveness
 
         const startPress = (e) => {
             if (state.isWeaving) return;
@@ -413,7 +441,7 @@ document.addEventListener('DOMContentLoaded', async () => {
                 weaveThread();
                 // Visual cleanup happens in weaveThread or endPress
                 // But if long press triggers, we want to ensure endPress doesn't re-trigger
-            }, 1000);
+            }, LONG_PRESS_DURATION);
         };
 
         const endPress = (e) => {
@@ -542,24 +570,24 @@ document.addEventListener('DOMContentLoaded', async () => {
             if (!file) return;
             try {
                 const text = await file.text();
-                const success = await tapestryLedger.importScroll(text);
-                if (success) {
-                    showNotification('Scroll imported successfully.', 'success');
-                    mandalaRenderer.render(tapestryLedger.getThreads());
-                } else {
-                    showNotification('The Scroll is torn or corrupted. (Import Failed)', 'error');
-                }
+            await tapestryLedger.importScroll(text);
+            showNotification('Scroll imported successfully.', 'success');
+            mandalaRenderer.render(tapestryLedger.getThreads());
             } catch (err) {
                 showNotification(`Import error: ${err.message}`, 'error');
             }
             e.target.value = ''; // Reset
         });
 
+        let resizeTimeout;
         window.addEventListener('resize', () => {
-            if (state.activeScreen === 'tapestry' && mandalaRenderer) {
-                mandalaRenderer.resize();
-                mandalaRenderer.render(tapestryLedger.getThreads());
-            }
+            clearTimeout(resizeTimeout);
+            resizeTimeout = setTimeout(() => {
+                if (state.activeScreen === 'tapestry' && mandalaRenderer) {
+                    mandalaRenderer.resize();
+                    mandalaRenderer.render(tapestryLedger.getThreads());
+                }
+            }, 100);
         });
 
         // Mandala Interaction (Click & Accessibility)
@@ -746,6 +774,19 @@ document.addEventListener('DOMContentLoaded', async () => {
     }
 
     // --- Initialization ---
+    // Handle Browser Back Button
+    window.addEventListener('popstate', (event) => {
+        if (event.state && event.state.screen) {
+            // Restore screen without pushing to history again
+            showScreen(event.state.screen, false);
+            // If we are back at Riad, we might need to restore location?
+            // Currently simple screen restore. For Riad, it persists in DOM so it's fine.
+        } else {
+            // Default to splash or astrolabe if history is empty/unknown
+            showScreen('astrolabe', false);
+        }
+    });
+
     // Global Error Boundary
     window.onerror = function(msg, url, lineNo, columnNo, error) {
         console.error('Global error:', msg, error);
