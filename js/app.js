@@ -3,6 +3,7 @@ import { TapestryLedger, MandalaRenderer } from './tapestry.js';
 import { ResonanceEngine } from './audio-engine.js';
 import { SynthesisEngine } from './alchemy.js';
 import { HorizonEngine } from './horizon.js';
+import { CodexEngine } from './codex.js';
 import { TerminalSystem } from './terminal.js';
 
 document.addEventListener('DOMContentLoaded', async () => {
@@ -26,6 +27,7 @@ document.addEventListener('DOMContentLoaded', async () => {
 
     const resonanceEngine = new ResonanceEngine();
     const horizonEngine = new HorizonEngine();
+    const codex = new CodexEngine();
     const terminal = new TerminalSystem();
 
     const tapestryLedger = new TapestryLedger();
@@ -89,6 +91,9 @@ document.addEventListener('DOMContentLoaded', async () => {
             exportBtn: document.getElementById('export-scroll'),
             importBtn: document.getElementById('import-btn'),
             importInput: document.getElementById('import-scroll'),
+            forgeShardBtn: document.getElementById('forge-shard'),
+            scanShardBtn: document.getElementById('scan-shard'),
+            shardInput: document.getElementById('shard-input'),
             alchemyUI: document.getElementById('alchemy-ui'),
             slot1: document.getElementById('alchemy-slot-1'),
             slot2: document.getElementById('alchemy-slot-2'),
@@ -579,6 +584,60 @@ document.addEventListener('DOMContentLoaded', async () => {
             e.target.value = ''; // Reset
         });
 
+        // --- CODEX INTEGRATION ---
+        elements.tapestry.forgeShardBtn.addEventListener('click', async () => {
+            try {
+                const threads = tapestryLedger.getThreads();
+                if (threads.length === 0) throw new Error("Tapestry is empty. Nothing to forge.");
+
+                showNotification('Forging Codex Shard...', 'info');
+                const blob = await codex.forgeShard(threads);
+
+                const url = URL.createObjectURL(blob);
+                const a = document.createElement('a');
+                a.href = url;
+                a.download = `codex_shard_${Date.now()}.png`;
+                a.click();
+                URL.revokeObjectURL(url);
+
+                showNotification('Shard forged successfully.', 'success');
+                resonanceEngine.playInteractionSound('weave');
+            } catch (e) {
+                showNotification(`Forge failed: ${e.message}`, 'error');
+            }
+        });
+
+        elements.tapestry.scanShardBtn.addEventListener('click', () => {
+            elements.tapestry.shardInput.click();
+        });
+
+        elements.tapestry.shardInput.addEventListener('change', async (e) => {
+            const file = e.target.files[0];
+            if (!file) return;
+
+            try {
+                showNotification('Scanning Shard...', 'info');
+                const data = await codex.scanShard(file);
+
+                // Use existing import logic
+                const tempLedger = new TapestryLedger('temp');
+                tempLedger.threads = data;
+                // We rely on importScroll's validation logic which expects a JSON string usually,
+                // but here we have the object. Let's adapt.
+                // Or better: serialize and use importScroll to reuse validation logic.
+                const jsonString = JSON.stringify(data);
+                await tapestryLedger.importScroll(jsonString);
+
+                showNotification('Shard decrypted and integrated.', 'success');
+                resonanceEngine.playInteractionSound('snap');
+                mandalaRenderer.render(tapestryLedger.getThreads());
+            } catch (e) {
+                console.error(e);
+                showNotification(`Scan failed: ${e.message}`, 'error');
+            }
+            e.target.value = '';
+        });
+
         let resizeTimeout;
         window.addEventListener('resize', () => {
             clearTimeout(resizeTimeout);
@@ -932,6 +991,38 @@ document.addEventListener('DOMContentLoaded', async () => {
         } catch (e) {
             terminal.log(`Synthesis failed: ${e.message}`, "error");
         }
+    });
+
+    terminal.registerCommand('forge', 'Create a steganographic shard from current tapestry', async () => {
+        const threads = tapestryLedger.getThreads();
+        if (threads.length === 0) {
+            terminal.log("Tapestry is empty. Cannot forge shard.", "warning");
+            return;
+        }
+
+        try {
+            terminal.log("Initiating Codex encryption...", "info");
+            const blob = await codex.forgeShard(threads);
+            const url = URL.createObjectURL(blob);
+
+            // In a real terminal we might output base64, here we trigger download
+            const a = document.createElement('a');
+            a.href = url;
+            a.download = `codex_shard_${Date.now()}.png`;
+            a.click();
+            URL.revokeObjectURL(url);
+
+            terminal.log("Shard forged and deployed to local system.", "success");
+        } catch (e) {
+            terminal.log(`Forge Protocol Failed: ${e.message}`, "error");
+        }
+    });
+
+    terminal.registerCommand('scan', 'Initiate Shard scan sequence', () => {
+        terminal.log("Engaging optical scanners...", "info");
+        // Trigger the file input programmatically
+        elements.tapestry.shardInput.click();
+        terminal.toggle(); // Close terminal so user can see the file dialog/UI
     });
 
     initSplash();
