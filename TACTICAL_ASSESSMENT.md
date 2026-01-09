@@ -1,74 +1,71 @@
-# TACTICAL ASSESSMENT: MOROCCAN MUSINGS (MARQ)
+# Tactical Assessment: Project MoroccanMusings (Marq)
 
-**DATE:** 2026-01-06
-**OFFICER:** JULES (Code Name)
-**SUBJECT:** Comprehensive Repository Audit & Production Readiness Roadmap
+**Date:** 2024-05-23
+**Assessor:** Jules (Navy SEAL / Senior Engineer)
+**Classification:** RESTRICTED
+**Subject:** Repository Analysis & Production Readiness Roadmap
 
-## 1. SITUATION ANALYSIS (SITREP)
+## 1. Executive Summary
 
-The repository "MoroccanMusings" (Marq) has evolved beyond the initial "Monolithic Prototype" phase. The codebase now exhibits modular architecture using ES6 Modules (`js/app.js`, `js/tapestry.js`, etc.) and a dedicated CSS structure. A basic integration test suite (`tests/verify_app.py`) using Playwright is present and passing.
+The target application ("Marq") displays a sophisticated usage of vanilla JavaScript to create an immersive, high-fidelity user experience. The use of cryptographic hashing for data integrity (`TapestryLedger`) and steganography for data portability (`CodexEngine`) demonstrates advanced capabilities.
 
-However, despite these improvements, the application remains in a **Late Prototype / Alpha Stage**. It lacks the robustness, comprehensive security hardening, and polished user experience required for a mission-critical production deployment.
+However, the current implementation exhibits critical risks regarding **Main Thread Blocking** (Performance/UX) and potential **Scalability** issues. The absence of a build system is acceptable for the current scale but limits future maintainability.
 
-**Mission Status:** **ALPHA - STABLE BUT IMMATURE**
+**Readiness Status:** `DEFCON 3` (Significant improvements required for production release).
 
-## 2. THREAT ASSESSMENT & GAP ANALYSIS
+---
 
-### 2.1 Code Quality & Architecture
-*   **Strengths**: Modular ES6 structure, clear separation of concerns (Logic, Data, Rendering, Audio).
-*   **Weaknesses**:
-    *   **"God Module" Pattern**: `js/app.js` is over-encumbered. It handles DOM manipulation, event routing, state management, and business logic simultaneously.
-    *   **Hardcoded Configuration**: Strings, timeouts (e.g., `lockTransition(1200)`), and animation durations are scattered throughout the code.
-    *   **Error Handling**: A basic `window.onerror` exists, but there is no graceful degradation for component failures (e.g., if Web Audio API fails, the experience might suffer silently).
+## 2. Detailed Reconnaissance
 
-### 2.2 Security (OWASP)
-*   **Status**: IMPROVED but INCOMPLETE.
-*   **Vulnerability**: `Content-Security-Policy` allows `data:` images. While sometimes necessary for generated content, it can be a vector for encoded attacks.
-*   **Vulnerability**: `innerHTML` usage is minimal (good), but direct DOM manipulation based on potentially tainted data (from `localStorage` or `importScroll`) requires stricter schema validation beyond simple integrity hashes.
-*   **Risk**: The `TapestryLedger` assumes local storage data is valid if the hash matches. It does not validate the *structure* of the payload before hashing during import.
+### A. Security (Hardening Required)
+*   **CSP:** Current Content Security Policy is functional but permissive regarding `blob:` images.
+    *   *Risk:* Low-Medium. Necessary for functionality, but requires strict control over blob generation.
+*   **Steganography (Codex):** The `CodexEngine` processes external image data.
+    *   *Risk:* Malformed or massive images could cause Denial of Service (DoS) by crashing the browser tab.
+*   **Input Handling:** `TerminalSystem` input parsing is robust enough for current commands, but future expansions must ensure no `innerHTML` injection occurs from user arguments.
 
-### 2.3 User Experience (UX) & Accessibility (A11y)
-*   **Critical Friction Points**:
-    *   **Artificial Latency**: The `lockTransition(1200)` function in `app.js` artificially blocks user input during screen transitions. This violates the "Response Time" heuristic (actions should feel immediate).
-    *   **Splash Screen Delay**: The splash screen imposes a fixed animation wait before the user can interact.
-*   **Accessibility**:
-    *   **Contrast**: Text overlay on images (`riad-narrative`) might fail contrast checks depending on the background image.
-    *   **Keyboard Nav**: The "Astrolabe" rings support arrow keys, which is excellent. However, visual focus states (`:focus-visible`) need verification on all custom interactive elements.
-    *   **Screen Readers**: The Canvas-based `Tapestry` is a "black box" to screen readers. It needs a fallback text-based representation or ARIA live regions describing the state.
+### B. Performance (Mission Critical)
+*   **Blocking Operations:** The `CodexEngine` (Forge/Scan) and `TapestryLedger` (Integrity Check) operate directly on the main UI thread.
+    *   *Impact:* Processing a 4MB image for steganography will freeze the interface for several seconds. This is unacceptable for a "premium" UX.
+    *   *Recommendation:* **Immediate offloading to Web Workers.** (ACCOMPLISHED: `js/codex.worker.js`)
+*   **Rendering:** `MandalaRenderer` uses `requestAnimationFrame`, which is good. However, deep object creation in the render loop should be monitored.
 
-### 2.4 Performance
-*   **Observation**: `Tapestry` canvas redraws on every interaction.
-*   **Optimization**: The `HorizonMode` loop (`requestAnimationFrame`) runs continuously when active. This will drain battery on mobile devices.
-*   **Asset Loading**: Full-size images are loaded. `loading="lazy"` is used, which is good, but `srcset` should be implemented for responsive sizing.
+### C. User Experience (UX)
+*   **Feedback Loops:** Long-running operations (Encryption/Decryption) lack granular progress bars because they block the thread that would render the progress bar.
+    *   *Remediation:* Implemented `cursor: wait` and asynchronous toast notifications during worker processing.
+*   **Accessibility:** The "Shadow DOM" layer in `MandalaRenderer` is a tactical win. However, navigation flow and "Skip to Content" mechanisms are absent.
 
-## 3. STRATEGIC ROADMAP (EXECUTION PLAN)
+---
 
-### PHASE 1: UX FRICTION ELIMINATION (Priority: IMMEDIATE)
-**Objective**: Remove artificial barriers to user interaction.
-1.  **Neutralize Latency**: Remove or significantly reduce `lockTransition` delays. Transitions should be visual only, not blocking.
-2.  **Optimize Entry**: Allow "Click to Skip" for the splash screen animations immediately.
-3.  **Visual Feedback**: Ensure the "Weave" button provides immediate tactile/visual feedback on press, not just after the timer completes.
+## 3. Strategic Roadmap
 
-### PHASE 2: SECURITY & DATA HARDENING (Priority: HIGH)
-**Objective**: Fortify the data layer against corruption and injection.
-1.  **Schema Validation**: Implement a strict JSON schema check in `TapestryLedger` before importing or loading threads.
-2.  **Sanitization**: Ensure all text rendered from data (titles, narratives) is treated as text content, never HTML.
-3.  **CSP Refinement**: Attempt to remove `data:` from `img-src` if possible, or strictly scope it.
+### Phase 1: Operation "Thread Breaker" (Critical Performance)
+**Objective:** Eliminate main-thread blocking to ensure 60fps fluidity at all times.
+1.  **Extract `CodexEngine` logic to a Web Worker.** (COMPLETED)
+    *   Moved pixel manipulation and bitwise operations off the main thread.
+    *   Implemented a messaging protocol for `Progress`, `Success`, and `Failure`.
+2.  **Asynchronous Integrity Verification.**
+    *   Refactor `TapestryLedger.verifyIntegrity()` to yield to the main thread or run in a worker if the chain exceeds 100 blocks.
 
-### PHASE 3: ACCESSIBILITY INTEGRATION (Priority: CRITICAL)
-**Objective**: Ensure mission success for all operators (users).
-1.  **Canvas A11y**: Implement a "Shadow DOM" or an invisible HTML list that mirrors the Tapestry threads, allowing screen readers to traverse the history.
-2.  **Focus Management**: Ensure focus is logically managed when switching screens (e.g., focus on the "Back" button or main content when entering a new screen).
-3.  **Reduced Motion**: Respect `prefers-reduced-motion` media query to disable the "Horizon Mode" animations and swift transitions.
+### Phase 2: Operation "Iron Dome" (Security & Stability)
+**Objective:** Harden the application against edge cases and external threats.
+1.  **Input Sanitization:** implement strict type checking in `TerminalSystem` before command execution.
+2.  **Error Boundaries:** Enhance `window.onerror` and `showNotification` to handle Worker errors gracefully.
+3.  **Memory Management:** Ensure large `ArrayBuffer`s used in `CodexEngine` are transferred (not copied) between workers to save memory. (PARTIALLY IMPLEMENTED)
 
-### PHASE 4: ARCHITECTURAL REFACTORING (Priority: MEDIUM)
-**Objective**: sustainable scalability.
-1.  **State Management**: Extract `state` from `app.js` into a dedicated `Store` module.
-2.  **Configuration Extraction**: Move all magic numbers (timeouts, colors, API endpoints) to `js/config.js`.
+### Phase 3: Operation "Smooth Sailing" (UX Polish)
+**Objective:** Elevate the user journey.
+1.  **Loading States:** Implement visual spinners/progress bars for Forge/Scan operations (enabled by Phase 1).
+2.  **Keyboard Navigation:** Verify full tab order through the "Riad" and "Tapestry" screens.
+3.  **Visual Feedback:** Add micro-interactions for successful "Command" executions in the Terminal.
 
-## 4. IMMEDIATE TACTICAL RECOMMENDATION
+---
 
-**Execute Phase 1 (UX Friction Elimination) immediately.**
-The artificial delays in `app.js` (`lockTransition`) and the Splash Screen logic are detrimental to the user experience and can be remediated with high confidence and low risk.
+## 4. Immediate Execution Orders (Status)
 
-**Pending Authorization to Engage.**
+1.  **Create `js/codex.worker.js`**: (COMPLETE)
+2.  **Refactor `CodexEngine`**: (COMPLETE)
+3.  **Update `Tapestry UI`**: (COMPLETE)
+
+**Signed,**
+**Jules**
