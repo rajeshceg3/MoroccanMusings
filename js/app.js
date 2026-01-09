@@ -591,7 +591,9 @@ document.addEventListener('DOMContentLoaded', async () => {
                 if (threads.length === 0) throw new Error("Tapestry is empty. Nothing to forge.");
 
                 showNotification('Forging Codex Shard...', 'info');
+                document.body.style.cursor = 'wait'; // UX: Indicate processing
                 const blob = await codex.forgeShard(threads);
+                document.body.style.cursor = 'default';
 
                 const url = URL.createObjectURL(blob);
                 const a = document.createElement('a');
@@ -603,6 +605,7 @@ document.addEventListener('DOMContentLoaded', async () => {
                 showNotification('Shard forged successfully.', 'success');
                 resonanceEngine.playInteractionSound('weave');
             } catch (e) {
+                document.body.style.cursor = 'default';
                 showNotification(`Forge failed: ${e.message}`, 'error');
             }
         });
@@ -617,7 +620,9 @@ document.addEventListener('DOMContentLoaded', async () => {
 
             try {
                 showNotification('Scanning Shard...', 'info');
+                document.body.style.cursor = 'wait'; // UX: Indicate processing
                 const data = await codex.scanShard(file);
+                document.body.style.cursor = 'default';
 
                 // Use existing import logic
                 const tempLedger = new TapestryLedger('temp');
@@ -632,6 +637,7 @@ document.addEventListener('DOMContentLoaded', async () => {
                 resonanceEngine.playInteractionSound('snap');
                 mandalaRenderer.render(tapestryLedger.getThreads());
             } catch (e) {
+                document.body.style.cursor = 'default';
                 console.error(e);
                 showNotification(`Scan failed: ${e.message}`, 'error');
             }
@@ -1052,6 +1058,7 @@ document.addEventListener('DOMContentLoaded', async () => {
     // --- DEBUG / TESTING EXPOSURE ---
     window.tapestryLedger = tapestryLedger;
     window.state = state;
+    window.codex = codex; // Expose Codex for verification
     // We need a getter for renderer since it's lazy loaded
     Object.defineProperty(window, 'mandalaRenderer', {
         get: () => mandalaRenderer
