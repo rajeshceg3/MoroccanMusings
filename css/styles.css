@@ -178,6 +178,7 @@ body.transition-locked {
     transition: all 0.5s var(--ease-out-quint);
     pointer-events: none;
     box-shadow: 0 10px 30px rgba(0,0,0,0.5);
+    z-index: 100;
 }
 
 .horizon-dashboard.visible {
@@ -185,6 +186,21 @@ body.transition-locked {
     visibility: visible;
     transform: translateY(-50%) translateX(0);
     pointer-events: auto;
+}
+
+@media (max-width: 768px) {
+    .horizon-dashboard {
+        top: auto;
+        bottom: 120px;
+        right: 1rem;
+        left: 1rem;
+        width: auto;
+        transform: translateY(20px);
+    }
+
+    .horizon-dashboard.visible {
+        transform: translateY(0);
+    }
 }
 
 .horizon-header {
