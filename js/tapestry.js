@@ -241,7 +241,12 @@ export class MandalaRenderer {
     }
 
     render(threads, projections = []) {
-        this.updateAccessibilityTree(threads); // Sync DOM
+        // Optimization: Only update A11y tree if threads have changed
+        const currentHash = threads.length + ':' + (threads.length > 0 ? threads[threads.length - 1].hash : '');
+        if (this.lastA11yHash !== currentHash) {
+             this.updateAccessibilityTree(threads); // Sync DOM
+             this.lastA11yHash = currentHash;
+        }
 
         this.ctx.clearRect(0, 0, this.width, this.height);
 

@@ -1,5 +1,5 @@
 
-const CACHE_NAME = 'marq-v1';
+const CACHE_NAME = 'marq-v2';
 const ASSETS = [
     './',
     './index.html',
@@ -23,14 +23,28 @@ self.addEventListener('install', (event) => {
     );
 });
 
+self.addEventListener('activate', (event) => {
+    // Clean up old caches
+    event.waitUntil(
+        caches.keys().then((keyList) => {
+            return Promise.all(keyList.map((key) => {
+                if (key !== CACHE_NAME) {
+                    return caches.delete(key);
+                }
+            }));
+        })
+    );
+});
+
 self.addEventListener('fetch', (event) => {
-    // Stale-while-revalidate strategy for same-origin
+    // Strategy: Stale-While-Revalidate for core assets
+    // This ensures fast load (stale) but updates in background for next visit
+
     if (event.request.destination === 'image' && event.request.url.includes('unsplash')) {
-        // Cache external images with cache-first
+        // Cache external images with Cache-First (they rarely change)
         event.respondWith(
             caches.match(event.request).then((response) => {
                 return response || fetch(event.request).then((response) => {
-                    // Check if we received a valid response
                     if (!response || response.status !== 200 || response.type !== 'basic' && response.type !== 'cors') {
                         return response;
                     }
@@ -43,9 +57,22 @@ self.addEventListener('fetch', (event) => {
             })
         );
     } else {
+        // Core Logic/UI: Stale-While-Revalidate
         event.respondWith(
-            caches.match(event.request).then((response) => {
-                return response || fetch(event.request);
+            caches.match(event.request).then((cachedResponse) => {
+                const fetchPromise = fetch(event.request).then((networkResponse) => {
+                    // Update the cache with the fresh response
+                    if (networkResponse && networkResponse.status === 200 && networkResponse.type === 'basic') {
+                        const responseToCache = networkResponse.clone();
+                        caches.open(CACHE_NAME).then((cache) => {
+                            cache.put(event.request, responseToCache);
+                        });
+                    }
+                    return networkResponse;
+                });
+
+                // Return cached response immediately if available, otherwise wait for network
+                return cachedResponse || fetchPromise;
             })
         );
     }
