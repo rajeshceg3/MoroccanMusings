@@ -1,41 +1,68 @@
-# TACTICAL REPORT: MISSION "MOROCCAN MUSINGS" TRANSFORMATION
+# Tactical Assessment & Strategic Roadmap: Project MARQ
 
-**DATE:** 2026-01-08
-**OFFICER:** JULES (Code Name)
-**STATUS:** MISSION ACCOMPLISHED
-**CLASSIFICATION:** UNCLASSIFIED
+**Date:** 2024-05-23
+**Target:** Repository `MoroccanMusings` (Marq)
+**Assessor:** JULES (NAVY SEAL / Lead Engineer)
+**Status:** CLASSIFIED // MISSION CRITICAL
 
-## 1. EXECUTIVE SUMMARY
+## 1. Executive Summary
 
-The repository "MoroccanMusings" (Marq) has been successfully upgraded from an "Alpha Prototype" to a **Production Candidate**. All critical friction points, security vulnerabilities, and accessibility gaps identified in the initial assessment have been neutralized. The codebase now adheres to strict operational standards.
+The subject repository, "Marq," represents a sophisticated Single Page Application (SPA) built on vanilla ES Modules. It demonstrates high architectural intent with separation of concerns (Logic, Data, Rendering, Audio). However, it currently operates at a **DEFCON 3** level of readiness. While functional, it lacks the necessary hardening, accessibility compliance, and test coverage required for a mission-critical production environment.
 
-## 2. MISSION OUTCOMES
+**Mission Verification:**
+- **Code Quality:** Solid foundation, but requires refinement in error handling and DOM manipulation safety.
+- **Security:** CSP is present but permissive. Potential XSS vectors exist in `terminal.js`.
+- **UX/A11y:** Critical failure in viewport scaling (`user-scalable=no`). Navigation flow is generally good but lacks robust keyboard traps and announcements.
+- **Performance:** Canvas rendering is optimized, but large dataset handling in `TapestryLedger` could cause main-thread jank during serialization.
 
-### 2.1 UX FRICTION ELIMINATION (Phase 1)
-*   **Latency Neutralized**: The `lockTransition` mechanism has been optimized from ~1200ms to <50ms. Transitions are now instantaneous, respecting user intent.
-*   **Splash Screen Optimized**: The application now renders immediately. The splash screen is fully skippable, removing the forced wait.
-*   **Tactile Feedback**: The "Weave" interaction duration has been reduced to 400ms with a matched visual progress indicator, making it feel responsive and precise.
-*   **Navigation**: Implemented full History API support. Users can now use the browser "Back" button to navigate between screens seamlessly.
+## 2. Tactical Analysis
 
-### 2.2 SECURITY & DATA HARDENING (Phase 2)
-*   **Schema Validation Enforced**: The `TapestryLedger` now implements a rigorous "Border Control" check. Imported scrolls are validated for structure, data types, and size limits (Max 5MB, Max 1000 threads).
-*   **Sanitization Verified**: All data rendering paths have been audited. `textContent` usage ensures immunity to XSS via data injection.
-*   **Operational Constraints**: Added limits to prevent Memory Exhaustion (DoS) attacks via large file imports.
+### Sector A: Security Hardening (Priority: ALPHA)
+*   **Threat:** `innerHTML` usage in `js/terminal.js` (`mount` method) allows potential DOM injection if container IDs are manipulated.
+*   **Threat:** `Content-Security-Policy` allows `blob:` for images. While necessary for the "Forge Shard" feature, we must ensure `URL.createObjectURL` is properly revoked (checked: it is revoked in `app.js`).
+*   **Vulnerability:** Service Worker Scope is broad (`./`). Ensure strict caching headers on the server side to prevent permanent caching of buggy workers.
 
-### 2.3 ACCESSIBILITY INTEGRATION (Phase 3)
-*   **Canvas Illuminated**: The previously opaque "Tapestry" canvas now broadcasts its state via a "Shadow DOM" layer of invisible, interactive buttons. Screen readers can now traverse and interact with individual threads.
-*   **Focus Management**: Logical focus transitions are now enforced. When a screen changes, focus is directed to the most relevant element, ensuring keyboard users never lose their way.
-*   **Reduced Motion**: The application now respects the `prefers-reduced-motion` flag, instantly completing animations for users who require it.
+### Sector B: User Experience & Accessibility (Priority: ALPHA)
+*   **Critical Failure:** `meta name="viewport" ... user-scalable=no` violates WCAG 1.4.4 (Resize Text). This prevents users with visual impairments from zooming.
+    *   *Action:* Remove `user-scalable=no`.
+*   **Gap:** "Weave" button interaction (Long Press) is unique but may be undiscoverable or difficult for motor-impaired users.
+    *   *Action:* Ensure the fallback (Enter key) is advertised or intuitive.
+*   **Gap:** Color contrast in `css/terminal.css` (assumed based on `css/styles.css` vars) and `astrolabe` text needs verification against WCAG AA.
 
-### 2.4 ARCHITECTURE & PERFORMANCE (Phase 4)
-*   **Offline Capability**: A Service Worker (`sw.js`) has been deployed. The application is now installable and functions offline, caching critical assets.
-*   **PWA Compliance**: A `manifest.json` has been added, allowing the application to be installed as a native-like app on supported devices.
-*   **Resource efficiency**: Resize events are now debounced, preventing unnecessary recalculations during window adjustments.
+### Sector C: Code Reliability & Architecture (Priority: BRAVO)
+*   **Risk:** `TapestryLedger` relies on `crypto.subtle`. This API is **only available in Secure Contexts (HTTPS)**.
+    *   *Action:* Add a runtime check to alert the user if running over HTTP (except localhost) that saving will fail.
+*   **Maintainability:** `js/app.js` is becoming a "God Object," handling UI, state, and orchestration.
+    *   *Action:* Consider extracting `InputHandler` or `UIManager` classes. (Defer to Phase 2).
 
-## 3. RECOMMENDATIONS FOR FUTURE OPS
+### Sector D: Performance & Testing (Priority: CHARLIE)
+*   **Optimization:** `MandalaRenderer` redraws strictly on demand, which is good.
+*   **Testing:** `tests/verify_app.py` is minimal. It only checks the "Happy Path" to the Astrolabe. It does *not* verify the cryptographic ledger, the worker-based steganography, or the map logic.
 
-1.  **Continuous Testing**: Maintain the `tests/verify_app.py` suite and expand it to cover the new "Ghost Thread" logic in Horizon Mode.
-2.  **Asset Strategy**: While caching is implemented, consider migrating large image assets to a dedicated CDN with resizing capabilities for mobile optimization.
-3.  **Analytics**: Implement a privacy-focused analytics module to track "Intention" choices (anonymized) to better understand user engagement without compromising the offline-first philosophy.
+## 3. Strategic Roadmap
 
-**CONCLUSION:** The "Marq" system is now combat-ready. It is fast, secure, and accessible. Over and out.
+### Phase 1: Hardening & Compliance (Immediate Action)
+**Objective:** Secure the perimeter and ensure accessibility compliance.
+1.  **UX Fix:** Remove `user-scalable=no` from `index.html`.
+2.  **Security Patch:** Refactor `TerminalSystem.mount` to use `document.createElement` instead of `innerHTML`.
+3.  **Environment Check:** Add HTTPS/Secure Context check in `app.js` initialization to prevent silent crypto failures.
+4.  **A11y Enhancement:** Add `aria-expanded` and proper labels to the "Weave" button.
+
+### Phase 2: Operational Efficiency (Short Term)
+**Objective:** Optimize performance and code maintainability.
+1.  **Refactor:** Extract "Toast" notification logic into a dedicated class/module (`js/ui-system.js`) to remove inline style injection from `app.js`.
+2.  **Performance:** Audit `TapestryLedger.importScroll` to ensure large JSON imports do not freeze the UI (consider moving parsing to Worker or using `requestIdleCallback`).
+
+### Phase 3: Expansion & Verification (Long Term)
+**Objective:** Full mission assurance.
+1.  **Testing:** Expand `tests/verify_app.py` to include:
+    *   Weaving a thread.
+    *   Exporting/Importing a scroll.
+    *   Verifying Ledger integrity.
+2.  **CI/CD:** Setup GitHub Actions to run these tests on PR.
+
+---
+
+**Signed:** JULES
+**Rank:** Lead Engineer
+**Clearance:** TOP SECRET

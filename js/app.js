@@ -5,8 +5,18 @@ import { SynthesisEngine } from './alchemy.js';
 import { HorizonEngine } from './horizon.js';
 import { CodexEngine } from './codex.js';
 import { TerminalSystem } from './terminal.js';
+import { UISystem } from './ui-system.js';
 
 document.addEventListener('DOMContentLoaded', async () => {
+    const uiSystem = new UISystem();
+    const showNotification = (msg, type) => uiSystem.showNotification(msg, type);
+
+    // Security Check: Secure Context
+    if (!window.isSecureContext && window.location.hostname !== 'localhost' && window.location.hostname !== '127.0.0.1') {
+        console.warn("Marq requires a Secure Context (HTTPS) for cryptographic operations.");
+        showNotification("Security Warning: Application requires HTTPS for data integrity.", "error");
+    }
+
     // Service Worker Registration
     if ('serviceWorker' in navigator) {
         try {
@@ -440,12 +450,11 @@ document.addEventListener('DOMContentLoaded', async () => {
 
             isLongPress = false;
             elements.riad.weaveButton.classList.add('pressing');
+            elements.riad.weaveButton.setAttribute('aria-pressed', 'true');
 
             pressTimer = setTimeout(() => {
                 isLongPress = true;
                 weaveThread();
-                // Visual cleanup happens in weaveThread or endPress
-                // But if long press triggers, we want to ensure endPress doesn't re-trigger
             }, LONG_PRESS_DURATION);
         };
 
@@ -455,12 +464,7 @@ document.addEventListener('DOMContentLoaded', async () => {
                 pressTimer = null;
             }
             elements.riad.weaveButton.classList.remove('pressing');
-
-            // If it wasn't a long press (timer cleared before execution), treat as click
-            // However, we must ensure we don't double fire if the user just clicked normally.
-            // The 'click' event will fire after mouseup/touchend.
-            // So we can actually rely on the 'click' event for the short press,
-            // and use this handler ONLY to cancel the visual state and the timer.
+            elements.riad.weaveButton.setAttribute('aria-pressed', 'false');
         };
 
         const handleClick = (e) => {
@@ -475,7 +479,6 @@ document.addEventListener('DOMContentLoaded', async () => {
         };
 
         // Pointer Events for unified touch/mouse handling
-        // Note: 'click' fires after pointerup
         elements.riad.weaveButton.addEventListener('pointerdown', startPress);
         elements.riad.weaveButton.addEventListener('pointerup', endPress);
         elements.riad.weaveButton.addEventListener('pointerleave', endPress);
@@ -483,10 +486,20 @@ document.addEventListener('DOMContentLoaded', async () => {
 
         // Accessibility fallback: Enter key
         elements.riad.weaveButton.setAttribute('tabindex', '0');
+        elements.riad.weaveButton.setAttribute('role', 'button');
+        elements.riad.weaveButton.setAttribute('aria-label', 'Weave current location into tapestry');
+        elements.riad.weaveButton.setAttribute('aria-pressed', 'false');
+
         elements.riad.weaveButton.addEventListener('keydown', (e) => {
             if (e.key === 'Enter' || e.key === ' ') {
                 e.preventDefault();
-                weaveThread();
+                elements.riad.weaveButton.classList.add('pressing');
+                elements.riad.weaveButton.setAttribute('aria-pressed', 'true');
+                setTimeout(() => {
+                     elements.riad.weaveButton.classList.remove('pressing');
+                     elements.riad.weaveButton.setAttribute('aria-pressed', 'false');
+                     weaveThread();
+                }, 200); // Short visual delay for keyboard feedback
             }
         });
     }
@@ -793,50 +806,7 @@ document.addEventListener('DOMContentLoaded', async () => {
     }
 
     // --- Notification / Error System ---
-    function showNotification(message, type = 'info') {
-        let container = document.getElementById('notification-container');
-        if (!container) {
-            container = document.createElement('div');
-            container.id = 'notification-container';
-            container.style.cssText = 'position:fixed; top:20px; right:20px; z-index:9999; display:flex; flex-direction:column; gap:10px; pointer-events:none;';
-            document.body.appendChild(container);
-        }
-
-        const toast = document.createElement('div');
-        toast.className = `toast toast-${type}`;
-        toast.textContent = message;
-        // Basic styles injected here to ensure reliability without CSS file changes for now, though CSS file is preferred.
-        // We'll rely on a basic style but add inline for safety.
-        toast.style.cssText = `
-            background: ${type === 'error' ? '#8a2be2' : '#1a1a1a'}; /* Deep Purple for error (Cyberpunk aesthetic) or Dark */
-            color: #fff;
-            padding: 12px 20px;
-            border-left: 4px solid ${type === 'error' ? '#ff0055' : '#c67605'};
-            font-family: 'Inter', sans-serif;
-            font-size: 0.9rem;
-            box-shadow: 0 4px 12px rgba(0,0,0,0.5);
-            opacity: 0;
-            transform: translateX(20px);
-            transition: all 0.3s ease;
-            pointer-events: auto;
-            max-width: 300px;
-        `;
-
-        container.appendChild(toast);
-
-        // Animate in
-        requestAnimationFrame(() => {
-            toast.style.opacity = '1';
-            toast.style.transform = 'translateX(0)';
-        });
-
-        // Auto dismiss
-        setTimeout(() => {
-            toast.style.opacity = '0';
-            toast.style.transform = 'translateX(20px)';
-            setTimeout(() => toast.remove(), 300);
-        }, 5000);
-    }
+    // Delegated to UISystem instance 'uiSystem' declared in scope.
 
     // --- Initialization ---
     // Handle Browser Back Button
