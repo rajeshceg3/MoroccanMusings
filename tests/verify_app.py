@@ -6,7 +6,7 @@ import os
 import sys
 from playwright.sync_api import sync_playwright
 
-PORT = 8086 # Changed port to avoid conflict if previous didn't close properly
+PORT = 8087 # Changed port to avoid conflict
 
 def run_server():
     os.chdir(os.path.dirname(os.path.dirname(os.path.abspath(__file__))))

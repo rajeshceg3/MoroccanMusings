@@ -314,3 +314,40 @@ body.transition-locked {
     cursor: not-allowed;
     box-shadow: none;
 }
+
+/* Notification System */
+.notification-container {
+    position: fixed;
+    top: 20px;
+    right: 20px;
+    z-index: 9999;
+    display: flex;
+    flex-direction: column;
+    gap: 10px;
+    pointer-events: none;
+}
+
+.toast {
+    background: #1a1a1a;
+    color: #fff;
+    padding: 12px 20px;
+    border-left: 4px solid #c67605;
+    font-family: 'Inter', sans-serif;
+    font-size: 0.9rem;
+    box-shadow: 0 4px 12px rgba(0,0,0,0.5);
+    opacity: 0;
+    transform: translateX(20px);
+    transition: all 0.3s ease;
+    pointer-events: auto;
+    max-width: 300px;
+}
+
+.toast.visible {
+    opacity: 1;
+    transform: translateX(0);
+}
+
+.toast-error {
+    background: #8a2be2;
+    border-left-color: #ff0055;
+}

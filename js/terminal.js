@@ -18,24 +18,56 @@ export class TerminalSystem {
 
         this.overlay = document.createElement('div');
         this.overlay.className = 'neural-link-overlay';
-        this.overlay.innerHTML = `
-            <div class="terminal-window" role="region" aria-label="Neural Link Command Interface">
-                <div class="terminal-header">
-                    <span class="terminal-title">NEURAL LINK // V1.0.4</span>
-                    <span class="terminal-status">CONNECTED</span>
-                </div>
-                <div class="terminal-output" id="terminal-output" aria-live="polite"></div>
-                <div class="terminal-input-line">
-                    <span class="prompt">></span>
-                    <input type="text" id="terminal-input" class="terminal-input" autocomplete="off" spellcheck="false" aria-label="Command Input">
-                </div>
-            </div>
-        `;
 
+        // Secure DOM Construction
+        const windowDiv = document.createElement('div');
+        windowDiv.className = 'terminal-window';
+        windowDiv.setAttribute('role', 'region');
+        windowDiv.setAttribute('aria-label', 'Neural Link Command Interface');
+
+        const headerDiv = document.createElement('div');
+        headerDiv.className = 'terminal-header';
+
+        const titleSpan = document.createElement('span');
+        titleSpan.className = 'terminal-title';
+        titleSpan.textContent = 'NEURAL LINK // V1.0.4';
+
+        const statusSpan = document.createElement('span');
+        statusSpan.className = 'terminal-status';
+        statusSpan.textContent = 'CONNECTED';
+
+        headerDiv.appendChild(titleSpan);
+        headerDiv.appendChild(statusSpan);
+
+        this.output = document.createElement('div');
+        this.output.className = 'terminal-output';
+        this.output.id = 'terminal-output';
+        this.output.setAttribute('aria-live', 'polite');
+
+        const inputLineDiv = document.createElement('div');
+        inputLineDiv.className = 'terminal-input-line';
+
+        const promptSpan = document.createElement('span');
+        promptSpan.className = 'prompt';
+        promptSpan.textContent = '>';
+
+        this.input = document.createElement('input');
+        this.input.type = 'text';
+        this.input.id = 'terminal-input';
+        this.input.className = 'terminal-input';
+        this.input.autocomplete = 'off';
+        this.input.spellcheck = false;
+        this.input.setAttribute('aria-label', 'Command Input');
+
+        inputLineDiv.appendChild(promptSpan);
+        inputLineDiv.appendChild(this.input);
+
+        windowDiv.appendChild(headerDiv);
+        windowDiv.appendChild(this.output);
+        windowDiv.appendChild(inputLineDiv);
+
+        this.overlay.appendChild(windowDiv);
         container.appendChild(this.overlay);
-
-        this.output = this.overlay.querySelector('#terminal-output');
-        this.input = this.overlay.querySelector('#terminal-input');
 
         this.input.addEventListener('keydown', (e) => this.handleInput(e));
 
