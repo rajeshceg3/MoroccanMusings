@@ -5,6 +5,7 @@ import { SynthesisEngine } from './alchemy.js';
 import { HorizonEngine } from './horizon.js';
 import { CodexEngine } from './codex.js';
 import { TerminalSystem } from './terminal.js';
+import { MapRenderer } from './cartographer.js';
 
 document.addEventListener('DOMContentLoaded', async () => {
     // Service Worker Registration
@@ -22,7 +23,8 @@ document.addEventListener('DOMContentLoaded', async () => {
         activeScreen: 'splash', activeLocation: null,
         isWeaving: false,
         selectedThreads: [], // Array of indices
-        isHorizonActive: false
+        isHorizonActive: false,
+        isMapActive: false
     };
 
     const resonanceEngine = new ResonanceEngine();
@@ -33,6 +35,7 @@ document.addEventListener('DOMContentLoaded', async () => {
     const tapestryLedger = new TapestryLedger();
     await tapestryLedger.initialize();
     let mandalaRenderer = null;
+    let mapRenderer = null;
 
     const elements = {
         screens: {
@@ -86,6 +89,7 @@ document.addEventListener('DOMContentLoaded', async () => {
         },
         tapestry: {
             canvas: document.getElementById('tapestry-canvas'),
+            mapCanvas: document.getElementById('map-canvas'),
             backButton: document.getElementById('tapestry-back'),
             clearBtn: document.getElementById('clear-tapestry'),
             exportBtn: document.getElementById('export-scroll'),
@@ -99,6 +103,7 @@ document.addEventListener('DOMContentLoaded', async () => {
             slot2: document.getElementById('alchemy-slot-2'),
             fuseBtn: document.getElementById('alchemy-fuse-btn'),
             horizonToggle: document.getElementById('horizon-toggle'),
+            mapToggle: document.getElementById('map-toggle'),
             horizonDashboard: document.getElementById('horizon-dashboard'),
             horizonDominance: document.getElementById('horizon-dominance'),
             horizonBalanceBar: document.getElementById('horizon-balance-bar'),
@@ -146,6 +151,11 @@ document.addEventListener('DOMContentLoaded', async () => {
              } else {
                  mandalaRenderer.resize();
              }
+
+             if (!mapRenderer && elements.tapestry.mapCanvas) {
+                 mapRenderer = new MapRenderer(elements.tapestry.mapCanvas);
+             }
+
              mandalaRenderer.setSelection(state.selectedThreads);
 
              // Initial render
@@ -552,6 +562,7 @@ document.addEventListener('DOMContentLoaded', async () => {
             if(confirm('Are you sure you want to unravel your tapestry? This cannot be undone.')) {
                 tapestryLedger.clear();
                 mandalaRenderer.render([]);
+                if (mapRenderer) mapRenderer.render([], locations);
             }
         });
 
@@ -577,7 +588,7 @@ document.addEventListener('DOMContentLoaded', async () => {
                 const text = await file.text();
             await tapestryLedger.importScroll(text);
             showNotification('Scroll imported successfully.', 'success');
-            mandalaRenderer.render(tapestryLedger.getThreads());
+            renderTapestry();
             } catch (err) {
                 showNotification(`Import error: ${err.message}`, 'error');
             }
@@ -627,15 +638,12 @@ document.addEventListener('DOMContentLoaded', async () => {
                 // Use existing import logic
                 const tempLedger = new TapestryLedger('temp');
                 tempLedger.threads = data;
-                // We rely on importScroll's validation logic which expects a JSON string usually,
-                // but here we have the object. Let's adapt.
-                // Or better: serialize and use importScroll to reuse validation logic.
                 const jsonString = JSON.stringify(data);
                 await tapestryLedger.importScroll(jsonString);
 
                 showNotification('Shard decrypted and integrated.', 'success');
                 resonanceEngine.playInteractionSound('snap');
-                mandalaRenderer.render(tapestryLedger.getThreads());
+                renderTapestry();
             } catch (e) {
                 document.body.style.cursor = 'default';
                 console.error(e);
@@ -648,9 +656,15 @@ document.addEventListener('DOMContentLoaded', async () => {
         window.addEventListener('resize', () => {
             clearTimeout(resizeTimeout);
             resizeTimeout = setTimeout(() => {
-                if (state.activeScreen === 'tapestry' && mandalaRenderer) {
-                    mandalaRenderer.resize();
-                    mandalaRenderer.render(tapestryLedger.getThreads());
+                if (state.activeScreen === 'tapestry') {
+                    if (mandalaRenderer) {
+                        mandalaRenderer.resize();
+                        mandalaRenderer.render(tapestryLedger.getThreads());
+                    }
+                    if (mapRenderer) {
+                        mapRenderer.resize();
+                        mapRenderer.render(tapestryLedger.getThreads(), locations);
+                    }
                 }
             }, 100);
         });
@@ -673,7 +687,7 @@ document.addEventListener('DOMContentLoaded', async () => {
                      }
                  }
                  mandalaRenderer.setSelection(state.selectedThreads);
-                 mandalaRenderer.render(threads);
+                 renderTapestry();
                  resonanceEngine.playInteractionSound('click');
                  updateAlchemyUI();
              }
@@ -681,6 +695,9 @@ document.addEventListener('DOMContentLoaded', async () => {
 
         elements.tapestry.canvas.addEventListener('click', (e) => {
              if (!mandalaRenderer) return;
+             // Only handle click if map is NOT active (or canvas is hidden via CSS, which we need to ensure)
+             if (state.isMapActive) return;
+
              const index = mandalaRenderer.getThreadIndexAt(e.clientX, e.clientY);
              handleThreadInteraction(index);
         });
@@ -698,11 +715,6 @@ document.addEventListener('DOMContentLoaded', async () => {
              const t2 = threads[state.selectedThreads[1]];
 
              const phantom = await alchemy.fuse(t1, t2);
-
-             // Transition to Riad with phantom data
-             // We need to slightly hack showRiad to accept this non-standard object or ensure it conforms
-             // Phantom object matches structure: { title, subtitle, image, narrative, sensory, foundation }
-             // But we should visually distinguish it.
 
              resonanceEngine.playInteractionSound('weave'); // Magical sound
              showScreen('riad');
@@ -728,6 +740,26 @@ document.addEventListener('DOMContentLoaded', async () => {
             } else {
                 stopHorizonLoop();
                 renderTapestry(); // One last render to clear ghosts
+            }
+            resonanceEngine.playInteractionSound('click');
+        });
+
+        // Map Interaction (Overwatch)
+        elements.tapestry.mapToggle.addEventListener('click', () => {
+            state.isMapActive = !state.isMapActive;
+            elements.tapestry.mapToggle.classList.toggle('active', state.isMapActive);
+
+            // Toggle Canvas Visibility
+            if (state.isMapActive) {
+                elements.tapestry.canvas.style.display = 'none';
+                elements.tapestry.mapCanvas.style.display = 'block';
+                if (!mapRenderer) mapRenderer = new MapRenderer(elements.tapestry.mapCanvas);
+                mapRenderer.resize();
+                mapRenderer.render(tapestryLedger.getThreads(), locations);
+            } else {
+                elements.tapestry.canvas.style.display = 'block';
+                elements.tapestry.mapCanvas.style.display = 'none';
+                if (mandalaRenderer) mandalaRenderer.render(tapestryLedger.getThreads());
             }
             resonanceEngine.playInteractionSound('click');
         });
@@ -781,6 +813,11 @@ document.addEventListener('DOMContentLoaded', async () => {
     }
 
     function renderTapestry() {
+        if (state.isMapActive) {
+             if (mapRenderer) mapRenderer.render(tapestryLedger.getThreads(), locations);
+             return;
+        }
+
         if (!mandalaRenderer) return;
         const threads = tapestryLedger.getThreads();
         let projections = [];
@@ -1031,6 +1068,12 @@ document.addEventListener('DOMContentLoaded', async () => {
         terminal.toggle(); // Close terminal so user can see the file dialog/UI
     });
 
+    // Command for Map Overwatch
+    terminal.registerCommand('overwatch', 'Toggle geospatial tactical display', () => {
+         elements.tapestry.mapToggle.click();
+         terminal.log(`Overwatch Display: ${state.isMapActive ? 'ACTIVE' : 'STANDBY'}`, "success");
+    });
+
     initSplash();
     updateAstrolabeState();
     setupRiadInteractions();
@@ -1064,4 +1107,5 @@ document.addEventListener('DOMContentLoaded', async () => {
         get: () => mandalaRenderer
     });
     window.showNotification = showNotification;
+    window.showScreen = showScreen; // Expose for testing
 });

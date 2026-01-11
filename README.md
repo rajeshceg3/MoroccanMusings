@@ -1,8 +1,16 @@
 # MoroccanMusings (Marq)
 
 **Current Status:** Production Candidate
+**Strategic Feature Pack:** OVERWATCH (v2.0)
 
-Marq is an immersive, interactive narrative experience exploring Moroccan themes through generative art and procedural audio.
+Marq is an immersive, interactive narrative experience exploring Moroccan themes through generative art, procedural audio, and geospatial intelligence.
+
+## New Feature: Project OVERWATCH (Geospatial Intelligence)
+
+The application now includes a tactical "Map Overwatch" mode.
+- **Access:** In the Tapestry screen, click "Map Overwatch" or use the CLI command `overwatch`.
+- **Function:** Visualizes the user's threaded journey on a vector map of Morocco.
+- **Tactical Data:** Plots nodes based on intention/region coordinates, allowing for geographic pattern analysis.
 
 ## Deployment
 
@@ -35,6 +43,7 @@ Integration tests are provided using Playwright.
 2. Run the verification script:
    ```bash
    python3 tests/verify_app.py
+   python3 tests/verify_map.py
    ```
 
 ## Architecture
@@ -42,6 +51,7 @@ Integration tests are provided using Playwright.
 - **Core:** `js/app.js` (Orchestration)
 - **Data:** `js/data.js` (Narrative content)
 - **Visuals:** `js/tapestry.js` (Canvas rendering & Crypto Ledger)
+- **Cartography:** `js/cartographer.js` (Map Rendering)
 - **Audio:** `js/audio-engine.js` (Web Audio API)
 - **Synthesis:** `js/alchemy.js` (Procedural generation)
 
