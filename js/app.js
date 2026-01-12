@@ -7,6 +7,7 @@ import { CodexEngine } from './codex.js';
 import { TerminalSystem } from './terminal.js';
 import { MapRenderer } from './cartographer.js';
 import { UISystem } from './ui-system.js';
+import { OracleEngine } from './oracle.js';
 
 document.addEventListener('DOMContentLoaded', async () => {
     // Service Worker Registration
@@ -42,6 +43,7 @@ document.addEventListener('DOMContentLoaded', async () => {
 
     let mandalaRenderer = null;
     let mapRenderer = null;
+    let oracleEngine = null;
 
     const elements = {
         screens: {
@@ -152,6 +154,10 @@ document.addEventListener('DOMContentLoaded', async () => {
 
              if (!mapRenderer && elements.tapestry.mapCanvas) {
                  mapRenderer = new MapRenderer(elements.tapestry.mapCanvas);
+                 // Initialize Oracle once map renderer is available
+                 if (!oracleEngine) {
+                     oracleEngine = new OracleEngine(horizonEngine, mapRenderer, locations);
+                 }
              }
 
              mandalaRenderer.setSelection(state.selectedThreads);
@@ -824,7 +830,11 @@ document.addEventListener('DOMContentLoaded', async () => {
 
     function renderTapestry() {
         if (state.isMapActive) {
-             if (mapRenderer) mapRenderer.render(tapestryLedger.getThreads(), locations);
+             if (oracleEngine && oracleEngine.activeMode) {
+                 oracleEngine.render(tapestryLedger.getThreads());
+             } else if (mapRenderer) {
+                 mapRenderer.render(tapestryLedger.getThreads(), locations);
+             }
              return;
         }
 
@@ -1098,6 +1108,42 @@ document.addEventListener('DOMContentLoaded', async () => {
          terminal.log(`Overwatch Display: ${state.isMapActive ? 'ACTIVE' : 'STANDBY'}`, "success");
     });
 
+    // Oracle Command Suite
+    terminal.registerCommand('oracle', 'Strategic Operations Interface', (args) => {
+        if (tapestryLedger.status === 'LOCKED') { terminal.log("ACCESS DENIED.", "error"); return; }
+
+        const subcmd = args[0] || 'status';
+
+        if (subcmd === 'status') {
+             const ghosts = oracleEngine ? oracleEngine.generateStrategicMap(tapestryLedger.getThreads()) : [];
+             terminal.log("--- ORACLE STRATEGIC FORECAST ---", "system");
+             if (ghosts.length === 0) {
+                 terminal.log("No data available for projection.", "warning");
+             } else {
+                 ghosts.forEach(g => {
+                     terminal.log(`[${g.type.toUpperCase()}] Target: ${g.locationTitle}`, "info");
+                     terminal.log(`   > Vector: ${g.intention} @ ${g.time}`, "info");
+                     terminal.log(`   > Region: ${g.region}`, "info");
+                 });
+             }
+        } else if (subcmd === 'visual') {
+             // Force map active
+             if (!state.isMapActive) elements.tapestry.mapToggle.click();
+
+             // Toggle Oracle Mode
+             if (oracleEngine) {
+                 const isActive = oracleEngine.toggle();
+                 terminal.log(`Oracle Visual Layer: ${isActive ? 'ENGAGED' : 'DISENGAGED'}`, isActive ? "success" : "warning");
+                 renderTapestry();
+             } else {
+                 terminal.log("Oracle Engine not initialized (Visit Tapestry first).", "error");
+             }
+             terminal.toggle();
+        } else {
+             terminal.log("Usage: oracle [status|visual]", "warning");
+        }
+    });
+
     initSplash();
     updateAstrolabeState();
     setupRiadInteractions();
@@ -1135,4 +1181,7 @@ document.addEventListener('DOMContentLoaded', async () => {
     // Backward compatibility for tests/debugging if needed, though we prefer ui.showNotification
     window.showNotification = (msg, type) => ui.showNotification(msg, type);
     window.showScreen = showScreen; // Expose for testing
+    Object.defineProperty(window, 'oracle', {
+        get: () => oracleEngine
+    });
 });

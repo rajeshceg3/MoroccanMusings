@@ -38,9 +38,10 @@ export class MapRenderer {
         this.height = rect.height;
     }
 
-    render(threads, locations) {
+    render(threads, locations, ghosts = []) {
         this.threads = threads;
         this.locations = locations;
+        this.ghosts = ghosts;
 
         this.ctx.clearRect(0, 0, this.width, this.height);
 
@@ -81,9 +82,9 @@ export class MapRenderer {
             this.ctx.beginPath(); this.ctx.moveTo(0, y); this.ctx.lineTo(mapWidth, y); this.ctx.stroke();
         }
 
-        // Plot Threads
-        if (threads.length > 0) {
-            // Draw Connections
+        // Plot Threads and Ghosts
+        if (threads.length > 0 || ghosts.length > 0) {
+            // Draw Connections for Real Threads
             this.ctx.strokeStyle = '#c67605'; // Gold
             this.ctx.lineWidth = 2;
             this.ctx.setLineDash([5, 5]);
@@ -108,7 +109,7 @@ export class MapRenderer {
             this.ctx.stroke();
             this.ctx.setLineDash([]);
 
-            // Draw Nodes
+            // Draw Nodes for Real Threads
             threads.forEach((t, i) => {
                 const coords = this._getThreadCoords(t);
                 if (coords) {
@@ -141,6 +142,42 @@ export class MapRenderer {
                     }
                 }
             });
+
+            // Draw Ghosts
+            this.ghosts.forEach(g => {
+                if (g.coordinates) {
+                    const x = (g.coordinates.x / 100) * mapWidth;
+                    const y = (g.coordinates.y / 100) * mapHeight;
+
+                    // Ghost Connection (if last thread exists)
+                    if (threads.length > 0) {
+                        const lastCoords = this._getThreadCoords(threads[threads.length - 1]);
+                        if (lastCoords) {
+                            const lx = (lastCoords.x / 100) * mapWidth;
+                            const ly = (lastCoords.y / 100) * mapHeight;
+                            this.ctx.strokeStyle = g.type === 'momentum' ? '#55aaff' : '#ffaa55';
+                            this.ctx.setLineDash([2, 4]);
+                            this.ctx.lineWidth = 1;
+                            this.ctx.beginPath();
+                            this.ctx.moveTo(lx, ly);
+                            this.ctx.lineTo(x, y);
+                            this.ctx.stroke();
+                        }
+                    }
+
+                    // Ghost Node
+                    const ghostPulse = 6 + Math.sin(Date.now() / 150) * 2;
+                    this.ctx.fillStyle = g.type === 'momentum' ? 'rgba(85, 170, 255, 0.6)' : 'rgba(255, 170, 85, 0.6)';
+                    this.ctx.beginPath();
+                    this.ctx.arc(x, y, ghostPulse, 0, Math.PI * 2);
+                    this.ctx.fill();
+
+                    this.ctx.fillStyle = '#ffffff';
+                    this.ctx.font = '10px Courier New';
+                    this.ctx.fillText(`? ${g.intention}`, x + 10, y);
+                }
+            });
+
         } else {
              this.ctx.fillStyle = "#445544";
              this.ctx.font = "italic 16px monospace";
@@ -150,8 +187,9 @@ export class MapRenderer {
 
         this.ctx.restore();
 
-        if (this.activeNodeIndex !== -1) {
-            requestAnimationFrame(() => this.render(this.threads, this.locations));
+        // If animated elements exist (active node or ghosts), continue loop
+        if (this.activeNodeIndex !== -1 || (this.ghosts && this.ghosts.length > 0)) {
+            requestAnimationFrame(() => this.render(this.threads, this.locations, this.ghosts));
         }
     }
 

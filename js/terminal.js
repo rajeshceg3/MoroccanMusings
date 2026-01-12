@@ -76,6 +76,7 @@ export class TerminalSystem {
                     await command.callback(args);
                 } catch (err) {
                     this.log(`Error: ${err.message}`, 'error');
+                    console.error(err);
                 }
             } else {
                 this.log(`Unknown command: ${cmd}`, 'error');
