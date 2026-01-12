@@ -6,6 +6,7 @@ import { HorizonEngine } from './horizon.js';
 import { CodexEngine } from './codex.js';
 import { TerminalSystem } from './terminal.js';
 import { MapRenderer } from './cartographer.js';
+import { UISystem } from './ui-system.js';
 
 document.addEventListener('DOMContentLoaded', async () => {
     // Service Worker Registration
@@ -17,6 +18,10 @@ document.addEventListener('DOMContentLoaded', async () => {
             console.log('Service Worker registration failed', e);
         }
     }
+
+    // Initialize UI System first
+    const ui = new UISystem();
+    ui.setupGlobalErrorHandling();
 
     const state = {
         intention: null, region: null, time: null,
@@ -115,21 +120,13 @@ document.addEventListener('DOMContentLoaded', async () => {
 
     const alchemy = new SynthesisEngine();
 
-    function lockTransition(duration) {
-        // Reduced lock time for better responsiveness
-        document.body.classList.add('transition-locked');
-        setTimeout(() => {
-            document.body.classList.remove('transition-locked');
-        }, duration);
-    }
-
     function showScreen(screenName, addToHistory = true) {
         if (addToHistory && state.activeScreen !== screenName) {
             history.pushState({ screen: screenName }, '', `#${screenName}`);
         }
 
         state.activeScreen = screenName;
-        lockTransition(50); // Micro-lock to prevent event ghosting, essentially instant
+        ui.lockTransition(50); // Micro-lock to prevent event ghosting, essentially instant
         for (const key in elements.screens) {
             elements.screens[key].classList.remove('active');
         }
@@ -209,7 +206,7 @@ document.addEventListener('DOMContentLoaded', async () => {
         if (initStatus === 'LOCKED') {
              elements.splash.calligraphy.textContent = "SECURE ENCLAVE";
              elements.splash.calligraphy.style.color = '#ff0055'; // Tactical Red
-             showNotification("SYSTEM LOCKED. ACCESS VIA TERMINAL (` or Ctrl+Space).", "error");
+             ui.showNotification("SYSTEM LOCKED. ACCESS VIA TERMINAL (` or Ctrl+Space).", "error");
         }
 
         setTimeout(() => {
@@ -219,7 +216,7 @@ document.addEventListener('DOMContentLoaded', async () => {
 
         const dismissSplash = () => {
             if (tapestryLedger.status === 'LOCKED') {
-                showNotification("AUTHENTICATION REQUIRED. ACCESS DENIED.", "error");
+                ui.showNotification("AUTHENTICATION REQUIRED. ACCESS DENIED.", "error");
                 terminal.toggle(); // Force open terminal
                 return;
             }
@@ -600,10 +597,10 @@ document.addEventListener('DOMContentLoaded', async () => {
             try {
                 const text = await file.text();
             await tapestryLedger.importScroll(text);
-            showNotification('Scroll imported successfully.', 'success');
+            ui.showNotification('Scroll imported successfully.', 'success');
             renderTapestry();
             } catch (err) {
-                showNotification(`Import error: ${err.message}`, 'error');
+                ui.showNotification(`Import error: ${err.message}`, 'error');
             }
             e.target.value = ''; // Reset
         });
@@ -614,7 +611,7 @@ document.addEventListener('DOMContentLoaded', async () => {
                 const threads = tapestryLedger.getThreads();
                 if (threads.length === 0) throw new Error("Tapestry is empty. Nothing to forge.");
 
-                showNotification('Forging Codex Shard...', 'info');
+                ui.showNotification('Forging Codex Shard...', 'info');
                 document.body.style.cursor = 'wait'; // UX: Indicate processing
                 const blob = await codex.forgeShard(threads);
                 document.body.style.cursor = 'default';
@@ -626,11 +623,11 @@ document.addEventListener('DOMContentLoaded', async () => {
                 a.click();
                 URL.revokeObjectURL(url);
 
-                showNotification('Shard forged successfully.', 'success');
+                ui.showNotification('Shard forged successfully.', 'success');
                 resonanceEngine.playInteractionSound('weave');
             } catch (e) {
                 document.body.style.cursor = 'default';
-                showNotification(`Forge failed: ${e.message}`, 'error');
+                ui.showNotification(`Forge failed: ${e.message}`, 'error');
             }
         });
 
@@ -643,7 +640,7 @@ document.addEventListener('DOMContentLoaded', async () => {
             if (!file) return;
 
             try {
-                showNotification('Scanning Shard...', 'info');
+                ui.showNotification('Scanning Shard...', 'info');
                 document.body.style.cursor = 'wait'; // UX: Indicate processing
                 const data = await codex.scanShard(file);
                 document.body.style.cursor = 'default';
@@ -654,13 +651,13 @@ document.addEventListener('DOMContentLoaded', async () => {
                 const jsonString = JSON.stringify(data);
                 await tapestryLedger.importScroll(jsonString);
 
-                showNotification('Shard decrypted and integrated.', 'success');
+                ui.showNotification('Shard decrypted and integrated.', 'success');
                 resonanceEngine.playInteractionSound('snap');
                 renderTapestry();
             } catch (e) {
                 document.body.style.cursor = 'default';
                 console.error(e);
-                showNotification(`Scan failed: ${e.message}`, 'error');
+                ui.showNotification(`Scan failed: ${e.message}`, 'error');
             }
             e.target.value = '';
         });
@@ -842,52 +839,6 @@ document.addEventListener('DOMContentLoaded', async () => {
         mandalaRenderer.render(threads, projections);
     }
 
-    // --- Notification / Error System ---
-    function showNotification(message, type = 'info') {
-        let container = document.getElementById('notification-container');
-        if (!container) {
-            container = document.createElement('div');
-            container.id = 'notification-container';
-            container.style.cssText = 'position:fixed; top:20px; right:20px; z-index:9999; display:flex; flex-direction:column; gap:10px; pointer-events:none;';
-            document.body.appendChild(container);
-        }
-
-        const toast = document.createElement('div');
-        toast.className = `toast toast-${type}`;
-        toast.textContent = message;
-        // Basic styles injected here to ensure reliability without CSS file changes for now, though CSS file is preferred.
-        // We'll rely on a basic style but add inline for safety.
-        toast.style.cssText = `
-            background: ${type === 'error' ? '#8a2be2' : '#1a1a1a'}; /* Deep Purple for error (Cyberpunk aesthetic) or Dark */
-            color: #fff;
-            padding: 12px 20px;
-            border-left: 4px solid ${type === 'error' ? '#ff0055' : '#c67605'};
-            font-family: 'Inter', sans-serif;
-            font-size: 0.9rem;
-            box-shadow: 0 4px 12px rgba(0,0,0,0.5);
-            opacity: 0;
-            transform: translateX(20px);
-            transition: all 0.3s ease;
-            pointer-events: auto;
-            max-width: 300px;
-        `;
-
-        container.appendChild(toast);
-
-        // Animate in
-        requestAnimationFrame(() => {
-            toast.style.opacity = '1';
-            toast.style.transform = 'translateX(0)';
-        });
-
-        // Auto dismiss
-        setTimeout(() => {
-            toast.style.opacity = '0';
-            toast.style.transform = 'translateX(20px)';
-            setTimeout(() => toast.remove(), 300);
-        }, 5000);
-    }
-
     // --- Initialization ---
     // Handle Browser Back Button
     window.addEventListener('popstate', (event) => {
@@ -901,13 +852,6 @@ document.addEventListener('DOMContentLoaded', async () => {
             showScreen('astrolabe', false);
         }
     });
-
-    // Global Error Boundary
-    window.onerror = function(msg, url, lineNo, columnNo, error) {
-        console.error('Global error:', msg, error);
-        showNotification(`System Error: ${msg}`, 'error');
-        return false;
-    };
 
     // --- Neural Link Integration ---
     terminal.mount('terminal-container');
@@ -1160,7 +1104,7 @@ document.addEventListener('DOMContentLoaded', async () => {
     setupTapestryInteractions();
 
     elements.astrolabe.center.addEventListener('click', () => {
-        if (tapestryLedger.status === 'LOCKED') { showNotification("ACCESS DENIED", "error"); return; }
+        if (tapestryLedger.status === 'LOCKED') { ui.showNotification("ACCESS DENIED", "error"); return; }
         const path = `${state.intention}.${state.region}.${state.time}`;
         const targetLocation = locations[path];
         if (targetLocation) {
@@ -1187,6 +1131,8 @@ document.addEventListener('DOMContentLoaded', async () => {
     Object.defineProperty(window, 'mandalaRenderer', {
         get: () => mandalaRenderer
     });
-    window.showNotification = showNotification;
+    window.ui = ui; // Expose UI system
+    // Backward compatibility for tests/debugging if needed, though we prefer ui.showNotification
+    window.showNotification = (msg, type) => ui.showNotification(msg, type);
     window.showScreen = showScreen; // Expose for testing
 });
