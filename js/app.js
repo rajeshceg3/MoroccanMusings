@@ -33,7 +33,8 @@ document.addEventListener('DOMContentLoaded', async () => {
     const terminal = new TerminalSystem();
 
     const tapestryLedger = new TapestryLedger();
-    await tapestryLedger.initialize();
+    const initStatus = await tapestryLedger.initialize();
+
     let mandalaRenderer = null;
     let mapRenderer = null;
 
@@ -205,12 +206,24 @@ document.addEventListener('DOMContentLoaded', async () => {
              elements.splash.surface.style.opacity = '1';
         });
 
+        if (initStatus === 'LOCKED') {
+             elements.splash.calligraphy.textContent = "SECURE ENCLAVE";
+             elements.splash.calligraphy.style.color = '#ff0055'; // Tactical Red
+             showNotification("SYSTEM LOCKED. ACCESS VIA TERMINAL (` or Ctrl+Space).", "error");
+        }
+
         setTimeout(() => {
             elements.splash.calligraphy.style.opacity = '1';
             elements.splash.calligraphy.style.transform = 'scale(1)';
         }, 800);
 
         const dismissSplash = () => {
+            if (tapestryLedger.status === 'LOCKED') {
+                showNotification("AUTHENTICATION REQUIRED. ACCESS DENIED.", "error");
+                terminal.toggle(); // Force open terminal
+                return;
+            }
+
             resonanceEngine.init(); // Initialize audio context on first gesture
             resonanceEngine.resume();
             elements.splash.calligraphy.style.opacity = '0';
@@ -923,11 +936,71 @@ document.addEventListener('DOMContentLoaded', async () => {
         terminal.log("SYSTEM STATUS: NOMINAL", "success");
         terminal.log(`Active Screen: ${state.activeScreen}`, "info");
         terminal.log(`Ledger Integrity: ${tapestryLedger.isIntegrityVerified ? 'VERIFIED' : 'UNKNOWN'}`, tapestryLedger.isIntegrityVerified ? "success" : "warning");
+        terminal.log(`Encryption Status: ${tapestryLedger.status === 'LOCKED' ? 'LOCKED' : (tapestryLedger.crypto.hasSession() ? 'UNLOCKED (SECURE)' : 'PLAINTEXT')}`, "info");
         const threadCount = tapestryLedger.getThreads().length;
         terminal.log(`Thread Count: ${threadCount}`, "info");
     });
 
+    terminal.registerCommand('auth', 'Unlock the Secure Enclave', async (args) => {
+         if (tapestryLedger.status !== 'LOCKED') {
+             terminal.log("System is already unlocked or not encrypted.", "info");
+             return;
+         }
+         if (args.length < 1) {
+             terminal.log("Usage: auth <password>", "warning");
+             return;
+         }
+         const password = args.join(' '); // Allow spaces in password
+         const success = await tapestryLedger.unlock(password);
+         if (success) {
+             terminal.log("ACCESS GRANTED. DECRYPTION SUCCESSFUL.", "success");
+             // Refresh splash if we were stuck there
+             if (elements.splash.calligraphy.textContent === "SECURE ENCLAVE") {
+                 elements.splash.calligraphy.textContent = "أهلاً";
+                 elements.splash.calligraphy.style.color = '#c67605';
+             }
+         } else {
+             terminal.log("ACCESS DENIED. INVALID CREDENTIALS.", "error");
+         }
+    });
+
+    terminal.registerCommand('sys-encrypt', 'Encrypt the Ledger (Set Password)', async (args) => {
+        if (tapestryLedger.crypto.hasSession()) {
+            terminal.log("Encryption already active.", "warning");
+            return;
+        }
+        if (args.length < 1) {
+            terminal.log("Usage: sys-encrypt <password>", "warning");
+            return;
+        }
+        const password = args.join(' ');
+        await tapestryLedger.enableEncryption(password);
+        terminal.log("ENCRYPTION ENABLED. Secure Enclave Active.", "success");
+    });
+
+    terminal.registerCommand('sys-decrypt', 'Remove Encryption (Warning: Data will be plaintext)', async () => {
+        if (!tapestryLedger.crypto.hasSession()) {
+             terminal.log("System is not encrypted.", "info");
+             return;
+        }
+        await tapestryLedger.disableEncryption();
+        terminal.log("ENCRYPTION DISABLED. Data is now plaintext.", "warning");
+    });
+
+    terminal.registerCommand('sys-lock', 'Immediately lock the system', async () => {
+        if (!tapestryLedger.crypto.hasSession()) {
+            terminal.log("System is not configured for encryption.", "error");
+            return;
+        }
+        await tapestryLedger.lock();
+        terminal.log("SYSTEM LOCKED. REFRESH REQUIRED TO RE-AUTH OR USE 'auth'", "success");
+        // Force reload or show lock screen
+        location.reload();
+    });
+
     terminal.registerCommand('jump', 'Navigate to a location (e.g., jump serenity dawn)', (args) => {
+        if (tapestryLedger.status === 'LOCKED') { terminal.log("ACCESS DENIED.", "error"); return; }
+
         if (args.length < 2) {
             terminal.log("Usage: jump <intention> <time>", "warning");
             return;
@@ -963,6 +1036,7 @@ document.addEventListener('DOMContentLoaded', async () => {
     });
 
     terminal.registerCommand('weave', 'Weave current location into tapestry', async () => {
+        if (tapestryLedger.status === 'LOCKED') { terminal.log("ACCESS DENIED.", "error"); return; }
         if (state.activeScreen !== 'riad') {
             terminal.log("Error: Must be at a Riad location to weave.", "error");
             return;
@@ -973,6 +1047,7 @@ document.addEventListener('DOMContentLoaded', async () => {
     });
 
     terminal.registerCommand('analyze', 'Run strategic horizon analysis', () => {
+         if (tapestryLedger.status === 'LOCKED') { terminal.log("ACCESS DENIED.", "error"); return; }
          const threads = tapestryLedger.getThreads();
          const analysis = horizonEngine.analyze(threads);
 
@@ -991,6 +1066,7 @@ document.addEventListener('DOMContentLoaded', async () => {
     });
 
     terminal.registerCommand('history', 'List woven threads', () => {
+        if (tapestryLedger.status === 'LOCKED') { terminal.log("ACCESS DENIED.", "error"); return; }
         const threads = tapestryLedger.getThreads();
         if (threads.length === 0) {
             terminal.log("The Tapestry is empty.", "info");
@@ -1003,6 +1079,7 @@ document.addEventListener('DOMContentLoaded', async () => {
     });
 
     terminal.registerCommand('synthesize', 'Fuse two threads (e.g., synthesize 0 1)', async (args) => {
+        if (tapestryLedger.status === 'LOCKED') { terminal.log("ACCESS DENIED.", "error"); return; }
         if (args.length < 2) {
             terminal.log("Usage: synthesize <index1> <index2>", "warning");
             return;
@@ -1037,6 +1114,7 @@ document.addEventListener('DOMContentLoaded', async () => {
     });
 
     terminal.registerCommand('forge', 'Create a steganographic shard from current tapestry', async () => {
+        if (tapestryLedger.status === 'LOCKED') { terminal.log("ACCESS DENIED.", "error"); return; }
         const threads = tapestryLedger.getThreads();
         if (threads.length === 0) {
             terminal.log("Tapestry is empty. Cannot forge shard.", "warning");
@@ -1062,6 +1140,7 @@ document.addEventListener('DOMContentLoaded', async () => {
     });
 
     terminal.registerCommand('scan', 'Initiate Shard scan sequence', () => {
+        if (tapestryLedger.status === 'LOCKED') { terminal.log("ACCESS DENIED.", "error"); return; }
         terminal.log("Engaging optical scanners...", "info");
         // Trigger the file input programmatically
         elements.tapestry.shardInput.click();
@@ -1070,6 +1149,7 @@ document.addEventListener('DOMContentLoaded', async () => {
 
     // Command for Map Overwatch
     terminal.registerCommand('overwatch', 'Toggle geospatial tactical display', () => {
+         if (tapestryLedger.status === 'LOCKED') { terminal.log("ACCESS DENIED.", "error"); return; }
          elements.tapestry.mapToggle.click();
          terminal.log(`Overwatch Display: ${state.isMapActive ? 'ACTIVE' : 'STANDBY'}`, "success");
     });
@@ -1080,6 +1160,7 @@ document.addEventListener('DOMContentLoaded', async () => {
     setupTapestryInteractions();
 
     elements.astrolabe.center.addEventListener('click', () => {
+        if (tapestryLedger.status === 'LOCKED') { showNotification("ACCESS DENIED", "error"); return; }
         const path = `${state.intention}.${state.region}.${state.time}`;
         const targetLocation = locations[path];
         if (targetLocation) {

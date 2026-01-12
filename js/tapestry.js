@@ -1,3 +1,4 @@
+import { CryptoGuard } from './crypto-guard.js';
 
 async function sha256(message) {
     const msgBuffer = new TextEncoder().encode(message);
@@ -9,40 +10,115 @@ async function sha256(message) {
 export class TapestryLedger {
     constructor(storageKey = 'marq_tapestry_threads') {
         this.storageKey = storageKey;
-        this.threads = this._loadLocal();
+        this.crypto = new CryptoGuard();
         this.isIntegrityVerified = false;
-        // Migration and verification must be called explicitly via initialize()
+        this.status = 'UNINITIALIZED'; // UNINITIALIZED, LOCKED, READY
+        this.threads = []; // Will be populated in initialize
     }
 
-    _loadLocal() {
-        try {
-            const data = localStorage.getItem(this.storageKey);
-            if (!data) return [];
-            const parsed = JSON.parse(data);
-            if (!Array.isArray(parsed)) throw new Error("Invalid storage format");
-            return parsed;
-        } catch (e) {
-            console.error("Failed to load tapestry threads", e);
-            return [];
-        }
+    _loadRaw() {
+        return localStorage.getItem(this.storageKey);
     }
 
-    _save() {
+    async _save() {
+        if (this.status === 'LOCKED') return; // Cannot save if locked
         try {
-            localStorage.setItem(this.storageKey, JSON.stringify(this.threads));
+            let dataToSave = this.threads;
+
+            // If we have a session password, encrypt before saving
+            if (this.crypto.hasSession()) {
+                const password = this.crypto.getSessionPassword();
+                dataToSave = await this.crypto.encrypt(this.threads, password);
+            }
+
+            localStorage.setItem(this.storageKey, JSON.stringify(dataToSave));
         } catch (e) { console.error("Failed to save tapestry threads", e); }
     }
 
     async initialize() {
-        // Check for legacy data (threads without hash)
-        const needsMigration = this.threads.some(t => !t.hash);
+        const raw = this._loadRaw();
 
-        if (needsMigration) {
-            console.log("Migrating legacy tapestry data to ledger format...");
-            await this._migrateData();
+        if (!raw) {
+            this.threads = [];
+            this.status = 'READY';
+            this.isIntegrityVerified = true;
+            return this.status;
         }
 
-        await this.verifyIntegrity();
+        let parsed;
+        try {
+            parsed = JSON.parse(raw);
+        } catch(e) {
+            console.error("Corrupt storage.");
+            this.threads = [];
+            return 'READY';
+        }
+
+        // Check if encrypted
+        if (parsed && parsed.tag === 'AEGIS_SECURE') {
+            this.status = 'LOCKED';
+            console.log("System Locked. Secure Enclave Active.");
+            return 'LOCKED';
+        }
+
+        // It is plaintext
+        if (Array.isArray(parsed)) {
+            this.threads = parsed;
+            // Check for legacy data
+            const needsMigration = this.threads.some(t => !t.hash);
+            if (needsMigration) {
+                console.log("Migrating legacy tapestry data to ledger format...");
+                await this._migrateData();
+            }
+            await this.verifyIntegrity();
+            this.status = 'READY';
+            return 'READY';
+        }
+
+        console.error("Unknown storage format. Resetting.");
+        this.threads = [];
+        this.status = 'READY';
+        return 'READY';
+    }
+
+    async unlock(password) {
+        if (this.status !== 'LOCKED') return true;
+
+        const raw = this._loadRaw();
+        const encrypted = JSON.parse(raw);
+
+        try {
+            const decrypted = await this.crypto.decrypt(encrypted, password);
+            this.threads = decrypted;
+            this.crypto.setSessionPassword(password);
+            this.status = 'READY';
+            await this.verifyIntegrity();
+            return true;
+        } catch (e) {
+            console.error("Unlock failed:", e);
+            return false;
+        }
+    }
+
+    async lock() {
+        if (!this.crypto.hasSession()) return false; // Can't lock if no password known
+        this.status = 'LOCKED';
+        this.threads = []; // Clear memory
+        this.crypto.clearSession(); // Clear key from memory
+        // Data is already encrypted on disk from last save
+        return true;
+    }
+
+    async enableEncryption(password) {
+        this.crypto.setSessionPassword(password);
+        await this._save(); // Will encrypt now
+    }
+
+    async disableEncryption() {
+        if (!this.crypto.hasSession()) return false;
+        this.crypto.clearSession();
+        await this._save(); // Will save as plaintext
+        return true;
     }
 
     async _migrateData() {
@@ -75,7 +151,7 @@ export class TapestryLedger {
         }
 
         this.threads = migratedThreads;
-        this._save();
+        await this._save();
         console.log("Migration complete.");
     }
 
@@ -113,6 +189,8 @@ export class TapestryLedger {
     }
 
     async addThread(data) {
+        if (this.status === 'LOCKED') throw new Error("Ledger is Locked");
+
         const previousHash = this.threads.length > 0 ? this.threads[this.threads.length - 1].hash : 'GENESIS_HASH';
         const timestamp = Date.now();
 
@@ -134,13 +212,18 @@ export class TapestryLedger {
         };
 
         this.threads.push(thread);
-        this._save();
+        await this._save();
         return thread;
     }
 
-    getThreads() { return [...this.threads]; }
+    getThreads() {
+        if (this.status === 'LOCKED') return [];
+        return [...this.threads];
+    }
 
     async importScroll(jsonString) {
+        if (this.status === 'LOCKED') throw new Error("Unlock ledger to import");
+
         try {
             // MAX SIZE CHECK (e.g., 5MB)
             if (jsonString.length > 5 * 1024 * 1024) throw new Error("File too large");
@@ -164,11 +247,10 @@ export class TapestryLedger {
             if (!valid) throw new Error("Integrity check failed for imported scroll");
 
             this.threads = imported;
-            this._save();
+            await this._save();
             return true;
         } catch (e) {
             console.error("Import failed", e);
-            // Propagate error message to UI if needed, or return false
             throw e;
         }
     }
@@ -193,8 +275,6 @@ export class TapestryLedger {
         const validTimes = ['dawn', 'midday', 'dusk', 'night', 'unknown'];
 
         if (!validIntentions.includes(thread.intention)) return false;
-        // We allow loose time check as it might be 'unknown' or legacy, but better to restrict if possible.
-        // Assuming current data.js uses strict times.
         if (!validTimes.includes(thread.time)) return false;
 
         // Hash format check (Hex)
@@ -204,10 +284,15 @@ export class TapestryLedger {
     }
 
     exportScroll() {
+        if (this.status === 'LOCKED') throw new Error("Ledger Locked");
         return JSON.stringify(this.threads, null, 2);
     }
 
-    clear() { this.threads = []; this._save(); }
+    clear() {
+        if (this.status === 'LOCKED') return;
+        this.threads = [];
+        this._save();
+    }
 }
 
 export class MandalaRenderer {
