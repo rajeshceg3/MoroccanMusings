@@ -8,6 +8,7 @@ import { TerminalSystem } from './terminal.js';
 import { MapRenderer } from './cartographer.js';
 import { UISystem } from './ui-system.js';
 import { OracleEngine } from './oracle.js';
+import { SpectraEngine } from './spectra.js';
 
 document.addEventListener('DOMContentLoaded', async () => {
     // Service Worker Registration
@@ -36,6 +37,7 @@ document.addEventListener('DOMContentLoaded', async () => {
     const resonanceEngine = new ResonanceEngine();
     const horizonEngine = new HorizonEngine();
     const codex = new CodexEngine();
+    const spectra = new SpectraEngine();
     const terminal = new TerminalSystem();
 
     const tapestryLedger = new TapestryLedger();
@@ -106,6 +108,7 @@ document.addEventListener('DOMContentLoaded', async () => {
             forgeShardBtn: document.getElementById('forge-shard'),
             scanShardBtn: document.getElementById('scan-shard'),
             shardInput: document.getElementById('shard-input'),
+            sonicShardInput: document.getElementById('sonic-shard-input'),
             alchemyUI: document.getElementById('alchemy-ui'),
             slot1: document.getElementById('alchemy-slot-1'),
             slot2: document.getElementById('alchemy-slot-2'),
@@ -1142,6 +1145,67 @@ document.addEventListener('DOMContentLoaded', async () => {
         } else {
              terminal.log("Usage: oracle [status|visual]", "warning");
         }
+    });
+
+    // Spectra Command Suite (Signal Intelligence)
+    terminal.registerCommand('signal', 'Audio Steganography Operations', async (args) => {
+        if (tapestryLedger.status === 'LOCKED') { terminal.log("ACCESS DENIED.", "error"); return; }
+        const subcmd = args[0];
+
+        if (subcmd === 'encode') {
+            const threads = tapestryLedger.getThreads();
+            if (threads.length === 0) {
+                terminal.log("Tapestry is empty. No signal to broadcast.", "warning");
+                return;
+            }
+            terminal.log("Modulating FSK carrier wave...", "info");
+            try {
+                const blob = await spectra.forgeSignal(threads);
+                const url = URL.createObjectURL(blob);
+                const a = document.createElement('a');
+                a.href = url;
+                a.download = `spectra_signal_${Date.now()}.wav`;
+                a.click();
+                URL.revokeObjectURL(url);
+                terminal.log("Signal broadcast generated. (WAV download)", "success");
+            } catch (e) {
+                terminal.log(`Signal Generation Failed: ${e.message}`, "error");
+            }
+
+        } else if (subcmd === 'decode') {
+            terminal.log("Listening for incoming signals...", "info");
+            elements.tapestry.sonicShardInput.click();
+            terminal.toggle();
+
+        } else if (subcmd === 'analyze') {
+             // In a full implementation, this would open a spectral visualizer
+             terminal.log("Spectral Analysis: FSK Carrier Protocol v1.0", "info");
+             terminal.log("Freq: 16kHz/18kHz | Baud: 200", "info");
+        } else {
+            terminal.log("Usage: signal [encode|decode|analyze]", "warning");
+        }
+    });
+
+    elements.tapestry.sonicShardInput.addEventListener('change', async (e) => {
+        const file = e.target.files[0];
+        if (!file) return;
+
+        try {
+            ui.showNotification('Decoding Signal...', 'info');
+            const arrayBuffer = await file.arrayBuffer();
+            const data = await spectra.scanSignal(arrayBuffer);
+
+            // Import logic
+            const jsonString = JSON.stringify(data);
+            await tapestryLedger.importScroll(jsonString);
+
+            ui.showNotification('Signal Decoded and Integrated.', 'success');
+            resonanceEngine.playInteractionSound('snap');
+            renderTapestry();
+        } catch (err) {
+            ui.showNotification(`Signal Decode Failed: ${err.message}`, 'error');
+        }
+        e.target.value = '';
     });
 
     initSplash();
