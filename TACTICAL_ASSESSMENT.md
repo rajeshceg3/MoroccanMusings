@@ -1,71 +1,61 @@
-# Tactical Assessment: Project MoroccanMusings (Marq)
+# Tactical Assessment & Strategic Roadmap: Project MARQ
 
-**Date:** 2024-05-23
-**Assessor:** Jules (Navy SEAL / Senior Engineer)
-**Classification:** RESTRICTED
-**Subject:** Repository Analysis & Production Readiness Roadmap
+## 1. Mission Overview
+**Objective:** Elevate current codebase to a mission-critical, production-ready status.
+**Current Status:** Functional Prototype with foundational security and modular architecture.
+**Risk Level:** Moderate (Accessibility violations, conflicting directives, potential race conditions).
 
-## 1. Executive Summary
+## 2. Threat Assessment (Gap Analysis)
 
-The target application ("Marq") displays a sophisticated usage of vanilla JavaScript to create an immersive, high-fidelity user experience. The use of cryptographic hashing for data integrity (`TapestryLedger`) and steganography for data portability (`CodexEngine`) demonstrates advanced capabilities.
+### A. Security & Compliance (Priority: ALPHA)
+1.  **Directive Contradiction:** `AGENTS.md` strictly forbids external dependencies, yet `index.html` CSP allows Google Fonts, Unsplash, and Pixabay. `sw.js` attempts to cache them.
+    *   *Risk:* Supply chain attack vector; violation of "air-gap" simulation protocols.
+    *   *Remediation:* Enforce total isolation. Download fonts/assets locally. Tighten CSP to `default-src 'self'`.
+2.  **Command Injection:** `TerminalSystem` uses `textContent` (good) but lacks strict input validation limits on length, leading to potential DoS via memory exhaustion.
+3.  **Cryptographic Integrity:** `CryptoGuard` uses `PBKDF2` with 100k iterations.
+    *   *Recommendation:* Increase to 600k iterations (OWASP standard for 2024) or migrate to Argon2 if WebAssembly is permissible.
 
-However, the current implementation exhibits critical risks regarding **Main Thread Blocking** (Performance/UX) and potential **Scalability** issues. The absence of a build system is acceptable for the current scale but limits future maintainability.
+### B. User Experience & Accessibility (Priority: BRAVO)
+1.  **Accessibility Violation:** `user-scalable=no` in `index.html` violates WCAG 1.4.4.
+    *   *Impact:* Critical failure for users with visual impairments.
+2.  **Mobile Responsiveness:** Touch targets for `tapestry-btn` and `alchemy-slot` may be too small (<44px) on mobile devices.
+3.  **Interaction Feedback:** Canvas interactions (`MandalaRenderer`) lack haptic feedback or auditory cues for screen readers beyond basic ARIA labels.
 
-**Readiness Status:** `DEFCON 3` (Significant improvements required for production release).
+### C. Architecture & Performance (Priority: CHARLIE)
+1.  **Service Worker Cache:** `sw.js` references `marq-v2` but file list might be stale (`codex.worker.js` missing from `ASSETS`).
+    *   *Risk:* Offline functionality failure.
+2.  **Main Thread Blocking:** Large imports in `TapestryLedger` run on the main thread.
+    *   *Remediation:* Offload JSON parsing and validation to a Worker.
 
----
+## 3. Strategic Roadmap (Execution Plan)
 
-## 2. Detailed Reconnaissance
+### Phase 1: Perimeter Hardening (Security & Standards)
+- [ ] **Step 1.1:** Resolve `AGENTS.md` vs `index.html` conflict.
+    -   *Action:* Download Google Fonts (Inter/Amiri) locally.
+    -   *Action:* Remove external CDN links from CSP.
+- [ ] **Step 1.2:** Enhance `CryptoGuard`.
+    -   *Action:* Bump PBKDF2 iterations to 600,000.
+- [ ] **Step 1.3:** Accessibility Compliance.
+    -   *Action:* Remove `user-scalable=no`.
+    -   *Action:* Ensure all interactive elements have `min-width: 44px`.
 
-### A. Security (Hardening Required)
-*   **CSP:** Current Content Security Policy is functional but permissive regarding `blob:` images.
-    *   *Risk:* Low-Medium. Necessary for functionality, but requires strict control over blob generation.
-*   **Steganography (Codex):** The `CodexEngine` processes external image data.
-    *   *Risk:* Malformed or massive images could cause Denial of Service (DoS) by crashing the browser tab.
-*   **Input Handling:** `TerminalSystem` input parsing is robust enough for current commands, but future expansions must ensure no `innerHTML` injection occurs from user arguments.
+### Phase 2: Tactical Maneuverability (UX & Interaction)
+- [ ] **Step 2.1:** Tapestry Interaction Polish.
+    -   *Action:* Implement "Smooth Zoom" for the Mandala.
+    -   *Action:* Add keyboard navigation support (Arrow keys) to traverse Thread Nodes on the Canvas.
+- [ ] **Step 2.2:** Feedback Systems.
+    -   *Action:* Integrate `AudioEngine` cues for successful/failed actions (e.g., fusing threads).
+    -   *Action:* Add "Undo" capability for critical actions (e.g., Unravel).
 
-### B. Performance (Mission Critical)
-*   **Blocking Operations:** The `CodexEngine` (Forge/Scan) and `TapestryLedger` (Integrity Check) operate directly on the main UI thread.
-    *   *Impact:* Processing a 4MB image for steganography will freeze the interface for several seconds. This is unacceptable for a "premium" UX.
-    *   *Recommendation:* **Immediate offloading to Web Workers.** (ACCOMPLISHED: `js/codex.worker.js`)
-*   **Rendering:** `MandalaRenderer` uses `requestAnimationFrame`, which is good. However, deep object creation in the render loop should be monitored.
+### Phase 3: Logistics & Reliability (DevOps & Code Quality)
+- [ ] **Step 3.1:** Service Worker Synchronization.
+    -   *Action:* Update `sw.js` asset list to include `codex.worker.js` and local font files.
+- [ ] **Step 3.2:** Automated Verification.
+    -   *Action:* Add a pre-commit hook (or script) to verify `sw.js` version matches `app.js` version.
 
-### C. User Experience (UX)
-*   **Feedback Loops:** Long-running operations (Encryption/Decryption) lack granular progress bars because they block the thread that would render the progress bar.
-    *   *Remediation:* Implemented `cursor: wait` and asynchronous toast notifications during worker processing.
-*   **Accessibility:** The "Shadow DOM" layer in `MandalaRenderer` is a tactical win. However, navigation flow and "Skip to Content" mechanisms are absent.
+## 4. Immediate Action Items
+1.  **Modify `index.html`:** Remove `user-scalable=no`.
+2.  **Modify `AGENTS.md`:** Clarify external asset policy (Stick to "No External" -> Localize assets).
+3.  **Update `sw.js`:** Add missing workers to cache list.
 
----
-
-## 3. Strategic Roadmap
-
-### Phase 1: Operation "Thread Breaker" (Critical Performance)
-**Objective:** Eliminate main-thread blocking to ensure 60fps fluidity at all times.
-1.  **Extract `CodexEngine` logic to a Web Worker.** (COMPLETED)
-    *   Moved pixel manipulation and bitwise operations off the main thread.
-    *   Implemented a messaging protocol for `Progress`, `Success`, and `Failure`.
-2.  **Asynchronous Integrity Verification.**
-    *   Refactor `TapestryLedger.verifyIntegrity()` to yield to the main thread or run in a worker if the chain exceeds 100 blocks.
-
-### Phase 2: Operation "Iron Dome" (Security & Stability)
-**Objective:** Harden the application against edge cases and external threats.
-1.  **Input Sanitization:** implement strict type checking in `TerminalSystem` before command execution.
-2.  **Error Boundaries:** Enhance `window.onerror` and `showNotification` to handle Worker errors gracefully.
-3.  **Memory Management:** Ensure large `ArrayBuffer`s used in `CodexEngine` are transferred (not copied) between workers to save memory. (PARTIALLY IMPLEMENTED)
-
-### Phase 3: Operation "Smooth Sailing" (UX Polish)
-**Objective:** Elevate the user journey.
-1.  **Loading States:** Implement visual spinners/progress bars for Forge/Scan operations (enabled by Phase 1).
-2.  **Keyboard Navigation:** Verify full tab order through the "Riad" and "Tapestry" screens.
-3.  **Visual Feedback:** Add micro-interactions for successful "Command" executions in the Terminal.
-
----
-
-## 4. Immediate Execution Orders (Status)
-
-1.  **Create `js/codex.worker.js`**: (COMPLETE)
-2.  **Refactor `CodexEngine`**: (COMPLETE)
-3.  **Update `Tapestry UI`**: (COMPLETE)
-
-**Signed,**
-**Jules**
+*End of Report.*
