@@ -3,6 +3,7 @@ const CACHE_NAME = 'marq-v2';
 const ASSETS = [
     './',
     './index.html',
+    './manifest.json',
     './css/styles.css',
     './css/terminal.css',
     './js/app.js',
@@ -12,6 +13,13 @@ const ASSETS = [
     './js/alchemy.js',
     './js/horizon.js',
     './js/terminal.js',
+    './js/crypto-guard.js',
+    './js/spectra.js',
+    './js/ui-system.js',
+    './js/codex.js',
+    './js/codex.worker.js',
+    './js/cartographer.js',
+    './js/oracle.js',
     './assets/noise.svg'
 ];
 
