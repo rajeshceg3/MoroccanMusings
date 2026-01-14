@@ -9,6 +9,7 @@ import { MapRenderer } from './cartographer.js';
 import { UISystem } from './ui-system.js';
 import { OracleEngine } from './oracle.js';
 import { SpectraEngine } from './spectra.js';
+import { AegisEngine } from './aegis.js';
 
 document.addEventListener('DOMContentLoaded', async () => {
     // Service Worker Registration
@@ -39,6 +40,7 @@ document.addEventListener('DOMContentLoaded', async () => {
     const codex = new CodexEngine();
     const spectra = new SpectraEngine();
     const terminal = new TerminalSystem();
+    const aegis = new AegisEngine(ui, horizonEngine);
 
     const tapestryLedger = new TapestryLedger();
     const initStatus = await tapestryLedger.initialize();
@@ -115,10 +117,12 @@ document.addEventListener('DOMContentLoaded', async () => {
             fuseBtn: document.getElementById('alchemy-fuse-btn'),
             horizonToggle: document.getElementById('horizon-toggle'),
             mapToggle: document.getElementById('map-toggle'),
+            aegisToggle: document.getElementById('aegis-toggle'),
             horizonDashboard: document.getElementById('horizon-dashboard'),
             horizonDominance: document.getElementById('horizon-dominance'),
             horizonBalanceBar: document.getElementById('horizon-balance-bar'),
-            horizonInsight: document.getElementById('horizon-insight')
+            horizonInsight: document.getElementById('horizon-insight'),
+            aegisHud: document.getElementById('aegis-hud')
         },
         colorWash: document.querySelector('.color-wash')
     };
@@ -534,6 +538,9 @@ document.addEventListener('DOMContentLoaded', async () => {
             title: state.activeLocation.title
         });
 
+        // Trigger Aegis Tactical Analysis
+        aegis.analyze(tapestryLedger.getThreads());
+
         const thread = document.createElement('div');
         thread.className = 'thread-animation';
         const startRect = elements.riad.weaveButton.getBoundingClientRect();
@@ -779,6 +786,17 @@ document.addEventListener('DOMContentLoaded', async () => {
                 elements.tapestry.canvas.style.display = 'block';
                 elements.tapestry.mapCanvas.style.display = 'none';
                 if (mandalaRenderer) mandalaRenderer.render(tapestryLedger.getThreads());
+            }
+            resonanceEngine.playInteractionSound('click');
+        });
+
+        // Aegis Interaction
+        elements.tapestry.aegisToggle.addEventListener('click', () => {
+            const isVisible = elements.tapestry.aegisHud.classList.toggle('visible');
+            elements.tapestry.aegisToggle.classList.toggle('active', isVisible);
+
+            if (isVisible) {
+                aegis.renderDashboard('aegis-hud');
             }
             resonanceEngine.playInteractionSound('click');
         });
@@ -1208,6 +1226,45 @@ document.addEventListener('DOMContentLoaded', async () => {
         e.target.value = '';
     });
 
+    // Aegis Command Suite
+    terminal.registerCommand('aegis', 'Tactical Operations Control', (args) => {
+        if (tapestryLedger.status === 'LOCKED') { terminal.log("ACCESS DENIED.", "error"); return; }
+        const subcmd = args[0] || 'status';
+
+        if (subcmd === 'status') {
+             const report = aegis.getReport();
+             terminal.log("--- PROJECT AEGIS: OPERATIONAL REPORT ---", "tactical");
+             terminal.log(`Rank: ${report.rank.toUpperCase()}`, "info");
+             terminal.log(`XP: ${report.xp}`, "info");
+             terminal.log(`Completed Directives: ${report.completedCount}/${report.totalCount}`, "info");
+             terminal.log("-----------------------------------------", "tactical");
+
+             if (report.active.length > 0) {
+                 terminal.log("ACTIVE DIRECTIVES:", "system");
+                 report.active.forEach(m => {
+                     terminal.log(`[ ] ${m.codename}: ${m.description}`, "info");
+                 });
+             } else {
+                 terminal.log("ALL DIRECTIVES COMPLETE.", "success");
+             }
+        } else if (subcmd === 'report') {
+            // Detailed report including badges
+             const report = aegis.getReport();
+             terminal.log("--- SERVICE RECORD ---", "tactical");
+             if (report.badges.length > 0) {
+                 report.badges.forEach(b => terminal.log(` * ${b}`, "success"));
+             } else {
+                 terminal.log("No commendations recorded.", "info");
+             }
+        } else if (subcmd === 'hud') {
+             elements.tapestry.aegisToggle.click();
+             terminal.log("Toggling Tactical HUD...", "info");
+             terminal.toggle();
+        } else {
+            terminal.log("Usage: aegis [status|report|hud]", "warning");
+        }
+    });
+
     initSplash();
     updateAstrolabeState();
     setupRiadInteractions();
@@ -1248,4 +1305,5 @@ document.addEventListener('DOMContentLoaded', async () => {
     Object.defineProperty(window, 'oracle', {
         get: () => oracleEngine
     });
+    window.aegis = aegis; // Expose for verification/CLI interaction
 });

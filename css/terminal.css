@@ -80,6 +80,7 @@
 .line-success { color: #2ea043; }
 .line-error { color: #f85149; }
 .line-warning { color: #d29922; }
+.line-tactical { color: #c67605; font-weight: bold; } /* Ochre Gold */
 
 .terminal-input-line {
     display: flex;
