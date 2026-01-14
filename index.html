@@ -2,8 +2,8 @@
 <html lang="en">
 <head>
     <meta charset="UTF-8">
-    <meta name="viewport" content="width=device-width, initial-scale=1.0, user-scalable=no, viewport-fit=cover">
-    <meta http-equiv="Content-Security-Policy" content="default-src 'self'; img-src 'self' https://images.unsplash.com blob:; media-src 'self' https://cdn.pixabay.com; font-src 'self' https://fonts.gstatic.com; style-src 'self' https://fonts.googleapis.com; script-src 'self'; object-src 'none'; base-uri 'self'; form-action 'self';">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, viewport-fit=cover">
+    <meta http-equiv="Content-Security-Policy" content="default-src 'self'; img-src 'self' https://images.unsplash.com blob:; media-src 'self' https://cdn.pixabay.com; font-src 'self'; style-src 'self'; script-src 'self'; object-src 'none'; base-uri 'self'; form-action 'self';">
     <title>Marq</title>
     <link rel="manifest" href="manifest.json">
     <link rel="stylesheet" href="css/styles.css">
@@ -25,7 +25,7 @@
             <div id="ring-time" class="astrolabe-ring"><div id="time-dawn" class="astrolabe-marker">◓</div><div id="time-midday" class="astrolabe-marker">☀</div><div id="time-dusk" class="astrolabe-marker">◒</div><div id="time-night" class="astrolabe-marker">☾</div></div>
             <div class="astrolabe-center"><span class="center-text">Align the rings</span></div>
         </div>
-        <div id="tapestry-icon">❖</div>
+        <div id="tapestry-icon" role="button" aria-label="Open Tapestry" tabindex="0">❖</div>
     </div>
     <div id="tapestry-screen" class="screen">
         <canvas id="tapestry-canvas"></canvas>
@@ -34,7 +34,7 @@
             <div class="tapestry-title">The Tapestry of Time</div>
             <div class="tapestry-subtitle">Your Woven Journey</div>
         </div>
-        <div class="back-button" id="tapestry-back">←</div>
+        <div class="back-button" id="tapestry-back" role="button" aria-label="Go Back" tabindex="0">←</div>
         <div class="alchemy-ui" id="alchemy-ui">
             <div class="alchemy-slot" id="alchemy-slot-1">1</div>
             <button class="alchemy-fuse-btn" id="alchemy-fuse-btn" disabled>FUSE</button>
@@ -71,8 +71,8 @@
     </div>
     <div id="riad-screen" class="screen">
         <div id="riad-image-container"><img id="riad-image-element" src="" alt=""></div>
-        <div id="back-button">←</div>
-        <div id="weave-button" class="weave-button">
+        <div id="back-button" role="button" aria-label="Go Back" tabindex="0">←</div>
+        <div id="weave-button" class="weave-button" role="button" aria-label="Weave Thread" tabindex="0">
             Weave a Thread
             <div class="weave-progress"></div>
         </div>
