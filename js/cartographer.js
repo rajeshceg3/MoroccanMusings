@@ -38,10 +38,11 @@ export class MapRenderer {
         this.height = rect.height;
     }
 
-    render(threads, locations, ghosts = []) {
+    render(threads, locations, ghosts = [], threatZones = []) {
         this.threads = threads;
         this.locations = locations;
         this.ghosts = ghosts;
+        this.threatZones = threatZones;
 
         this.ctx.clearRect(0, 0, this.width, this.height);
 
@@ -80,6 +81,32 @@ export class MapRenderer {
             // Horizontal
             const y = (i/100) * mapHeight;
             this.ctx.beginPath(); this.ctx.moveTo(0, y); this.ctx.lineTo(mapWidth, y); this.ctx.stroke();
+        }
+
+        // Plot Threat Zones (Sentinel)
+        if (threatZones && threatZones.length > 0) {
+             threatZones.forEach(zone => {
+                 const x = (zone.x / 100) * mapWidth;
+                 const y = (zone.y / 100) * mapHeight;
+                 const r = zone.r || 15;
+
+                 // Pulse
+                 const pulse = Math.sin(Date.now() / 300) * 0.2 + 0.3; // 0.1 to 0.5 opacity
+                 this.ctx.fillStyle = zone.level === 'HIGH' || zone.level === 'CRITICAL' ? `rgba(255, 0, 0, ${pulse})` : `rgba(255, 165, 0, ${pulse})`;
+
+                 this.ctx.beginPath();
+                 this.ctx.arc(x, y, r * 1.5, 0, Math.PI * 2);
+                 this.ctx.fill();
+
+                 // Stroke
+                 this.ctx.strokeStyle = '#ff3333';
+                 this.ctx.lineWidth = 1;
+                 this.ctx.setLineDash([2, 4]);
+                 this.ctx.beginPath();
+                 this.ctx.arc(x, y, r * 1.5, 0, Math.PI * 2);
+                 this.ctx.stroke();
+                 this.ctx.setLineDash([]);
+             });
         }
 
         // Plot Threads and Ghosts
@@ -187,9 +214,9 @@ export class MapRenderer {
 
         this.ctx.restore();
 
-        // If animated elements exist (active node or ghosts), continue loop
-        if (this.activeNodeIndex !== -1 || (this.ghosts && this.ghosts.length > 0)) {
-            requestAnimationFrame(() => this.render(this.threads, this.locations, this.ghosts));
+        // If animated elements exist (active node, ghosts, or threats), continue loop
+        if (this.activeNodeIndex !== -1 || (this.ghosts && this.ghosts.length > 0) || (this.threatZones && this.threatZones.length > 0)) {
+            requestAnimationFrame(() => this.render(this.threads, this.locations, this.ghosts, this.threatZones));
         }
     }
 

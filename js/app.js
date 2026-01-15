@@ -10,6 +10,7 @@ import { UISystem } from './ui-system.js';
 import { OracleEngine } from './oracle.js';
 import { SpectraEngine } from './spectra.js';
 import { AegisEngine } from './aegis.js';
+import { SentinelEngine } from './sentinel.js';
 
 document.addEventListener('DOMContentLoaded', async () => {
     // Service Worker Registration
@@ -41,6 +42,7 @@ document.addEventListener('DOMContentLoaded', async () => {
     const spectra = new SpectraEngine();
     const terminal = new TerminalSystem();
     const aegis = new AegisEngine(ui, horizonEngine);
+    const sentinel = new SentinelEngine(horizonEngine);
 
     const tapestryLedger = new TapestryLedger();
     const initStatus = await tapestryLedger.initialize();
@@ -172,6 +174,9 @@ document.addEventListener('DOMContentLoaded', async () => {
              // Initial render
              renderTapestry();
              updateAlchemyUI();
+
+             // Sentinel Scan on screen entry
+             sentinel.assess(tapestryLedger.getThreads());
 
              // Start animation loop if horizon is active
              if (state.isHorizonActive) {
@@ -541,6 +546,12 @@ document.addEventListener('DOMContentLoaded', async () => {
         // Trigger Aegis Tactical Analysis
         aegis.analyze(tapestryLedger.getThreads());
 
+        // Trigger Sentinel Threat Assessment
+        const threatReport = sentinel.assess(tapestryLedger.getThreads());
+        if (threatReport.status !== 'STANDBY') {
+             ui.showNotification(`SENTINEL ALERT: DEFCON ${threatReport.defcon}`, 'warning');
+        }
+
         const thread = document.createElement('div');
         thread.className = 'thread-animation';
         const startRect = elements.riad.weaveButton.getBoundingClientRect();
@@ -852,7 +863,8 @@ document.addEventListener('DOMContentLoaded', async () => {
              if (oracleEngine && oracleEngine.activeMode) {
                  oracleEngine.render(tapestryLedger.getThreads());
              } else if (mapRenderer) {
-                 mapRenderer.render(tapestryLedger.getThreads(), locations);
+                 const threatReport = sentinel.getReport();
+                 mapRenderer.render(tapestryLedger.getThreads(), locations, [], threatReport.zones);
              }
              return;
         }
@@ -1224,6 +1236,41 @@ document.addEventListener('DOMContentLoaded', async () => {
         e.target.value = '';
     });
 
+    // Sentinel Command Suite
+    terminal.registerCommand('sentinel', 'Automated Threat Detection System', (args) => {
+        if (tapestryLedger.status === 'LOCKED') { terminal.log("ACCESS DENIED.", "error"); return; }
+        const subcmd = args[0] || 'status';
+
+        if (subcmd === 'status') {
+            const report = sentinel.assess(tapestryLedger.getThreads());
+            const color = report.defcon < 3 ? 'error' : (report.defcon < 5 ? 'warning' : 'success');
+            terminal.log(`--- SENTINEL WATCHTOWER ---`, "system");
+            terminal.log(`DEFCON: ${report.defcon}`, color);
+            terminal.log(`Status: ${report.status}`, "info");
+
+            if (report.threats.length > 0) {
+                terminal.log("DETECTED THREATS:", "warning");
+                report.threats.forEach(t => {
+                    terminal.log(`[${t.level}] ${t.type}: ${t.message}`, "error");
+                });
+            } else {
+                terminal.log("No active threats detected.", "success");
+            }
+        } else if (subcmd === 'scan') {
+            terminal.log("Initiating full spectrum scan...", "info");
+            setTimeout(() => {
+                const report = sentinel.assess(tapestryLedger.getThreads());
+                if (report.threats.length > 0) {
+                    terminal.log(`SCAN COMPLETE. ${report.threats.length} ANOMALIES DETECTED.`, "warning");
+                } else {
+                    terminal.log("SCAN COMPLETE. SYSTEM CLEAN.", "success");
+                }
+            }, 800);
+        } else {
+            terminal.log("Usage: sentinel [status|scan]", "warning");
+        }
+    });
+
     // Aegis Command Suite
     terminal.registerCommand('aegis', 'Tactical Operations Control', (args) => {
         if (tapestryLedger.status === 'LOCKED') { terminal.log("ACCESS DENIED.", "error"); return; }
@@ -1304,4 +1351,5 @@ document.addEventListener('DOMContentLoaded', async () => {
         get: () => oracleEngine
     });
     window.aegis = aegis; // Expose for verification/CLI interaction
+    window.sentinel = sentinel;
 });
