@@ -627,10 +627,9 @@ document.addEventListener('DOMContentLoaded', async () => {
                 const threads = tapestryLedger.getThreads();
                 if (threads.length === 0) throw new Error("Tapestry is empty. Nothing to forge.");
 
-                ui.showNotification('Forging Codex Shard...', 'info');
-                document.body.style.cursor = 'wait'; // UX: Indicate processing
+                ui.showLoading('ENCRYPTING SHARD...');
                 const blob = await codex.forgeShard(threads);
-                document.body.style.cursor = 'default';
+                ui.hideLoading();
 
                 const url = URL.createObjectURL(blob);
                 const a = document.createElement('a');
@@ -656,10 +655,9 @@ document.addEventListener('DOMContentLoaded', async () => {
             if (!file) return;
 
             try {
-                ui.showNotification('Scanning Shard...', 'info');
-                document.body.style.cursor = 'wait'; // UX: Indicate processing
+                ui.showLoading('DECRYPTING SHARD...');
                 const data = await codex.scanShard(file);
-                document.body.style.cursor = 'default';
+                ui.hideLoading();
 
                 // Use existing import logic
                 const tempLedger = new TapestryLedger('temp');

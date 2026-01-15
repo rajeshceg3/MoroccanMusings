@@ -18,6 +18,18 @@ body {
     width: 100vw;
 }
 
+/* Accessibility & Focus */
+:focus {
+    outline: none;
+}
+
+:focus-visible {
+    outline: 2px solid var(--ochre-gold);
+    outline-offset: 4px;
+    border-radius: 2px;
+    box-shadow: 0 0 10px var(--ochre-gold);
+}
+
 /* Screen Management */
 .screen {
     position: absolute;
@@ -150,14 +162,10 @@ body {
     text-shadow: 0 0 10px rgba(198, 118, 5, 0.5);
 }
 
-/* Marker positioning logic (simplified static for CSS, dynamic in JS? No, fixed positions relative to ring) */
-/* Top */
+/* Marker positioning logic */
 .astrolabe-marker:nth-child(1) { top: -10px; left: 50%; margin-left: -10px; }
-/* Right */
 .astrolabe-marker:nth-child(2) { top: 50%; right: -10px; margin-top: -10px; }
-/* Bottom */
 .astrolabe-marker:nth-child(3) { bottom: -10px; left: 50%; margin-left: -10px; }
-/* Left */
 .astrolabe-marker:nth-child(4) { top: 50%; left: -10px; margin-top: -10px; }
 
 .astrolabe-center {
@@ -241,7 +249,7 @@ body {
 }
 
 .riad-content {
-    margin-top: 100vh; /* Pushes content below initial view */
+    margin-top: 100vh;
     background: linear-gradient(to bottom, transparent, #000 10%, #000);
     padding: 2rem;
     min-height: 100vh;
@@ -438,7 +446,7 @@ body {
     justify-content: center;
     gap: 1rem;
     flex-wrap: wrap;
-    pointer-events: none; /* Allow click through to canvas */
+    pointer-events: none;
 }
 
 .tapestry-btn {
@@ -571,7 +579,7 @@ body {
     border-left: 2px solid var(--ochre-gold);
     padding: 1rem;
     font-family: 'Courier New', monospace;
-    display: none; /* Hidden by default */
+    display: none;
     z-index: 20;
 }
 
@@ -616,7 +624,7 @@ body {
 .stat-fill {
     height: 100%;
     background: var(--ochre-gold);
-    width: 0%; /* Dynamic */
+    width: 0%;
     transition: width 0.5s;
 }
 
@@ -629,7 +637,7 @@ body {
     padding-top: 0.5rem;
 }
 
-/* --- Project AEGIS Styles --- */
+/* AEGIS HUD */
 .aegis-hud {
     position: absolute;
     top: 6rem;
@@ -637,9 +645,9 @@ body {
     width: 320px;
     max-height: 80vh;
     overflow-y: auto;
-    background: rgba(10, 16, 20, 0.95); /* Deep tactical blue/black */
+    background: rgba(10, 16, 20, 0.95);
     border: 1px solid #334455;
-    border-top: 2px solid #55aaff; /* Tactical Blue */
+    border-top: 2px solid #55aaff;
     padding: 0;
     font-family: 'Share Tech Mono', 'Courier New', monospace;
     display: none;
@@ -700,7 +708,7 @@ body {
 }
 
 .mission-card.completed {
-    border-left-color: #55ffaa; /* Success Green */
+    border-left-color: #55ffaa;
     color: #55ffaa;
     text-align: center;
     font-size: 0.8rem;
@@ -722,7 +730,7 @@ body {
 
 .mission-reward {
     font-size: 0.7rem;
-    color: #c67605; /* Gold */
+    color: #c67605;
     text-transform: uppercase;
 }
 
@@ -750,6 +758,68 @@ body {
 @keyframes fadeIn {
     from { opacity: 0; transform: translateY(-10px); }
     to { opacity: 1; transform: translateY(0); }
+}
+
+/* Loading Overlay */
+#loading-overlay {
+    position: fixed;
+    top: 0; left: 0;
+    width: 100%; height: 100%;
+    background: rgba(0,0,0,0.85);
+    backdrop-filter: blur(10px);
+    z-index: 9999;
+    display: flex;
+    flex-direction: column;
+    justify-content: center;
+    align-items: center;
+    opacity: 0;
+    pointer-events: none;
+    transition: opacity 0.3s;
+}
+
+#loading-overlay.visible {
+    opacity: 1;
+    pointer-events: auto;
+}
+
+.loader {
+    width: 60px;
+    height: 60px;
+    border: 4px solid rgba(255,255,255,0.1);
+    border-top: 4px solid var(--ochre-gold);
+    border-radius: 50%;
+    animation: spin 1s linear infinite;
+    margin-bottom: 2rem;
+}
+
+.loading-text {
+    font-family: 'Courier New', monospace;
+    font-size: 0.9rem;
+    color: var(--sand);
+    letter-spacing: 2px;
+    text-transform: uppercase;
+    animation: pulse 1.5s infinite;
+}
+
+@keyframes spin {
+    0% { transform: rotate(0deg); }
+    100% { transform: rotate(360deg); }
+}
+
+@keyframes pulse {
+    0% { opacity: 0.6; }
+    50% { opacity: 1; }
+    100% { opacity: 0.6; }
+}
+
+/* Reduced Motion */
+@media (prefers-reduced-motion: reduce) {
+    *, *::before, *::after {
+        animation-duration: 0.01ms !important;
+        animation-iteration-count: 1 !important;
+        transition-duration: 0.01ms !important;
+        scroll-behavior: auto !important;
+    }
 }
 
 @media (max-width: 768px) {
