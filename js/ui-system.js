@@ -1,6 +1,7 @@
 export class UISystem {
     constructor() {
         this.container = this.ensureContainer();
+        this.loadingOverlay = this.ensureLoadingOverlay();
     }
 
     ensureContainer() {
@@ -11,6 +12,49 @@ export class UISystem {
             document.body.appendChild(container);
         }
         return container;
+    }
+
+    ensureLoadingOverlay() {
+        let overlay = document.getElementById('loading-overlay');
+        if (!overlay) {
+            overlay = document.createElement('div');
+            overlay.id = 'loading-overlay';
+            overlay.setAttribute('role', 'dialog');
+            overlay.setAttribute('aria-modal', 'true');
+            overlay.setAttribute('aria-label', 'System Processing');
+
+            const loader = document.createElement('div');
+            loader.className = 'loader';
+
+            const text = document.createElement('div');
+            text.className = 'loading-text';
+            text.id = 'loading-text-content';
+            text.textContent = 'PROCESSING...';
+
+            overlay.appendChild(loader);
+            overlay.appendChild(text);
+            document.body.appendChild(overlay);
+        }
+        return overlay;
+    }
+
+    showLoading(message = 'PROCESSING...') {
+        const textEl = document.getElementById('loading-text-content');
+        if (textEl) textEl.textContent = message;
+
+        this.loadingOverlay.classList.add('visible');
+
+        // Trap focus (simple version)
+        this.activeElementBeforeLoading = document.activeElement;
+        this.loadingOverlay.focus();
+    }
+
+    hideLoading() {
+        this.loadingOverlay.classList.remove('visible');
+        // Restore focus
+        if (this.activeElementBeforeLoading) {
+            this.activeElementBeforeLoading.focus();
+        }
     }
 
     showNotification(message, type = 'info') {

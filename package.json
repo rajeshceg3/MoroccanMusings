@@ -1,0 +1,18 @@
+{
+  "name": "marq-operations",
+  "version": "1.0.0",
+  "description": "Project MARQ: A secure, steganography-enabled tactical interface.",
+  "main": "js/app.js",
+  "scripts": {
+    "start": "python3 -m http.server 8080",
+    "test": "echo 'Running tactical verification...'",
+    "lint": "eslint js/",
+    "format": "prettier --write '**/*.{js,css,html,md}'"
+  },
+  "devDependencies": {
+    "eslint": "^8.56.0",
+    "prettier": "^3.2.4",
+    "@playwright/test": "^1.41.0"
+  },
+  "private": true
+}
