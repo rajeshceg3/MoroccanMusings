@@ -14,6 +14,43 @@ export class UISystem {
         return container;
     }
 
+    ensureConfirmModal() {
+        let modal = document.getElementById('confirm-modal');
+        if (!modal) {
+            modal = document.createElement('div');
+            modal.id = 'confirm-modal';
+            modal.setAttribute('role', 'dialog');
+            modal.setAttribute('aria-modal', 'true');
+            modal.setAttribute('aria-labelledby', 'confirm-text');
+            modal.className = 'confirm-modal-overlay';
+
+            const content = document.createElement('div');
+            content.className = 'confirm-modal-content';
+
+            const text = document.createElement('p');
+            text.id = 'confirm-text';
+
+            const btnGroup = document.createElement('div');
+            btnGroup.className = 'confirm-btn-group';
+
+            const cancelBtn = document.createElement('button');
+            cancelBtn.textContent = 'Cancel';
+            cancelBtn.className = 'confirm-btn cancel';
+
+            const okBtn = document.createElement('button');
+            okBtn.textContent = 'Confirm';
+            okBtn.className = 'confirm-btn ok';
+
+            btnGroup.appendChild(cancelBtn);
+            btnGroup.appendChild(okBtn);
+            content.appendChild(text);
+            content.appendChild(btnGroup);
+            modal.appendChild(content);
+            document.body.appendChild(modal);
+        }
+        return modal;
+    }
+
     ensureLoadingOverlay() {
         let overlay = document.getElementById('loading-overlay');
         if (!overlay) {
@@ -47,6 +84,39 @@ export class UISystem {
         // Trap focus (simple version)
         this.activeElementBeforeLoading = document.activeElement;
         this.loadingOverlay.focus();
+    }
+
+    showConfirm(message, onConfirm, onCancel) {
+        const modal = this.ensureConfirmModal();
+        const text = modal.querySelector('#confirm-text');
+        const okBtn = modal.querySelector('.confirm-btn.ok');
+        const cancelBtn = modal.querySelector('.confirm-btn.cancel');
+
+        text.textContent = message;
+        modal.classList.add('visible');
+
+        // Save focus to restore later
+        const activeBefore = document.activeElement;
+
+        const close = () => {
+            modal.classList.remove('visible');
+            okBtn.onclick = null;
+            cancelBtn.onclick = null;
+            if (activeBefore) activeBefore.focus();
+        };
+
+        okBtn.onclick = () => {
+            close();
+            if (onConfirm) onConfirm();
+        };
+
+        cancelBtn.onclick = () => {
+            close();
+            if (onCancel) onCancel();
+        };
+
+        // Trap focus on Cancel button initially
+        cancelBtn.focus();
     }
 
     hideLoading() {

@@ -84,7 +84,7 @@ export class SynthesisEngine {
             sensory: {
                 sight: { desc: "Grey mist.", color: "#888888" },
                 sound: { desc: "White noise.", audio: "" },
-                scent: { desc: "Nothing.", desc: "Dust." },
+            scent: { desc: "Nothing." },
                 touch: { desc: "Cold air." }
             }
         };

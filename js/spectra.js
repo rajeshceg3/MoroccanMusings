@@ -130,8 +130,6 @@ export class SpectraEngine {
     }
 
     _generateFSK(ctx, messageBuffer, totalBits) {
-        const samplesPerBit = Math.floor(this.SAMPLE_RATE / this.BAUD_RATE);
-
         const osc = ctx.createOscillator();
         osc.type = 'sine'; // Pure sine for FSK
 
