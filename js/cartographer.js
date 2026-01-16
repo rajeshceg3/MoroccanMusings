@@ -117,7 +117,7 @@ export class MapRenderer {
             this.ctx.setLineDash([5, 5]);
             this.ctx.beginPath();
 
-            let lastX = null, lastY = null;
+            let lastX = null;
 
             threads.forEach((t) => {
                 const coords = this._getThreadCoords(t);
@@ -130,7 +130,7 @@ export class MapRenderer {
                     } else {
                         this.ctx.moveTo(x, y);
                     }
-                    lastX = x; lastY = y;
+                    lastX = x;
                 }
             });
             this.ctx.stroke();
@@ -244,38 +244,11 @@ export class MapRenderer {
             const mouseX = (e.clientX - rect.left);
             const mouseY = (e.clientY - rect.top);
 
-            // Convert back to map space
-            const padding = 40;
-            const mapWidth = this.width - (padding * 2);
-            const mapHeight = this.height - (padding * 2);
-
             // Check collisions
             let found = -1;
             this.threads.forEach((t, i) => {
                 const coords = this._getThreadCoords(t);
                 if (coords) {
-                     // Translate coords to screen pixels
-                     // Note: We need to handle scale if canvas is scaled via CSS?
-                     // Here we assume 1:1 CSS pixel to internal width/height logic before DPR
-                     // Actually, we drew with transform(padding, padding).
-
-                     const cx = padding + (coords.x / 100) * mapWidth;
-                     const cy = padding + (coords.y / 100) * mapHeight;
-
-                     const dist = Math.sqrt(Math.pow(mouseX - (cx/this.dpr), 2) + Math.pow(mouseY - (cy/this.dpr), 2)); // Adjustment for mouse vs canvas coordinate space
-                     // Actually simplest is to just check distance in logic space
-                     // But mouse is in CSS pixels.
-                     // The logic space (cx) was scaled by DPR? No, we used this.ctx.scale(dpr).
-                     // So we draw in logic pixels.
-
-                     // Logic Pixel coord:
-                     const logicX = padding + (coords.x / 100) * (this.width - 80); // wait, this.width is * DPR.
-                     // let's stick to logic coords.
-                     // Rect width is CSS width.
-                     const cssWidth = rect.width;
-                     const cssHeight = rect.height;
-                     const cssPadding = 40 / this.dpr; // Approximation if we don't track it
-
                      // Let's re-calculate cleanly.
                      // Map drawing area in CSS pixels:
                      const drawW = rect.width - 80; // 40px padding left/right
@@ -298,11 +271,13 @@ export class MapRenderer {
             }
         });
 
-        this.canvas.addEventListener('click', (e) => {
+        this.canvas.addEventListener('click', () => {
             if (this.activeNodeIndex !== -1) {
                  // Open thread details?
                  // For now just log, or trigger same event as Tapestry
-                 console.log("Map clicked thread", this.activeNodeIndex);
+                 // Trigger custom event for the app to listen to
+                 const event = new CustomEvent('map-thread-click', { detail: { index: this.activeNodeIndex } });
+                 this.canvas.dispatchEvent(event);
             }
         });
     }

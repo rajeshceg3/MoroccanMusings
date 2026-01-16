@@ -57,7 +57,7 @@ export class TapestryLedger {
         // Check if encrypted
         if (parsed && parsed.tag === 'AEGIS_SECURE') {
             this.status = 'LOCKED';
-            console.log("System Locked. Secure Enclave Active.");
+            // System Locked. Secure Enclave Active.
             return 'LOCKED';
         }
 
@@ -67,7 +67,7 @@ export class TapestryLedger {
             // Check for legacy data
             const needsMigration = this.threads.some(t => !t.hash);
             if (needsMigration) {
-                console.log("Migrating legacy tapestry data to ledger format...");
+                // Migrating legacy tapestry data to ledger format...
                 await this._migrateData();
             }
             await this.verifyIntegrity();
@@ -152,7 +152,6 @@ export class TapestryLedger {
 
         this.threads = migratedThreads;
         await this._save();
-        console.log("Migration complete.");
     }
 
     async verifyIntegrity() {

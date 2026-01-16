@@ -17,9 +17,8 @@ document.addEventListener('DOMContentLoaded', async () => {
     if ('serviceWorker' in navigator) {
         try {
             await navigator.serviceWorker.register('./sw.js');
-            console.log('Service Worker registered');
         } catch (e) {
-            console.log('Service Worker registration failed', e);
+            // Service Worker registration failed
         }
     }
 
@@ -596,11 +595,12 @@ document.addEventListener('DOMContentLoaded', async () => {
         });
 
         elements.tapestry.clearBtn.addEventListener('click', () => {
-            if(confirm('Are you sure you want to unravel your tapestry? This cannot be undone.')) {
+            ui.showConfirm('Are you sure you want to unravel your tapestry? This cannot be undone.', () => {
                 tapestryLedger.clear();
                 mandalaRenderer.render([]);
                 if (mapRenderer) mapRenderer.render([], locations);
-            }
+                ui.showNotification('Tapestry unraveled.', 'info');
+            });
         });
 
         elements.tapestry.exportBtn.addEventListener('click', () => {
