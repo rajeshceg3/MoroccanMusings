@@ -161,15 +161,19 @@ export class UISystem {
     dismiss(toast) {
         toast.classList.remove('visible');
         // Wait for CSS transition to finish
-        toast.addEventListener('transitionend', () => {
-            if (toast.parentElement) {
-                toast.remove();
-            }
-        }, { once: true });
+        toast.addEventListener(
+            'transitionend',
+            () => {
+                if (toast.parentElement) {
+                    toast.remove();
+                }
+            },
+            { once: true }
+        );
 
         // Fallback in case transitionend fails
         setTimeout(() => {
-             if (toast.parentElement) toast.remove();
+            if (toast.parentElement) toast.remove();
         }, 500);
     }
 
@@ -192,7 +196,10 @@ export class UISystem {
 
         window.addEventListener('unhandledrejection', (event) => {
             console.error('Unhandled Rejection:', event.reason);
-            this.showNotification(`Async Error: ${event.reason.message || event.reason}`, 'error');
+            this.showNotification(
+                `Async Error: ${event.reason.message || event.reason}`,
+                'error'
+            );
         });
     }
 }

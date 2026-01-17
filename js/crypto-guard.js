@@ -1,4 +1,3 @@
-
 export class CryptoGuard {
     constructor() {
         this.passwordCache = null; // Stored only in memory
@@ -9,29 +8,29 @@ export class CryptoGuard {
     async deriveKey(password, salt) {
         const enc = new TextEncoder();
         const keyMaterial = await window.crypto.subtle.importKey(
-            "raw",
+            'raw',
             enc.encode(password),
-            { name: "PBKDF2" },
+            { name: 'PBKDF2' },
             false,
-            ["deriveKey"]
+            ['deriveKey']
         );
 
         return window.crypto.subtle.deriveKey(
             {
-                name: "PBKDF2",
+                name: 'PBKDF2',
                 salt: salt,
                 iterations: 100000,
-                hash: "SHA-256"
+                hash: 'SHA-256'
             },
             keyMaterial,
             this.algo,
             false,
-            ["encrypt", "decrypt"]
+            ['encrypt', 'decrypt']
         );
     }
 
     async encrypt(data, password) {
-        if (!password) throw new Error("Encryption requires a password.");
+        if (!password) throw new Error('Encryption requires a password.');
 
         // Generate new salt and IV
         const salt = window.crypto.getRandomValues(new Uint8Array(16));
@@ -41,7 +40,7 @@ export class CryptoGuard {
         const enc = new TextEncoder();
 
         const ciphertext = await window.crypto.subtle.encrypt(
-            { name: "AES-GCM", iv: iv },
+            { name: 'AES-GCM', iv: iv },
             key,
             enc.encode(JSON.stringify(data))
         );
@@ -56,8 +55,9 @@ export class CryptoGuard {
     }
 
     async decrypt(encryptedPacket, password) {
-        if (!password) throw new Error("Decryption requires a password.");
-        if (encryptedPacket.tag !== 'AEGIS_SECURE') throw new Error("Invalid encryption format.");
+        if (!password) throw new Error('Decryption requires a password.');
+        if (encryptedPacket.tag !== 'AEGIS_SECURE')
+            throw new Error('Invalid encryption format.');
 
         const salt = this._base64ToBuffer(encryptedPacket.salt);
         const iv = this._base64ToBuffer(encryptedPacket.iv);
@@ -67,14 +67,16 @@ export class CryptoGuard {
 
         try {
             const decryptedBuffer = await window.crypto.subtle.decrypt(
-                { name: "AES-GCM", iv: iv },
+                { name: 'AES-GCM', iv: iv },
                 key,
                 ciphertext
             );
             const dec = new TextDecoder();
             return JSON.parse(dec.decode(decryptedBuffer));
         } catch (e) {
-            throw new Error("Decryption failed. Incorrect password or data corruption.");
+            throw new Error(
+                'Decryption failed. Incorrect password or data corruption.'
+            );
         }
     }
 

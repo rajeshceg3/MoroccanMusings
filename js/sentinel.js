@@ -26,14 +26,15 @@ export class SentinelEngine {
         // Check timestamps of last 5 threads
         if (threads.length >= 5) {
             const recent = threads.slice(-5);
-            const duration = recent[recent.length - 1].timestamp - recent[0].timestamp;
+            const duration =
+                recent[recent.length - 1].timestamp - recent[0].timestamp;
             // If 5 threads in less than 60 seconds?
             if (duration < 60 * 1000) {
                 this.threats.push({
                     type: 'TEMPORAL_SURGE',
                     level: 'HIGH',
                     message: 'Rapid narrative acceleration detected.',
-                    region: recent[recent.length-1].region
+                    region: recent[recent.length - 1].region
                 });
             }
         }
@@ -54,13 +55,13 @@ export class SentinelEngine {
         if (threads.length >= 3) {
             const recent = threads.slice(-3);
             const region = recent[0].region;
-            if (recent.every(t => t.region === region)) {
-                 this.threats.push({
-                     type: 'LOCALIZED_CONGESTION',
-                     level: 'LOW',
-                     message: `High concentration in ${region} sector.`,
-                     region: region
-                 });
+            if (recent.every((t) => t.region === region)) {
+                this.threats.push({
+                    type: 'LOCALIZED_CONGESTION',
+                    level: 'LOW',
+                    message: `High concentration in ${region} sector.`,
+                    region: region
+                });
             }
         }
 
@@ -70,10 +71,11 @@ export class SentinelEngine {
 
     _updateDefcon() {
         let maxSeverity = 0;
-        const severityMap = { 'LOW': 1, 'MEDIUM': 2, 'HIGH': 3, 'CRITICAL': 4 };
+        const severityMap = { LOW: 1, MEDIUM: 2, HIGH: 3, CRITICAL: 4 };
 
-        this.threats.forEach(t => {
-            if (severityMap[t.level] > maxSeverity) maxSeverity = severityMap[t.level];
+        this.threats.forEach((t) => {
+            if (severityMap[t.level] > maxSeverity)
+                maxSeverity = severityMap[t.level];
         });
 
         // DEFCON mapping: 5 - maxSeverity
@@ -103,13 +105,13 @@ export class SentinelEngine {
         // We'll rely on the map to interpret 'region' strings or provide generic coords here
         const zones = [];
         const regionCoords = {
-            'coast': { x: 25, y: 55, r: 15 },
-            'medina': { x: 60, y: 30, r: 12 },
-            'sahara': { x: 75, y: 75, r: 20 },
-            'kasbah': { x: 50, y: 50, r: 10 } // Generic center
+            coast: { x: 25, y: 55, r: 15 },
+            medina: { x: 60, y: 30, r: 12 },
+            sahara: { x: 75, y: 75, r: 20 },
+            kasbah: { x: 50, y: 50, r: 10 } // Generic center
         };
 
-        this.threats.forEach(t => {
+        this.threats.forEach((t) => {
             if (t.region && t.region !== 'global' && regionCoords[t.region]) {
                 zones.push({
                     ...regionCoords[t.region],

@@ -1,4 +1,3 @@
-
 // The Horizon Engine: Strategic Forecasting & Vector Analysis
 // Analyzes the TapestryLedger to project future trajectory and suggest strategic balance.
 
@@ -23,7 +22,7 @@ export class HorizonEngine {
         let lastIntention = null;
         let streak = 0;
 
-        threads.forEach(t => {
+        threads.forEach((t) => {
             if (counts[t.intention] !== undefined) {
                 counts[t.intention]++;
             }
@@ -59,11 +58,14 @@ export class HorizonEngine {
         // Max deviation is if all are one type: |total - total/4| + 3*|0 - total/4| = 0.75t + 0.75t = 1.5t
         // So normalized deviation = totalDeviation / (1.5 * total)
         // Invert for balance score
-        const balanceRatio = 1 - (totalDeviation / (1.5 * total));
+        const balanceRatio = 1 - totalDeviation / (1.5 * total);
         const balanceScore = Math.round(balanceRatio * 100);
 
         return {
-            dominance: { intention: dominantIntention, percent: Math.round((maxCount / total) * 100) },
+            dominance: {
+                intention: dominantIntention,
+                percent: Math.round((maxCount / total) * 100)
+            },
             counts: counts,
             balanceScore: balanceScore,
             streak: streak,
@@ -147,7 +149,7 @@ export class HorizonEngine {
         let str = `${intention}-${time}-${type}`;
         let hash = 0;
         for (let i = 0; i < str.length; i++) {
-            hash = ((hash << 5) - hash) + str.charCodeAt(i);
+            hash = (hash << 5) - hash + str.charCodeAt(i);
             hash |= 0;
         }
 

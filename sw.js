@@ -1,4 +1,3 @@
-
 const CACHE_NAME = 'marq-v2';
 const ASSETS = [
     './',
@@ -35,11 +34,13 @@ self.addEventListener('activate', (event) => {
     // Clean up old caches
     event.waitUntil(
         caches.keys().then((keyList) => {
-            return Promise.all(keyList.map((key) => {
-                if (key !== CACHE_NAME) {
-                    return caches.delete(key);
-                }
-            }));
+            return Promise.all(
+                keyList.map((key) => {
+                    if (key !== CACHE_NAME) {
+                        return caches.delete(key);
+                    }
+                })
+            );
         })
     );
 });
@@ -48,36 +49,53 @@ self.addEventListener('fetch', (event) => {
     // Strategy: Stale-While-Revalidate for core assets
     // This ensures fast load (stale) but updates in background for next visit
 
-    if (event.request.destination === 'image' && event.request.url.includes('unsplash')) {
+    if (
+        event.request.destination === 'image' &&
+        event.request.url.includes('unsplash')
+    ) {
         // Cache external images with Cache-First (they rarely change)
         event.respondWith(
             caches.match(event.request).then((response) => {
-                return response || fetch(event.request).then((response) => {
-                    if (!response || response.status !== 200 || response.type !== 'basic' && response.type !== 'cors') {
+                return (
+                    response ||
+                    fetch(event.request).then((response) => {
+                        if (
+                            !response ||
+                            response.status !== 200 ||
+                            (response.type !== 'basic' &&
+                                response.type !== 'cors')
+                        ) {
+                            return response;
+                        }
+                        const responseToCache = response.clone();
+                        caches.open(CACHE_NAME).then((cache) => {
+                            cache.put(event.request, responseToCache);
+                        });
                         return response;
-                    }
-                    const responseToCache = response.clone();
-                    caches.open(CACHE_NAME).then((cache) => {
-                        cache.put(event.request, responseToCache);
-                    });
-                    return response;
-                });
+                    })
+                );
             })
         );
     } else {
         // Core Logic/UI: Stale-While-Revalidate
         event.respondWith(
             caches.match(event.request).then((cachedResponse) => {
-                const fetchPromise = fetch(event.request).then((networkResponse) => {
-                    // Update the cache with the fresh response
-                    if (networkResponse && networkResponse.status === 200 && networkResponse.type === 'basic') {
-                        const responseToCache = networkResponse.clone();
-                        caches.open(CACHE_NAME).then((cache) => {
-                            cache.put(event.request, responseToCache);
-                        });
+                const fetchPromise = fetch(event.request).then(
+                    (networkResponse) => {
+                        // Update the cache with the fresh response
+                        if (
+                            networkResponse &&
+                            networkResponse.status === 200 &&
+                            networkResponse.type === 'basic'
+                        ) {
+                            const responseToCache = networkResponse.clone();
+                            caches.open(CACHE_NAME).then((cache) => {
+                                cache.put(event.request, responseToCache);
+                            });
+                        }
+                        return networkResponse;
                     }
-                    return networkResponse;
-                });
+                );
 
                 // Return cached response immediately if available, otherwise wait for network
                 return cachedResponse || fetchPromise;

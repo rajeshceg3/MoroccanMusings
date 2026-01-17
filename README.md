@@ -8,6 +8,7 @@ Marq is an immersive, interactive narrative experience exploring Moroccan themes
 ## New Feature: Project OVERWATCH (Geospatial Intelligence)
 
 The application now includes a tactical "Map Overwatch" mode.
+
 - **Access:** In the Tapestry screen, click "Map Overwatch" or use the CLI command `overwatch`.
 - **Function:** Visualizes the user's threaded journey on a vector map of Morocco.
 - **Tactical Data:** Plots nodes based on intention/region coordinates, allowing for geographic pattern analysis.
@@ -17,34 +18,37 @@ The application now includes a tactical "Map Overwatch" mode.
 This application is a static site (HTML/CSS/JS). No build step is required.
 
 ### Prerequisites
+
 - A modern web browser (Chrome, Firefox, Safari, Edge)
 - Python 3.x (optional, for local testing)
 
 ### Running Locally
+
 1. Clone the repository.
 2. Open `index.html` directly in your browser.
    OR
    Run a local server:
-   ```bash
-   python3 -m http.server 8080
-   ```
-   Then navigate to `http://localhost:8080`.
+    ```bash
+    python3 -m http.server 8080
+    ```
+    Then navigate to `http://localhost:8080`.
 
 ## Testing
 
 Integration tests are provided using Playwright.
 
 1. Install dependencies (if not already present):
-   ```bash
-   pip install playwright
-   playwright install chromium
-   ```
+
+    ```bash
+    pip install playwright
+    playwright install chromium
+    ```
 
 2. Run the verification script:
-   ```bash
-   python3 tests/verify_app.py
-   python3 tests/verify_map.py
-   ```
+    ```bash
+    python3 tests/verify_app.py
+    python3 tests/verify_map.py
+    ```
 
 ## Architecture
 

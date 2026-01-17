@@ -29,7 +29,11 @@ export class ResonanceEngine {
 
     setVolume(value) {
         if (this.masterGain) {
-            this.masterGain.gain.setTargetAtTime(value, this.ctx.currentTime, 0.1);
+            this.masterGain.gain.setTargetAtTime(
+                value,
+                this.ctx.currentTime,
+                0.1
+            );
         }
     }
 
@@ -45,7 +49,11 @@ export class ResonanceEngine {
 
     _createNoiseBuffer() {
         const bufferSize = this.ctx.sampleRate * 2; // 2 seconds
-        const buffer = this.ctx.createBuffer(1, bufferSize, this.ctx.sampleRate);
+        const buffer = this.ctx.createBuffer(
+            1,
+            bufferSize,
+            this.ctx.sampleRate
+        );
         const data = buffer.getChannelData(0);
         for (let i = 0; i < bufferSize; i++) {
             data[i] = Math.random() * 2 - 1;
@@ -89,7 +97,11 @@ export class ResonanceEngine {
         }
 
         harmonics.forEach((ratio, i) => {
-            const osc = this._createOscillator(oscType, rootFreq * ratio, i * 2);
+            const osc = this._createOscillator(
+                oscType,
+                rootFreq * ratio,
+                i * 2
+            );
             const gain = this.ctx.createGain();
             gain.gain.value = 0;
 
@@ -117,10 +129,12 @@ export class ResonanceEngine {
             osc.start(now);
             gain.gain.setTargetAtTime(0.1 / harmonics.length, now, 2); // Fade in
 
-            this.ambienceNodes.push({ stop: () => {
-                gain.gain.setTargetAtTime(0, this.ctx.currentTime, 1);
-                setTimeout(() => osc.stop(), 1000);
-            }});
+            this.ambienceNodes.push({
+                stop: () => {
+                    gain.gain.setTargetAtTime(0, this.ctx.currentTime, 1);
+                    setTimeout(() => osc.stop(), 1000);
+                }
+            });
         });
 
         // --- 3. Texture Layer (Noise/Wind) ---
@@ -148,13 +162,15 @@ export class ResonanceEngine {
         noiseFilter.connect(noiseGain);
         noiseGain.connect(this.masterGain);
         noise.start(now);
-        this.ambienceNodes.push({ stop: () => {
-             noise.stop();
-        }});
+        this.ambienceNodes.push({
+            stop: () => {
+                noise.stop();
+            }
+        });
     }
 
     stopAmbience() {
-        this.ambienceNodes.forEach(node => node.stop());
+        this.ambienceNodes.forEach((node) => node.stop());
         this.ambienceNodes = [];
     }
 

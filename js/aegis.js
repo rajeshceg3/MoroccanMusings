@@ -1,4 +1,3 @@
-
 // Project AEGIS: Tactical Operations & Mission Control
 // Enhances the Marq experience with structured strategic objectives and long-term progression.
 
@@ -15,7 +14,7 @@ export class AegisEngine {
                 codename: 'FIRST LIGHT',
                 description: 'Weave a thread during the Dawn phase.',
                 type: 'tutorial',
-                criteria: (threads) => threads.some(t => t.time === 'dawn'),
+                criteria: (threads) => threads.some((t) => t.time === 'dawn'),
                 reward: 'Badge: Early Riser'
             },
             {
@@ -24,7 +23,7 @@ export class AegisEngine {
                 description: 'Weave threads with 3 unique intentions.',
                 type: 'tactical',
                 criteria: (threads) => {
-                    const unique = new Set(threads.map(t => t.intention));
+                    const unique = new Set(threads.map((t) => t.intention));
                     return unique.size >= 3;
                 },
                 reward: 'Badge: Triad Strategist'
@@ -32,7 +31,8 @@ export class AegisEngine {
             {
                 id: 'M003',
                 codename: 'EQUILIBRIUM',
-                description: 'Maintain a Balance Score > 80% with at least 8 threads.',
+                description:
+                    'Maintain a Balance Score > 80% with at least 8 threads.',
                 type: 'strategic',
                 criteria: (threads, analysis) => {
                     return threads.length >= 8 && analysis.balanceScore > 80;
@@ -42,7 +42,8 @@ export class AegisEngine {
             {
                 id: 'M004',
                 codename: 'GHOST HUNTER',
-                description: 'Weave a thread that aligns with a predicted Horizon Ghost Vector.',
+                description:
+                    'Weave a thread that aligns with a predicted Horizon Ghost Vector.',
                 type: 'intel',
                 // This requires stateful tracking of previous ghosts, or checking if the LAST thread matched a prediction.
                 // We will implement a check in the analyze function specifically for this.
@@ -61,7 +62,7 @@ export class AegisEngine {
                     let maxStreak = 0;
                     let currentStreak = 1;
                     for (let i = 1; i < threads.length; i++) {
-                        if (threads[i].region === threads[i-1].region) {
+                        if (threads[i].region === threads[i - 1].region) {
                             currentStreak++;
                         } else {
                             maxStreak = Math.max(maxStreak, currentStreak);
@@ -84,7 +85,7 @@ export class AegisEngine {
             try {
                 return JSON.parse(raw);
             } catch (e) {
-                console.error("Aegis Profile Corrupt. Resetting.");
+                console.error('Aegis Profile Corrupt. Resetting.');
             }
         }
         return {
@@ -115,9 +116,10 @@ export class AegisEngine {
         if (threads.length > 0 && this.activeGhosts.length > 0) {
             const lastThread = threads[threads.length - 1];
             // Check if last thread matches any active ghost's intention and time
-            ghostMatched = this.activeGhosts.some(g =>
-                g.intention === lastThread.intention &&
-                g.time === lastThread.time
+            ghostMatched = this.activeGhosts.some(
+                (g) =>
+                    g.intention === lastThread.intention &&
+                    g.time === lastThread.time
             );
         }
 
@@ -126,7 +128,7 @@ export class AegisEngine {
         // 3. Evaluate Missions
         const newlyCompleted = [];
 
-        this.missionRegistry.forEach(mission => {
+        this.missionRegistry.forEach((mission) => {
             if (this.profile.completedMissions.includes(mission.id)) return; // Already done
 
             if (mission.criteria(threads, analysis, context)) {
@@ -154,15 +156,22 @@ export class AegisEngine {
     }
 
     _notifyCompletion(missions) {
-        missions.forEach(m => {
-            this.ui.showNotification(`MISSION ACCOMPLISHED: ${m.codename}`, 'success');
+        missions.forEach((m) => {
+            this.ui.showNotification(
+                `MISSION ACCOMPLISHED: ${m.codename}`,
+                'success'
+            );
             // Play sound? (Handled by UI/Resonance if we had access, but UI notification is good)
         });
     }
 
     getReport() {
-        const completed = this.missionRegistry.filter(m => this.profile.completedMissions.includes(m.id));
-        const active = this.missionRegistry.filter(m => !this.profile.completedMissions.includes(m.id));
+        const completed = this.missionRegistry.filter((m) =>
+            this.profile.completedMissions.includes(m.id)
+        );
+        const active = this.missionRegistry.filter(
+            (m) => !this.profile.completedMissions.includes(m.id)
+        );
 
         return {
             rank: this.profile.rank,
@@ -194,7 +203,7 @@ export class AegisEngine {
         if (report.active.length === 0) {
             html += `<div class="mission-card completed">ALL OBJECTIVES SECURED. STANDBY FOR NEW ORDERS.</div>`;
         } else {
-            report.active.forEach(m => {
+            report.active.forEach((m) => {
                 html += `
                     <div class="mission-card">
                         <div class="mission-codename">${m.codename}</div>
@@ -217,7 +226,7 @@ export class AegisEngine {
         if (report.badges.length === 0) {
             html += `<div class="no-data">No commendations recorded.</div>`;
         } else {
-            report.badges.forEach(b => {
+            report.badges.forEach((b) => {
                 html += `<div class="badge-item">${b}</div>`;
             });
         }

@@ -10,10 +10,10 @@ export class OracleEngine {
 
         // Base coordinates for Intentions (Fallbacks)
         this.baseCoordinates = {
-            'serenity': { x: 25, y: 55, region: 'coast' }, // Essaouira
-            'vibrancy': { x: 60, y: 30, region: 'medina' }, // Fes
-            'awe': { x: 75, y: 75, region: 'sahara' }, // Merzouga
-            'legacy': { x: 45, y: 15, region: 'atlas' }  // Middle Atlas/North
+            serenity: { x: 25, y: 55, region: 'coast' }, // Essaouira
+            vibrancy: { x: 60, y: 30, region: 'medina' }, // Fes
+            awe: { x: 75, y: 75, region: 'sahara' }, // Merzouga
+            legacy: { x: 45, y: 15, region: 'atlas' } // Middle Atlas/North
         };
     }
 
@@ -28,8 +28,11 @@ export class OracleEngine {
         const projections = this.horizon.project(threads);
 
         // Augment ghosts with geospatial data
-        const strategicGhosts = projections.map(ghost => {
-            const locationData = this._resolveLocation(ghost.intention, ghost.time);
+        const strategicGhosts = projections.map((ghost) => {
+            const locationData = this._resolveLocation(
+                ghost.intention,
+                ghost.time
+            );
 
             return {
                 ...ghost,
@@ -59,7 +62,11 @@ export class OracleEngine {
         }
 
         // 2. Fallback: Base of Operations
-        const base = this.baseCoordinates[intention] || { x: 50, y: 50, region: 'unknown' };
+        const base = this.baseCoordinates[intention] || {
+            x: 50,
+            y: 50,
+            region: 'unknown'
+        };
         return {
             coordinates: { x: base.x, y: base.y },
             region: base.region,

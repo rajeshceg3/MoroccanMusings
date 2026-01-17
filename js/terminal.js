@@ -18,29 +18,63 @@ export class TerminalSystem {
 
         this.overlay = document.createElement('div');
         this.overlay.className = 'neural-link-overlay';
-        this.overlay.innerHTML = `
-            <div class="terminal-window" role="region" aria-label="Neural Link Command Interface">
-                <div class="terminal-header">
-                    <span class="terminal-title">NEURAL LINK // V1.0.4</span>
-                    <span class="terminal-status">CONNECTED</span>
-                </div>
-                <div class="terminal-output" id="terminal-output" aria-live="polite"></div>
-                <div class="terminal-input-line">
-                    <span class="prompt">></span>
-                    <input type="text" id="terminal-input" class="terminal-input" autocomplete="off" spellcheck="false" aria-label="Command Input">
-                </div>
-            </div>
-        `;
 
+        const windowDiv = document.createElement('div');
+        windowDiv.className = 'terminal-window';
+        windowDiv.setAttribute('role', 'region');
+        windowDiv.setAttribute('aria-label', 'Neural Link Command Interface');
+
+        const header = document.createElement('div');
+        header.className = 'terminal-header';
+
+        const title = document.createElement('span');
+        title.className = 'terminal-title';
+        title.textContent = 'NEURAL LINK // V1.0.4';
+
+        const status = document.createElement('span');
+        status.className = 'terminal-status';
+        status.textContent = 'CONNECTED';
+
+        header.appendChild(title);
+        header.appendChild(status);
+
+        const output = document.createElement('div');
+        output.className = 'terminal-output';
+        output.id = 'terminal-output';
+        output.setAttribute('aria-live', 'polite');
+
+        const inputLine = document.createElement('div');
+        inputLine.className = 'terminal-input-line';
+
+        const prompt = document.createElement('span');
+        prompt.className = 'prompt';
+        prompt.textContent = '>';
+
+        const input = document.createElement('input');
+        input.type = 'text';
+        input.id = 'terminal-input';
+        input.className = 'terminal-input';
+        input.autocomplete = 'off';
+        input.spellcheck = false;
+        input.setAttribute('aria-label', 'Command Input');
+
+        inputLine.appendChild(prompt);
+        inputLine.appendChild(input);
+
+        windowDiv.appendChild(header);
+        windowDiv.appendChild(output);
+        windowDiv.appendChild(inputLine);
+
+        this.overlay.appendChild(windowDiv);
         container.appendChild(this.overlay);
 
-        this.output = this.overlay.querySelector('#terminal-output');
-        this.input = this.overlay.querySelector('#terminal-input');
+        this.output = output;
+        this.input = input;
 
         this.input.addEventListener('keydown', (e) => this.handleInput(e));
 
-        this.log("Neural Link initialized. Awaiting input...", "system");
-        this.log("Type 'help' for available commands.", "info");
+        this.log('Neural Link initialized. Awaiting input...', 'system');
+        this.log("Type 'help' for available commands.", 'info');
     }
 
     toggle() {

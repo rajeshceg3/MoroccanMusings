@@ -1,4 +1,3 @@
-
 import { locations } from './data.js';
 
 // Simple seeded RNG
@@ -11,7 +10,7 @@ class Seer {
         let hash = 0;
         for (let i = 0; i < str.length; i++) {
             const char = str.charCodeAt(i);
-            hash = ((hash << 5) - hash) + char;
+            hash = (hash << 5) - hash + char;
             hash = hash & hash; // Convert to 32bit integer
         }
         return Math.abs(hash);
@@ -37,14 +36,41 @@ class Seer {
 export class SynthesisEngine {
     constructor() {
         // Vocabulary banks for generation
-        this.prefixes = ["Echo of", "Shadow of", "Dream of", "Memory of", "Whisper from", "The Phantom", "The Lost", "Convergent"];
-        this.connectors = ["amidst", "beyond", "beneath", "within", "transcending"];
-        this.abstractNouns = ["Silence", "Light", "Time", "Dust", "Infinity", "Reflection", "Void", "Nexus", "Horizon"];
+        this.prefixes = [
+            'Echo of',
+            'Shadow of',
+            'Dream of',
+            'Memory of',
+            'Whisper from',
+            'The Phantom',
+            'The Lost',
+            'Convergent'
+        ];
+        this.connectors = [
+            'amidst',
+            'beyond',
+            'beneath',
+            'within',
+            'transcending'
+        ];
+        this.abstractNouns = [
+            'Silence',
+            'Light',
+            'Time',
+            'Dust',
+            'Infinity',
+            'Reflection',
+            'Void',
+            'Nexus',
+            'Horizon'
+        ];
     }
 
     async fuse(threadA, threadB) {
         // Ensure consistent ordering for deterministic seed regardless of selection order
-        const [t1, t2] = [threadA, threadB].sort((a, b) => a.hash.localeCompare(b.hash));
+        const [t1, t2] = [threadA, threadB].sort((a, b) =>
+            a.hash.localeCompare(b.hash)
+        );
 
         const seedString = t1.hash + t2.hash;
         const seer = new Seer(seedString);
@@ -63,9 +89,16 @@ export class SynthesisEngine {
             title: this._generateTitle(seer, safeLocA, safeLocB),
             subtitle: this._generateSubtitle(seer, safeLocA, safeLocB),
             image: seer.random() > 0.5 ? safeLocA.image : safeLocB.image, // In a real engine, we'd blend images via canvas, but here we pick one
-            narrative: this._generateNarrative(seer, safeLocA, safeLocB, t1, t2),
+            narrative: this._generateNarrative(
+                seer,
+                safeLocA,
+                safeLocB,
+                t1,
+                t2
+            ),
             sensory: this._blendSensory(seer, safeLocA, safeLocB),
-            foundation: "This place exists only in the space between memories. It is a fleeting convergence of two paths.",
+            foundation:
+                'This place exists only in the space between memories. It is a fleeting convergence of two paths.',
             parents: [t1, t2]
         };
     }
@@ -77,15 +110,15 @@ export class SynthesisEngine {
 
     _getFallbackLocation(thread) {
         return {
-            title: "Unknown Realm",
-            subtitle: "The Void",
-            image: "", // Empty or default
-            narrative: "A memory fading into the mist...",
+            title: 'Unknown Realm',
+            subtitle: 'The Void',
+            image: '', // Empty or default
+            narrative: 'A memory fading into the mist...',
             sensory: {
-                sight: { desc: "Grey mist.", color: "#888888" },
-                sound: { desc: "White noise.", audio: "" },
-            scent: { desc: "Nothing." },
-                touch: { desc: "Cold air." }
+                sight: { desc: 'Grey mist.', color: '#888888' },
+                sound: { desc: 'White noise.', audio: '' },
+                scent: { desc: 'Nothing.' },
+                touch: { desc: 'Cold air.' }
             }
         };
     }
@@ -140,7 +173,10 @@ export class SynthesisEngine {
             },
             sound: {
                 desc: `The impossible harmony of ${locA.sensory.sound.desc} and ${locB.sensory.sound.desc}`,
-                audio: seer.random() > 0.5 ? locA.sensory.sound.audio : locB.sensory.sound.audio,
+                audio:
+                    seer.random() > 0.5
+                        ? locA.sensory.sound.audio
+                        : locB.sensory.sound.audio,
                 // In the future, we could pass params to the audio engine to actually blend them
                 mixRatio: ratio
             },
@@ -155,14 +191,18 @@ export class SynthesisEngine {
 
     _hexToRgb(hex) {
         const result = /^#?([a-f\d]{2})([a-f\d]{2})([a-f\d]{2})$/i.exec(hex);
-        return result ? {
-            r: parseInt(result[1], 16),
-            g: parseInt(result[2], 16),
-            b: parseInt(result[3], 16)
-        } : { r: 0, g: 0, b: 0 };
+        return result
+            ? {
+                  r: parseInt(result[1], 16),
+                  g: parseInt(result[2], 16),
+                  b: parseInt(result[3], 16)
+              }
+            : { r: 0, g: 0, b: 0 };
     }
 
     _rgbToHex(r, g, b) {
-        return "#" + ((1 << 24) + (r << 16) + (g << 8) + b).toString(16).slice(1);
+        return (
+            '#' + ((1 << 24) + (r << 16) + (g << 8) + b).toString(16).slice(1)
+        );
     }
 }
