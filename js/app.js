@@ -11,6 +11,7 @@ import { OracleEngine } from './oracle.js';
 import { SpectraEngine } from './spectra.js';
 import { AegisEngine } from './aegis.js';
 import { SentinelEngine } from './sentinel.js';
+import { ChronosEngine } from './chronos.js';
 import { registerCommands } from './terminal-commands.js';
 
 document.addEventListener('DOMContentLoaded', async () => {
@@ -60,6 +61,7 @@ document.addEventListener('DOMContentLoaded', async () => {
     const terminal = new TerminalSystem();
     const aegis = new AegisEngine(ui, horizonEngine);
     const sentinel = new SentinelEngine(horizonEngine);
+    const chronos = new ChronosEngine(horizonEngine, SentinelEngine);
 
     const tapestryLedger = new TapestryLedger();
     const initStatus = await tapestryLedger.initialize();
@@ -118,7 +120,8 @@ document.addEventListener('DOMContentLoaded', async () => {
                 text: document.getElementById('foundation-text')
             },
             backButton: document.getElementById('back-button'),
-            weaveButton: document.getElementById('weave-button')
+            weaveButton: document.getElementById('weave-button'),
+            simulateButton: document.getElementById('simulate-button')
         },
         tapestry: {
             canvas: document.getElementById('tapestry-canvas'),
@@ -484,8 +487,12 @@ document.addEventListener('DOMContentLoaded', async () => {
         elements.screens.riad.scrollTop = 0;
         elements.riad.imageContainer.style.opacity = 1;
         elements.riad.weaveButton.classList.remove('visible');
+        elements.riad.simulateButton.classList.remove('visible');
         setTimeout(
-            () => elements.riad.weaveButton.classList.add('visible'),
+            () => {
+                elements.riad.weaveButton.classList.add('visible');
+                elements.riad.simulateButton.classList.add('visible');
+            },
             1500
         );
 
@@ -496,6 +503,7 @@ document.addEventListener('DOMContentLoaded', async () => {
         elements.riad.backButton.addEventListener('click', () => {
             showScreen('astrolabe');
             elements.riad.weaveButton.classList.remove('visible');
+            elements.riad.simulateButton.classList.remove('visible');
         });
 
         elements.screens.riad.addEventListener('scroll', () => {
@@ -631,6 +639,31 @@ document.addEventListener('DOMContentLoaded', async () => {
             if (e.key === 'Enter' || e.key === ' ') {
                 e.preventDefault();
                 weaveThread();
+            }
+        });
+
+        // Simulate Button Interaction
+        elements.riad.simulateButton.addEventListener('click', () => {
+            const proposed = {
+                intention: state.intention,
+                time: state.time,
+                region: state.region,
+                title: state.activeLocation.title
+            };
+
+            const report = chronos.simulate(tapestryLedger.getThreads(), proposed);
+
+            ui.showSimulationResults(report, () => {
+                weaveThread();
+            });
+            resonanceEngine.playInteractionSound('click');
+        });
+
+        elements.riad.simulateButton.setAttribute('tabindex', '0');
+        elements.riad.simulateButton.addEventListener('keydown', (e) => {
+            if (e.key === 'Enter' || e.key === ' ') {
+                e.preventDefault();
+                elements.riad.simulateButton.click();
             }
         });
     }
@@ -1078,7 +1111,8 @@ document.addEventListener('DOMContentLoaded', async () => {
             sentinel,
             aegis,
             codex,
-            alchemy
+            alchemy,
+            chronos
         },
         ui,
         elements,
