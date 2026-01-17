@@ -582,4 +582,76 @@ export function registerCommands(terminal, context) {
             terminal.log('Usage: aegis [status|report|hud]', 'warning');
         }
     });
+
+    terminal.registerCommand(
+        'simulate',
+        'Run Chronos Tactical Forecast',
+        (args) => {
+            if (!checkAccess()) return;
+            if (args.length < 3) {
+                terminal.log(
+                    'Usage: simulate <intention> <region> <time>',
+                    'warning'
+                );
+                return;
+            }
+
+            const intention = args[0].toLowerCase();
+            const region = args[1].toLowerCase();
+            const time = args[2].toLowerCase();
+
+            // Validate inputs
+            const validIntentions = ['serenity', 'vibrancy', 'awe', 'legacy'];
+            const validTimes = ['dawn', 'midday', 'dusk', 'night'];
+
+            if (!validIntentions.includes(intention)) {
+                terminal.log(
+                    `Invalid intention. Valid: ${validIntentions.join(', ')}`,
+                    'error'
+                );
+                return;
+            }
+
+            if (!validTimes.includes(time)) {
+                terminal.log(
+                    `Invalid time. Valid: ${validTimes.join(', ')}`,
+                    'error'
+                );
+                return;
+            }
+
+            const proposed = {
+                intention,
+                region,
+                time,
+                title: 'Simulated Node'
+            };
+
+            terminal.log('--- CHRONOS TACTICAL FORECAST ---', 'system');
+            terminal.log('Running simulation...', 'info');
+
+            const report = context.engines.chronos.simulate(
+                tapestryLedger.getThreads(),
+                proposed
+            );
+
+            terminal.log(
+                `Baseline DEFCON: ${report.baseline.defcon} -> Projected: ${report.projected.defcon}`,
+                'info'
+            );
+
+            const defconDelta = report.deltas.defcon;
+            if (defconDelta > 0)
+                terminal.log('IMPACT: THREAT REDUCTION', 'success');
+            else if (defconDelta < 0)
+                terminal.log('IMPACT: THREAT ESCALATION', 'error');
+            else terminal.log('IMPACT: STABLE', 'info');
+
+            terminal.log(
+                `Balance Shift: ${report.deltas.balance >= 0 ? '+' : ''}${report.deltas.balance}%`,
+                'info'
+            );
+            terminal.log(`Advisory: ${report.advisory}`, 'warning');
+        }
+    );
 }

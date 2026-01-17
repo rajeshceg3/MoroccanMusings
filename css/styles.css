@@ -429,6 +429,33 @@ body {
     transform: scale(0.95);
 }
 
+/* Simulation Button */
+.simulate-button {
+    position: fixed;
+    bottom: 2rem;
+    left: 2rem; /* Opposite to Weave */
+    padding: 1rem 2rem;
+    background: rgba(0, 200, 255, 0.1);
+    border: 1px solid #00c8ff;
+    color: #00c8ff;
+    font-weight: bold;
+    border-radius: 30px;
+    cursor: pointer;
+    z-index: 20;
+    box-shadow: 0 4px 15px rgba(0, 200, 255, 0.2);
+    transform: translateY(100px);
+    transition: transform 0.5s var(--ease-out-quint), background 0.2s;
+    backdrop-filter: blur(5px);
+}
+
+.simulate-button.visible {
+    transform: translateY(0);
+}
+
+.simulate-button:hover {
+    background: rgba(0, 200, 255, 0.2);
+}
+
 /* Tapestry Screen */
 #tapestry-screen {
     background: #000;
@@ -971,6 +998,70 @@ body {
     background: var(--ochre-gold);
     color: #000;
 }
+
+/* Simulation Modal Styles */
+.simulation-content {
+    border-color: #00c8ff;
+    box-shadow: 0 0 30px rgba(0, 200, 255, 0.1);
+    text-align: left;
+    min-width: 320px;
+}
+
+.simulation-title {
+    color: #00c8ff;
+    font-family: 'Share Tech Mono', monospace;
+    letter-spacing: 2px;
+    text-align: center;
+    margin-top: 0;
+    border-bottom: 1px solid rgba(0, 200, 255, 0.3);
+    padding-bottom: 1rem;
+}
+
+.simulation-grid {
+    display: grid;
+    gap: 1rem;
+    margin: 1.5rem 0;
+    font-family: 'Share Tech Mono', monospace;
+}
+
+.sim-row {
+    display: flex;
+    justify-content: space-between;
+    border-bottom: 1px dashed rgba(255, 255, 255, 0.1);
+    padding-bottom: 0.5rem;
+}
+
+.sim-row span:first-child {
+    color: #888;
+}
+
+.sim-row span:last-child {
+    color: #fff;
+    font-weight: bold;
+}
+
+.simulation-advisory {
+    margin: 1.5rem 0;
+    padding: 1rem;
+    background: rgba(255, 255, 255, 0.05);
+    font-size: 0.85rem;
+    border-left: 3px solid #888;
+    line-height: 1.4;
+}
+
+.advisory-warning {
+    border-left-color: #ffaa00;
+    color: #ffcc88;
+}
+
+.advisory-success {
+    border-left-color: #55ffaa;
+    color: #ccffdd;
+}
+
+.positive { color: #55ffaa; }
+.negative { color: #ff0055; }
+.neutral { color: #fff; }
 
 /* Reduced Motion */
 @media (prefers-reduced-motion: reduce) {

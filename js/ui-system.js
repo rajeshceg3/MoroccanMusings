@@ -51,6 +51,46 @@ export class UISystem {
         return modal;
     }
 
+    ensureSimulationModal() {
+        let modal = document.getElementById('simulation-modal');
+        if (!modal) {
+            modal = document.createElement('div');
+            modal.id = 'simulation-modal';
+            modal.setAttribute('role', 'dialog');
+            modal.setAttribute('aria-modal', 'true');
+            modal.setAttribute('aria-label', 'Tactical Forecast');
+            modal.className = 'confirm-modal-overlay'; // Reuse overlay style
+
+            // Custom content structure
+            modal.innerHTML = `
+                <div class="confirm-modal-content simulation-content">
+                    <h3 class="simulation-title">TACTICAL FORECAST</h3>
+                    <div class="simulation-grid">
+                        <div class="sim-row">
+                            <span>DEFCON:</span>
+                            <span id="sim-defcon"></span>
+                        </div>
+                        <div class="sim-row">
+                            <span>BALANCE:</span>
+                            <span id="sim-balance"></span>
+                        </div>
+                        <div class="sim-row">
+                            <span>DOMINANCE:</span>
+                            <span id="sim-dominance"></span>
+                        </div>
+                    </div>
+                    <div id="sim-advisory" class="simulation-advisory"></div>
+                    <div class="confirm-btn-group">
+                        <button class="confirm-btn cancel">ABORT</button>
+                        <button class="confirm-btn ok">EXECUTE</button>
+                    </div>
+                </div>
+            `;
+            document.body.appendChild(modal);
+        }
+        return modal;
+    }
+
     ensureLoadingOverlay() {
         let overlay = document.getElementById('loading-overlay');
         if (!overlay) {
@@ -117,6 +157,62 @@ export class UISystem {
 
         // Trap focus on Cancel button initially
         cancelBtn.focus();
+    }
+
+    showSimulationResults(report, onConfirm, onCancel) {
+        const modal = this.ensureSimulationModal();
+        const defconEl = modal.querySelector('#sim-defcon');
+        const balanceEl = modal.querySelector('#sim-balance');
+        const dominanceEl = modal.querySelector('#sim-dominance');
+        const advisoryEl = modal.querySelector('#sim-advisory');
+        const okBtn = modal.querySelector('.confirm-btn.ok');
+        const cancelBtn = modal.querySelector('.confirm-btn.cancel');
+
+        // Populate Data
+        // Higher DEFCON is safer. Delta > 0 is Improvement.
+        const defconArrow = report.deltas.defcon > 0 ? '⬆' : (report.deltas.defcon < 0 ? '⬇' : '➡');
+
+        let defconClass = 'neutral';
+        if (report.deltas.defcon > 0) defconClass = 'positive';
+        if (report.deltas.defcon < 0) defconClass = 'negative';
+
+        defconEl.innerHTML = `<span class="${defconClass}">${report.baseline.defcon} ${defconArrow} ${report.projected.defcon}</span>`;
+
+        const balanceSign = report.deltas.balance >= 0 ? '+' : '';
+        balanceEl.textContent = `${report.baseline.balance}% -> ${report.projected.balance}% (${balanceSign}${report.deltas.balance})`;
+
+        dominanceEl.textContent = report.deltas.dominance;
+        advisoryEl.textContent = report.advisory;
+
+        // Style advisory
+        advisoryEl.className = 'simulation-advisory';
+        if (report.advisory.includes('CRITICAL') || report.advisory.includes('WARNING') || report.advisory.includes('CAUTION')) {
+            advisoryEl.classList.add('advisory-warning');
+        } else if (report.advisory.includes('RECOMMENDED') || report.advisory.includes('ADVANTAGE')) {
+            advisoryEl.classList.add('advisory-success');
+        }
+
+        modal.classList.add('visible');
+        const activeBefore = document.activeElement;
+
+        const close = () => {
+            modal.classList.remove('visible');
+            okBtn.onclick = null;
+            cancelBtn.onclick = null;
+            if (activeBefore) activeBefore.focus();
+        };
+
+        okBtn.onclick = () => {
+            close();
+            if (onConfirm) onConfirm();
+        };
+
+        cancelBtn.onclick = () => {
+            close();
+            if (onCancel) onCancel();
+        };
+
+        okBtn.focus();
     }
 
     hideLoading() {
