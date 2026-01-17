@@ -11,6 +11,7 @@ import { OracleEngine } from './oracle.js';
 import { SpectraEngine } from './spectra.js';
 import { AegisEngine } from './aegis.js';
 import { SentinelEngine } from './sentinel.js';
+import { registerCommands } from './terminal-commands.js';
 
 document.addEventListener('DOMContentLoaded', async () => {
     // Service Worker Registration
@@ -26,9 +27,26 @@ document.addEventListener('DOMContentLoaded', async () => {
     const ui = new UISystem();
     ui.setupGlobalErrorHandling();
 
+    /**
+     * @typedef {Object} AppState
+     * @property {string|null} intention - Selected intention
+     * @property {string|null} region - Derived region
+     * @property {string|null} time - Selected time
+     * @property {'splash'|'astrolabe'|'riad'|'tapestry'} activeScreen - Current screen
+     * @property {Object|null} activeLocation - Current location data
+     * @property {boolean} isWeaving - Lock for weaving animation
+     * @property {number[]} selectedThreads - Indices of selected threads
+     * @property {boolean} isHorizonActive - Horizon visualization toggle
+     * @property {boolean} isMapActive - Map/Overwatch toggle
+     */
+
+    /** @type {AppState} */
     const state = {
-        intention: null, region: null, time: null,
-        activeScreen: 'splash', activeLocation: null,
+        intention: null,
+        region: null,
+        time: null,
+        activeScreen: 'splash',
+        activeLocation: null,
         isWeaving: false,
         selectedThreads: [], // Array of indices
         isHorizonActive: false,
@@ -68,8 +86,10 @@ document.addEventListener('DOMContentLoaded', async () => {
                 time: document.getElementById('ring-time')
             },
             markers: {
-                intention: document.querySelectorAll('#ring-intention .astrolabe-marker'),
-                time: document.querySelectorAll('#ring-time .astrolabe-marker'),
+                intention: document.querySelectorAll(
+                    '#ring-intention .astrolabe-marker'
+                ),
+                time: document.querySelectorAll('#ring-time .astrolabe-marker')
             },
             center: document.querySelector('.astrolabe-center'),
             centerText: document.querySelector('.center-text'),
@@ -153,34 +173,38 @@ document.addEventListener('DOMContentLoaded', async () => {
         }
 
         if (screenName === 'tapestry') {
-             elements.screens.tapestry.classList.add('tapestry-active');
-             if (!mandalaRenderer) {
-                 mandalaRenderer = new MandalaRenderer(elements.tapestry.canvas);
-             } else {
-                 mandalaRenderer.resize();
-             }
+            elements.screens.tapestry.classList.add('tapestry-active');
+            if (!mandalaRenderer) {
+                mandalaRenderer = new MandalaRenderer(elements.tapestry.canvas);
+            } else {
+                mandalaRenderer.resize();
+            }
 
-             if (!mapRenderer && elements.tapestry.mapCanvas) {
-                 mapRenderer = new MapRenderer(elements.tapestry.mapCanvas);
-                 // Initialize Oracle once map renderer is available
-                 if (!oracleEngine) {
-                     oracleEngine = new OracleEngine(horizonEngine, mapRenderer, locations);
-                 }
-             }
+            if (!mapRenderer && elements.tapestry.mapCanvas) {
+                mapRenderer = new MapRenderer(elements.tapestry.mapCanvas);
+                // Initialize Oracle once map renderer is available
+                if (!oracleEngine) {
+                    oracleEngine = new OracleEngine(
+                        horizonEngine,
+                        mapRenderer,
+                        locations
+                    );
+                }
+            }
 
-             mandalaRenderer.setSelection(state.selectedThreads);
+            mandalaRenderer.setSelection(state.selectedThreads);
 
-             // Initial render
-             renderTapestry();
-             updateAlchemyUI();
+            // Initial render
+            renderTapestry();
+            updateAlchemyUI();
 
-             // Sentinel Scan on screen entry
-             sentinel.assess(tapestryLedger.getThreads());
+            // Sentinel Scan on screen entry
+            sentinel.assess(tapestryLedger.getThreads());
 
-             // Start animation loop if horizon is active
-             if (state.isHorizonActive) {
-                 startHorizonLoop();
-             }
+            // Start animation loop if horizon is active
+            if (state.isHorizonActive) {
+                startHorizonLoop();
+            }
         } else {
             elements.screens.tapestry.classList.remove('tapestry-active');
             stopHorizonLoop();
@@ -192,38 +216,44 @@ document.addEventListener('DOMContentLoaded', async () => {
         const threads = tapestryLedger.getThreads();
 
         state.selectedThreads.forEach((threadIndex, i) => {
-             slots[i].classList.add('filled');
-             // Just show first letter of intention as a glyph/symbol placeholder
-             const t = threads[threadIndex];
-             slots[i].textContent = t ? t.intention[0].toUpperCase() : '?';
+            slots[i].classList.add('filled');
+            // Just show first letter of intention as a glyph/symbol placeholder
+            const t = threads[threadIndex];
+            slots[i].textContent = t ? t.intention[0].toUpperCase() : '?';
         });
 
         // Clear empty slots
-        for(let i = state.selectedThreads.length; i < 2; i++) {
-             slots[i].classList.remove('filled');
-             slots[i].textContent = (i + 1);
+        for (let i = state.selectedThreads.length; i < 2; i++) {
+            slots[i].classList.remove('filled');
+            slots[i].textContent = i + 1;
         }
 
         if (state.selectedThreads.length === 2) {
-             elements.tapestry.fuseBtn.disabled = false;
+            elements.tapestry.fuseBtn.disabled = false;
         } else {
-             elements.tapestry.fuseBtn.disabled = true;
+            elements.tapestry.fuseBtn.disabled = true;
         }
 
-        elements.tapestry.alchemyUI.classList.toggle('visible', threads.length >= 2);
+        elements.tapestry.alchemyUI.classList.toggle(
+            'visible',
+            threads.length >= 2
+        );
     }
 
     // --- Splash Screen Logic ---
     function initSplash() {
         // Immediate visual entry
         requestAnimationFrame(() => {
-             elements.splash.surface.style.opacity = '1';
+            elements.splash.surface.style.opacity = '1';
         });
 
         if (initStatus === 'LOCKED') {
-             elements.splash.calligraphy.textContent = "SECURE ENCLAVE";
-             elements.splash.calligraphy.style.color = '#ff0055'; // Tactical Red
-             ui.showNotification("SYSTEM LOCKED. ACCESS VIA TERMINAL (` or Ctrl+Space).", "error");
+            elements.splash.calligraphy.textContent = 'SECURE ENCLAVE';
+            elements.splash.calligraphy.style.color = '#ff0055'; // Tactical Red
+            ui.showNotification(
+                'SYSTEM LOCKED. ACCESS VIA TERMINAL (` or Ctrl+Space).',
+                'error'
+            );
         }
 
         setTimeout(() => {
@@ -233,7 +263,10 @@ document.addEventListener('DOMContentLoaded', async () => {
 
         const dismissSplash = () => {
             if (tapestryLedger.status === 'LOCKED') {
-                ui.showNotification("AUTHENTICATION REQUIRED. ACCESS DENIED.", "error");
+                ui.showNotification(
+                    'AUTHENTICATION REQUIRED. ACCESS DENIED.',
+                    'error'
+                );
                 terminal.toggle(); // Force open terminal
                 return;
             }
@@ -254,7 +287,9 @@ document.addEventListener('DOMContentLoaded', async () => {
 
         // Allow interaction immediately
         elements.screens.splash.style.cursor = 'pointer';
-        elements.screens.splash.addEventListener('click', dismissSplash, { once: true });
+        elements.screens.splash.addEventListener('click', dismissSplash, {
+            once: true
+        });
         window.addEventListener('keydown', handleSplashKey);
     }
 
@@ -269,7 +304,10 @@ document.addEventListener('DOMContentLoaded', async () => {
             const centerY = rect.top + rect.height / 2;
             const clientX = e.touches ? e.touches[0].clientX : e.clientX;
             const clientY = e.touches ? e.touches[0].clientY : e.clientY;
-            return Math.atan2(clientY - centerY, clientX - centerX) * (180 / Math.PI);
+            return (
+                Math.atan2(clientY - centerY, clientX - centerX) *
+                (180 / Math.PI)
+            );
         };
 
         const drag = (e) => {
@@ -279,13 +317,24 @@ document.addEventListener('DOMContentLoaded', async () => {
         };
 
         const endDrag = () => {
-            ringElement.style.transition = 'transform 0.8s var(--ease-out-quint)';
+            ringElement.style.transition =
+                'transform 0.8s var(--ease-out-quint)';
             document.body.style.cursor = 'default';
 
-            const closestSnap = snapAngles.reduce((prev, curr) => (Math.abs(curr - currentRotation % 360) < Math.abs(prev - currentRotation % 360) ? curr : prev));
+            const closestSnap = snapAngles.reduce((prev, curr) =>
+                Math.abs(curr - (currentRotation % 360)) <
+                Math.abs(prev - (currentRotation % 360))
+                    ? curr
+                    : prev
+            );
             const revolutions = Math.round(currentRotation / 360);
             let finalRotation = revolutions * 360 + closestSnap;
-            if (Math.abs(currentRotation - (finalRotation - 360)) < Math.abs(currentRotation - finalRotation)) { finalRotation -= 360; }
+            if (
+                Math.abs(currentRotation - (finalRotation - 360)) <
+                Math.abs(currentRotation - finalRotation)
+            ) {
+                finalRotation -= 360;
+            }
 
             currentRotation = finalRotation;
             ringElement.style.transform = `rotate(${currentRotation}deg)`;
@@ -311,44 +360,70 @@ document.addEventListener('DOMContentLoaded', async () => {
         };
 
         ringElement.addEventListener('mousedown', startDrag);
-        ringElement.addEventListener('touchstart', startDrag, { passive: false });
+        ringElement.addEventListener('touchstart', startDrag, {
+            passive: false
+        });
 
         // Keyboard support
         ringElement.setAttribute('tabindex', '0');
         ringElement.setAttribute('role', 'slider');
-        ringElement.setAttribute('aria-label', ringElement.id === 'ring-intention' ? 'Intention Ring' : 'Time Ring');
+        ringElement.setAttribute(
+            'aria-label',
+            ringElement.id === 'ring-intention' ? 'Intention Ring' : 'Time Ring'
+        );
 
         ringElement.addEventListener('keydown', (e) => {
             let rotationChange = 0;
-            if (e.key === 'ArrowRight' || e.key === 'ArrowUp') rotationChange = -90;
-            if (e.key === 'ArrowLeft' || e.key === 'ArrowDown') rotationChange = 90;
+            if (e.key === 'ArrowRight' || e.key === 'ArrowUp')
+                rotationChange = -90;
+            if (e.key === 'ArrowLeft' || e.key === 'ArrowDown')
+                rotationChange = 90;
 
             if (rotationChange !== 0) {
-                 e.preventDefault();
-                 currentRotation += rotationChange;
-                 ringElement.style.transition = 'transform 0.5s var(--ease-out-quint)';
-                 ringElement.style.transform = `rotate(${currentRotation}deg)`;
+                e.preventDefault();
+                currentRotation += rotationChange;
+                ringElement.style.transition =
+                    'transform 0.5s var(--ease-out-quint)';
+                ringElement.style.transform = `rotate(${currentRotation}deg)`;
 
-                 // Find closest snap point (simplified for keyboard: just snap to next quadrant)
-                 const closestSnap = snapAngles.reduce((prev, curr) => (Math.abs(curr - currentRotation % 360) < Math.abs(prev - currentRotation % 360) ? curr : prev));
-                 onSnap(closestSnap);
+                // Find closest snap point (simplified for keyboard: just snap to next quadrant)
+                const closestSnap = snapAngles.reduce((prev, curr) =>
+                    Math.abs(curr - (currentRotation % 360)) <
+                    Math.abs(prev - (currentRotation % 360))
+                        ? curr
+                        : prev
+                );
+                onSnap(closestSnap);
             }
         });
     }
 
     function updateAstrolabeState() {
-        const keys = { intention: ['serenity', 'vibrancy', 'awe', 'legacy'], time: ['dawn', 'midday', 'dusk', 'night'] };
+        const keys = {
+            intention: ['serenity', 'vibrancy', 'awe', 'legacy'],
+            time: ['dawn', 'midday', 'dusk', 'night']
+        };
 
         const updateSelection = (ring, angle) => {
             const index = (Math.round(angle / 90) + 4) % 4;
             state[ring] = keys[ring][index];
             const markers = elements.astrolabe.markers[ring];
-            markers.forEach((m, i) => m.classList.toggle('selected-marker', i === index));
+            markers.forEach((m, i) =>
+                m.classList.toggle('selected-marker', i === index)
+            );
             updateCenterText();
         };
 
-        setupRing(elements.astrolabe.rings.intention, [0, -90, -180, -270], (angle) => updateSelection('intention', angle));
-        setupRing(elements.astrolabe.rings.time, [0, -90, -180, -270], (angle) => updateSelection('time', angle));
+        setupRing(
+            elements.astrolabe.rings.intention,
+            [0, -90, -180, -270],
+            (angle) => updateSelection('intention', angle)
+        );
+        setupRing(
+            elements.astrolabe.rings.time,
+            [0, -90, -180, -270],
+            (angle) => updateSelection('time', angle)
+        );
 
         // Initialize state
         updateSelection('intention', 0);
@@ -356,11 +431,17 @@ document.addEventListener('DOMContentLoaded', async () => {
     }
     function updateCenterText() {
         if (state.intention && state.time) {
-            const regionMap = { serenity: 'coast', vibrancy: 'medina', awe: 'sahara', legacy: 'kasbah' };
+            const regionMap = {
+                serenity: 'coast',
+                vibrancy: 'medina',
+                awe: 'sahara',
+                legacy: 'kasbah'
+            };
             state.region = regionMap[state.intention];
             elements.astrolabe.centerText.textContent = `Find a path for ${state.intention} at ${state.time}`;
         } else {
-            elements.astrolabe.centerText.textContent = 'Use arrows or drag to align rings';
+            elements.astrolabe.centerText.textContent =
+                'Use arrows or drag to align rings';
         }
         // Accessibility: Announce change
         elements.astrolabe.centerText.setAttribute('aria-live', 'polite');
@@ -378,25 +459,35 @@ document.addEventListener('DOMContentLoaded', async () => {
             elements.riad.imageContainer.style.display = 'none'; // Hide the container on failure
             document.querySelector('.riad-content').style.marginTop = '0'; // Adjust layout
         };
-        elements.riad.imageElement.loading = "lazy"; // Native lazy loading
+        elements.riad.imageElement.loading = 'lazy'; // Native lazy loading
         elements.riad.imageElement.src = locationData.image;
 
         elements.riad.title.textContent = locationData.title;
         elements.riad.subtitle.textContent = locationData.subtitle;
         elements.riad.narrative.textContent = locationData.narrative;
-        elements.riad.sensory.sight.dataset.color = locationData.sensory.sight.color;
-        elements.riad.sensory.sightDesc.textContent = locationData.sensory.sight.desc;
-        elements.riad.sensory.sound.dataset.audio = locationData.sensory.sound.audio;
-        elements.riad.sensory.soundDesc.textContent = locationData.sensory.sound.desc;
-        elements.riad.sensory.scentDesc.textContent = locationData.sensory.scent.desc;
-        elements.riad.sensory.touchDesc.textContent = locationData.sensory.touch.desc;
+        elements.riad.sensory.sight.dataset.color =
+            locationData.sensory.sight.color;
+        elements.riad.sensory.sightDesc.textContent =
+            locationData.sensory.sight.desc;
+        elements.riad.sensory.sound.dataset.audio =
+            locationData.sensory.sound.audio;
+        elements.riad.sensory.soundDesc.textContent =
+            locationData.sensory.sound.desc;
+        elements.riad.sensory.scentDesc.textContent =
+            locationData.sensory.scent.desc;
+        elements.riad.sensory.touchDesc.textContent =
+            locationData.sensory.touch.desc;
         elements.riad.foundation.text.textContent = locationData.foundation;
-        elements.riad.weaveButton.dataset.color = locationData.sensory.sight.color;
+        elements.riad.weaveButton.dataset.color =
+            locationData.sensory.sight.color;
 
         elements.screens.riad.scrollTop = 0;
         elements.riad.imageContainer.style.opacity = 1;
         elements.riad.weaveButton.classList.remove('visible');
-        setTimeout(() => elements.riad.weaveButton.classList.add('visible'), 1500);
+        setTimeout(
+            () => elements.riad.weaveButton.classList.add('visible'),
+            1500
+        );
 
         showScreen('riad');
     }
@@ -409,7 +500,10 @@ document.addEventListener('DOMContentLoaded', async () => {
 
         elements.screens.riad.addEventListener('scroll', () => {
             const scrollY = elements.screens.riad.scrollTop;
-            const opacity = Math.max(0, 1 - (scrollY / (window.innerHeight * 0.7)));
+            const opacity = Math.max(
+                0,
+                1 - scrollY / (window.innerHeight * 0.7)
+            );
             elements.riad.imageContainer.style.opacity = opacity;
         });
 
@@ -432,18 +526,24 @@ document.addEventListener('DOMContentLoaded', async () => {
             const color = e.currentTarget.dataset.color;
             elements.colorWash.style.backgroundColor = color;
             elements.colorWash.style.opacity = 1;
-            setTimeout(() => { elements.colorWash.style.opacity = 0; }, 600);
+            setTimeout(() => {
+                elements.colorWash.style.opacity = 0;
+            }, 600);
             resonanceEngine.playInteractionSound('click');
         });
 
         setupSensoryItem(elements.riad.sensory.sound, (e) => {
-             resonanceEngine.resume();
-             resonanceEngine.playInteractionSound('snap');
+            resonanceEngine.resume();
+            resonanceEngine.playInteractionSound('snap');
         });
 
         // Placeholder actions for scent/touch to ensure they are at least focusable
-        setupSensoryItem(elements.riad.sensory.scent, () => resonanceEngine.playInteractionSound('click'));
-        setupSensoryItem(elements.riad.sensory.touch, () => resonanceEngine.playInteractionSound('click'));
+        setupSensoryItem(elements.riad.sensory.scent, () =>
+            resonanceEngine.playInteractionSound('click')
+        );
+        setupSensoryItem(elements.riad.sensory.touch, () =>
+            resonanceEngine.playInteractionSound('click')
+        );
 
         // Foundation toggle accessibility
         elements.riad.foundation.toggle.setAttribute('tabindex', '0');
@@ -451,13 +551,20 @@ document.addEventListener('DOMContentLoaded', async () => {
         elements.riad.foundation.toggle.setAttribute('aria-expanded', 'false');
 
         const toggleFoundation = () => {
-            const isOpen = elements.riad.foundation.details.classList.toggle('open');
+            const isOpen =
+                elements.riad.foundation.details.classList.toggle('open');
             elements.riad.foundation.plusIcon.classList.toggle('open');
-            elements.riad.foundation.toggle.setAttribute('aria-expanded', isOpen);
+            elements.riad.foundation.toggle.setAttribute(
+                'aria-expanded',
+                isOpen
+            );
             resonanceEngine.playInteractionSound('click');
         };
 
-        elements.riad.foundation.toggle.addEventListener('click', toggleFoundation);
+        elements.riad.foundation.toggle.addEventListener(
+            'click',
+            toggleFoundation
+        );
         elements.riad.foundation.toggle.addEventListener('keydown', (e) => {
             if (e.key === 'Enter' || e.key === ' ') {
                 e.preventDefault();
@@ -548,7 +655,10 @@ document.addEventListener('DOMContentLoaded', async () => {
         // Trigger Sentinel Threat Assessment
         const threatReport = sentinel.assess(tapestryLedger.getThreads());
         if (threatReport.status !== 'STANDBY') {
-             ui.showNotification(`SENTINEL ALERT: DEFCON ${threatReport.defcon}`, 'warning');
+            ui.showNotification(
+                `SENTINEL ALERT: DEFCON ${threatReport.defcon}`,
+                'warning'
+            );
         }
 
         const thread = document.createElement('div');
@@ -568,20 +678,31 @@ document.addEventListener('DOMContentLoaded', async () => {
         thread.style.top = `${startY}px`;
         thread.style.width = `${distance}px`;
         thread.style.transform = `rotate(${angle}deg)`;
-        thread.style.backgroundColor = elements.riad.weaveButton.dataset.color || 'var(--ochre-gold)';
+        thread.style.backgroundColor =
+            elements.riad.weaveButton.dataset.color || 'var(--ochre-gold)';
         document.body.appendChild(thread);
 
-        thread.animate([{ transform: `rotate(${angle}deg) scaleX(0)` }, { transform: `rotate(${angle}deg) scaleX(1)` }], { duration: 600, easing: 'cubic-bezier(0.7, 0, 0.3, 1)' })
-        .onfinish = () => {
-            thread.animate([{ opacity: 1 }, { opacity: 0 }], { duration: 200 })
-            .onfinish = () => {
+        thread.animate(
+            [
+                { transform: `rotate(${angle}deg) scaleX(0)` },
+                { transform: `rotate(${angle}deg) scaleX(1)` }
+            ],
+            { duration: 600, easing: 'cubic-bezier(0.7, 0, 0.3, 1)' }
+        ).onfinish = () => {
+            thread.animate([{ opacity: 1 }, { opacity: 0 }], {
+                duration: 200
+            }).onfinish = () => {
                 thread.remove();
-                elements.astrolabe.tapestryIcon.classList.add('tapestry-icon-pulse');
+                elements.astrolabe.tapestryIcon.classList.add(
+                    'tapestry-icon-pulse'
+                );
                 setTimeout(() => {
-                    elements.astrolabe.tapestryIcon.classList.remove('tapestry-icon-pulse');
+                    elements.astrolabe.tapestryIcon.classList.remove(
+                        'tapestry-icon-pulse'
+                    );
                     state.isWeaving = false; // Reset the lock
                 }, 500);
-            }
+            };
         };
     }
 
@@ -595,12 +716,15 @@ document.addEventListener('DOMContentLoaded', async () => {
         });
 
         elements.tapestry.clearBtn.addEventListener('click', () => {
-            ui.showConfirm('Are you sure you want to unravel your tapestry? This cannot be undone.', () => {
-                tapestryLedger.clear();
-                mandalaRenderer.render([]);
-                if (mapRenderer) mapRenderer.render([], locations);
-                ui.showNotification('Tapestry unraveled.', 'info');
-            });
+            ui.showConfirm(
+                'Are you sure you want to unravel your tapestry? This cannot be undone.',
+                () => {
+                    tapestryLedger.clear();
+                    mandalaRenderer.render([]);
+                    if (mapRenderer) mapRenderer.render([], locations);
+                    ui.showNotification('Tapestry unraveled.', 'info');
+                }
+            );
         });
 
         elements.tapestry.exportBtn.addEventListener('click', () => {
@@ -623,9 +747,9 @@ document.addEventListener('DOMContentLoaded', async () => {
             if (!file) return;
             try {
                 const text = await file.text();
-            await tapestryLedger.importScroll(text);
-            ui.showNotification('Scroll imported successfully.', 'success');
-            renderTapestry();
+                await tapestryLedger.importScroll(text);
+                ui.showNotification('Scroll imported successfully.', 'success');
+                renderTapestry();
             } catch (err) {
                 ui.showNotification(`Import error: ${err.message}`, 'error');
             }
@@ -636,7 +760,8 @@ document.addEventListener('DOMContentLoaded', async () => {
         elements.tapestry.forgeShardBtn.addEventListener('click', async () => {
             try {
                 const threads = tapestryLedger.getThreads();
-                if (threads.length === 0) throw new Error("Tapestry is empty. Nothing to forge.");
+                if (threads.length === 0)
+                    throw new Error('Tapestry is empty. Nothing to forge.');
 
                 ui.showLoading('ENCRYPTING SHARD...');
                 const blob = await codex.forgeShard(threads);
@@ -676,7 +801,10 @@ document.addEventListener('DOMContentLoaded', async () => {
                 const jsonString = JSON.stringify(data);
                 await tapestryLedger.importScroll(jsonString);
 
-                ui.showNotification('Shard decrypted and integrated.', 'success');
+                ui.showNotification(
+                    'Shard decrypted and integrated.',
+                    'success'
+                );
                 resonanceEngine.playInteractionSound('snap');
                 renderTapestry();
             } catch (e) {
@@ -698,7 +826,10 @@ document.addEventListener('DOMContentLoaded', async () => {
                     }
                     if (mapRenderer) {
                         mapRenderer.resize();
-                        mapRenderer.render(tapestryLedger.getThreads(), locations);
+                        mapRenderer.render(
+                            tapestryLedger.getThreads(),
+                            locations
+                        );
                     }
                 }
             }, 100);
@@ -706,68 +837,80 @@ document.addEventListener('DOMContentLoaded', async () => {
 
         // Mandala Interaction (Click & Accessibility)
         const handleThreadInteraction = (index) => {
-             const threads = tapestryLedger.getThreads();
-             if (index >= 0 && index < threads.length) {
-                 // Toggle selection
-                 const selectedIndex = state.selectedThreads.indexOf(index);
-                 if (selectedIndex >= 0) {
-                     state.selectedThreads.splice(selectedIndex, 1);
-                 } else {
-                     if (state.selectedThreads.length < 2) {
-                         state.selectedThreads.push(index);
-                     } else {
-                         // FIFO replacement if full
-                         state.selectedThreads.shift();
-                         state.selectedThreads.push(index);
-                     }
-                 }
-                 mandalaRenderer.setSelection(state.selectedThreads);
-                 renderTapestry();
-                 resonanceEngine.playInteractionSound('click');
-                 updateAlchemyUI();
-             }
+            const threads = tapestryLedger.getThreads();
+            if (index >= 0 && index < threads.length) {
+                // Toggle selection
+                const selectedIndex = state.selectedThreads.indexOf(index);
+                if (selectedIndex >= 0) {
+                    state.selectedThreads.splice(selectedIndex, 1);
+                } else {
+                    if (state.selectedThreads.length < 2) {
+                        state.selectedThreads.push(index);
+                    } else {
+                        // FIFO replacement if full
+                        state.selectedThreads.shift();
+                        state.selectedThreads.push(index);
+                    }
+                }
+                mandalaRenderer.setSelection(state.selectedThreads);
+                renderTapestry();
+                resonanceEngine.playInteractionSound('click');
+                updateAlchemyUI();
+            }
         };
 
         elements.tapestry.canvas.addEventListener('click', (e) => {
-             if (!mandalaRenderer) return;
-             // Only handle click if map is NOT active (or canvas is hidden via CSS, which we need to ensure)
-             if (state.isMapActive) return;
+            if (!mandalaRenderer) return;
+            // Only handle click if map is NOT active (or canvas is hidden via CSS, which we need to ensure)
+            if (state.isMapActive) return;
 
-             const index = mandalaRenderer.getThreadIndexAt(e.clientX, e.clientY);
-             handleThreadInteraction(index);
+            const index = mandalaRenderer.getThreadIndexAt(
+                e.clientX,
+                e.clientY
+            );
+            handleThreadInteraction(index);
         });
 
         // Listen for accessibility events from Shadow DOM
-        elements.tapestry.canvas.addEventListener('tapestry-thread-click', (e) => {
-            handleThreadInteraction(e.detail.index);
-        });
+        elements.tapestry.canvas.addEventListener(
+            'tapestry-thread-click',
+            (e) => {
+                handleThreadInteraction(e.detail.index);
+            }
+        );
 
         elements.tapestry.fuseBtn.addEventListener('click', async () => {
-             const threads = tapestryLedger.getThreads();
-             if (state.selectedThreads.length !== 2) return;
+            const threads = tapestryLedger.getThreads();
+            if (state.selectedThreads.length !== 2) return;
 
-             const t1 = threads[state.selectedThreads[0]];
-             const t2 = threads[state.selectedThreads[1]];
+            const t1 = threads[state.selectedThreads[0]];
+            const t2 = threads[state.selectedThreads[1]];
 
-             const phantom = await alchemy.fuse(t1, t2);
+            const phantom = await alchemy.fuse(t1, t2);
 
-             resonanceEngine.playInteractionSound('weave'); // Magical sound
-             showScreen('riad');
-             showRiad(phantom);
+            resonanceEngine.playInteractionSound('weave'); // Magical sound
+            showScreen('riad');
+            showRiad(phantom);
 
-             // Inject a special visual cue for Phantom mode
-             elements.riad.title.style.color = '#c67605'; // Gold title
-             elements.riad.subtitle.textContent = "✧ A PHANTOM REALM ✧";
+            // Inject a special visual cue for Phantom mode
+            elements.riad.title.style.color = '#c67605'; // Gold title
+            elements.riad.subtitle.textContent = '✧ A PHANTOM REALM ✧';
 
-             // Clear selection
-             state.selectedThreads = [];
+            // Clear selection
+            state.selectedThreads = [];
         });
 
         // Horizon Interaction
         elements.tapestry.horizonToggle.addEventListener('click', () => {
             state.isHorizonActive = !state.isHorizonActive;
-            elements.tapestry.horizonToggle.classList.toggle('active', state.isHorizonActive);
-            elements.tapestry.horizonDashboard.classList.toggle('visible', state.isHorizonActive);
+            elements.tapestry.horizonToggle.classList.toggle(
+                'active',
+                state.isHorizonActive
+            );
+            elements.tapestry.horizonDashboard.classList.toggle(
+                'visible',
+                state.isHorizonActive
+            );
 
             if (state.isHorizonActive) {
                 updateHorizonDashboard();
@@ -782,26 +925,32 @@ document.addEventListener('DOMContentLoaded', async () => {
         // Map Interaction (Overwatch)
         elements.tapestry.mapToggle.addEventListener('click', () => {
             state.isMapActive = !state.isMapActive;
-            elements.tapestry.mapToggle.classList.toggle('active', state.isMapActive);
+            elements.tapestry.mapToggle.classList.toggle(
+                'active',
+                state.isMapActive
+            );
 
             // Toggle Canvas Visibility
             if (state.isMapActive) {
                 elements.tapestry.canvas.style.display = 'none';
                 elements.tapestry.mapCanvas.style.display = 'block';
-                if (!mapRenderer) mapRenderer = new MapRenderer(elements.tapestry.mapCanvas);
+                if (!mapRenderer)
+                    mapRenderer = new MapRenderer(elements.tapestry.mapCanvas);
                 mapRenderer.resize();
                 mapRenderer.render(tapestryLedger.getThreads(), locations);
             } else {
                 elements.tapestry.canvas.style.display = 'block';
                 elements.tapestry.mapCanvas.style.display = 'none';
-                if (mandalaRenderer) mandalaRenderer.render(tapestryLedger.getThreads());
+                if (mandalaRenderer)
+                    mandalaRenderer.render(tapestryLedger.getThreads());
             }
             resonanceEngine.playInteractionSound('click');
         });
 
         // Aegis Interaction
         elements.tapestry.aegisToggle.addEventListener('click', () => {
-            const isVisible = elements.tapestry.aegisHud.classList.toggle('visible');
+            const isVisible =
+                elements.tapestry.aegisHud.classList.toggle('visible');
             elements.tapestry.aegisToggle.classList.toggle('active', isVisible);
 
             if (isVisible) {
@@ -839,34 +988,44 @@ document.addEventListener('DOMContentLoaded', async () => {
         const threads = tapestryLedger.getThreads();
         const analysis = horizonEngine.analyze(threads);
 
-        elements.tapestry.horizonDominance.textContent = analysis.dominance.intention !== 'None' ? `${analysis.dominance.intention} (${analysis.dominance.percent}%)` : 'None';
+        elements.tapestry.horizonDominance.textContent =
+            analysis.dominance.intention !== 'None'
+                ? `${analysis.dominance.intention} (${analysis.dominance.percent}%)`
+                : 'None';
         elements.tapestry.horizonBalanceBar.style.width = `${analysis.balanceScore}%`;
 
         // Dynamic Insight
         if (threads.length < 3) {
-            elements.tapestry.horizonInsight.textContent = "More data needed for strategic projection.";
+            elements.tapestry.horizonInsight.textContent =
+                'More data needed for strategic projection.';
         } else if (analysis.balanceScore < 40) {
             elements.tapestry.horizonInsight.textContent = `Pattern is heavily skewed. Consider seeking ${findLeastCommon(analysis.counts)} to restore equilibrium.`;
         } else if (analysis.streak > 2) {
-             elements.tapestry.horizonInsight.textContent = `Strong momentum in ${analysis.lastIntention}. Continuing this path will deepen the groove.`;
+            elements.tapestry.horizonInsight.textContent = `Strong momentum in ${analysis.lastIntention}. Continuing this path will deepen the groove.`;
         } else {
-            elements.tapestry.horizonInsight.textContent = "The pattern is balanced. You are weaving a diverse tapestry.";
+            elements.tapestry.horizonInsight.textContent =
+                'The pattern is balanced. You are weaving a diverse tapestry.';
         }
     }
 
     function findLeastCommon(counts) {
-        return Object.entries(counts).sort((a,b) => a[1] - b[1])[0][0];
+        return Object.entries(counts).sort((a, b) => a[1] - b[1])[0][0];
     }
 
     function renderTapestry() {
         if (state.isMapActive) {
-             if (oracleEngine && oracleEngine.activeMode) {
-                 oracleEngine.render(tapestryLedger.getThreads());
-             } else if (mapRenderer) {
-                 const threatReport = sentinel.getReport();
-                 mapRenderer.render(tapestryLedger.getThreads(), locations, [], threatReport.zones);
-             }
-             return;
+            if (oracleEngine && oracleEngine.activeMode) {
+                oracleEngine.render(tapestryLedger.getThreads());
+            } else if (mapRenderer) {
+                const threatReport = sentinel.getReport();
+                mapRenderer.render(
+                    tapestryLedger.getThreads(),
+                    locations,
+                    [],
+                    threatReport.zones
+                );
+            }
+            return;
         }
 
         if (!mandalaRenderer) return;
@@ -905,408 +1064,29 @@ document.addEventListener('DOMContentLoaded', async () => {
         }
     });
 
-    // Register Commands
-    terminal.registerCommand('help', 'List available commands', () => {
-        terminal.log("Available Commands:", "system");
-        Object.entries(terminal.commandRegistry).forEach(([name, cmd]) => {
-            terminal.log(`  ${name.padEnd(10)} - ${cmd.description}`, "info");
-        });
-    });
-
-    terminal.registerCommand('clear', 'Clear terminal output', () => {
-        terminal.output.textContent = '';
-    });
-
-    terminal.registerCommand('status', 'Show system status', () => {
-        terminal.log("SYSTEM STATUS: NOMINAL", "success");
-        terminal.log(`Active Screen: ${state.activeScreen}`, "info");
-        terminal.log(`Ledger Integrity: ${tapestryLedger.isIntegrityVerified ? 'VERIFIED' : 'UNKNOWN'}`, tapestryLedger.isIntegrityVerified ? "success" : "warning");
-        terminal.log(`Encryption Status: ${tapestryLedger.status === 'LOCKED' ? 'LOCKED' : (tapestryLedger.crypto.hasSession() ? 'UNLOCKED (SECURE)' : 'PLAINTEXT')}`, "info");
-        const threadCount = tapestryLedger.getThreads().length;
-        terminal.log(`Thread Count: ${threadCount}`, "info");
-    });
-
-    terminal.registerCommand('auth', 'Unlock the Secure Enclave', async (args) => {
-         if (tapestryLedger.status !== 'LOCKED') {
-             terminal.log("System is already unlocked or not encrypted.", "info");
-             return;
-         }
-         if (args.length < 1) {
-             terminal.log("Usage: auth <password>", "warning");
-             return;
-         }
-         const password = args.join(' '); // Allow spaces in password
-         const success = await tapestryLedger.unlock(password);
-         if (success) {
-             terminal.log("ACCESS GRANTED. DECRYPTION SUCCESSFUL.", "success");
-             // Refresh splash if we were stuck there
-             if (elements.splash.calligraphy.textContent === "SECURE ENCLAVE") {
-                 elements.splash.calligraphy.textContent = "أهلاً";
-                 elements.splash.calligraphy.style.color = '#c67605';
-             }
-         } else {
-             terminal.log("ACCESS DENIED. INVALID CREDENTIALS.", "error");
-         }
-    });
-
-    terminal.registerCommand('sys-encrypt', 'Encrypt the Ledger (Set Password)', async (args) => {
-        if (tapestryLedger.crypto.hasSession()) {
-            terminal.log("Encryption already active.", "warning");
-            return;
-        }
-        if (args.length < 1) {
-            terminal.log("Usage: sys-encrypt <password>", "warning");
-            return;
-        }
-        const password = args.join(' ');
-        await tapestryLedger.enableEncryption(password);
-        terminal.log("ENCRYPTION ENABLED. Secure Enclave Active.", "success");
-    });
-
-    terminal.registerCommand('sys-decrypt', 'Remove Encryption (Warning: Data will be plaintext)', async () => {
-        if (!tapestryLedger.crypto.hasSession()) {
-             terminal.log("System is not encrypted.", "info");
-             return;
-        }
-        await tapestryLedger.disableEncryption();
-        terminal.log("ENCRYPTION DISABLED. Data is now plaintext.", "warning");
-    });
-
-    terminal.registerCommand('sys-lock', 'Immediately lock the system', async () => {
-        if (!tapestryLedger.crypto.hasSession()) {
-            terminal.log("System is not configured for encryption.", "error");
-            return;
-        }
-        await tapestryLedger.lock();
-        terminal.log("SYSTEM LOCKED. REFRESH REQUIRED TO RE-AUTH OR USE 'auth'", "success");
-        // Force reload or show lock screen
-        location.reload();
-    });
-
-    terminal.registerCommand('jump', 'Navigate to a location (e.g., jump serenity dawn)', (args) => {
-        if (tapestryLedger.status === 'LOCKED') { terminal.log("ACCESS DENIED.", "error"); return; }
-
-        if (args.length < 2) {
-            terminal.log("Usage: jump <intention> <time>", "warning");
-            return;
-        }
-        const intention = args[0].toLowerCase();
-        const time = args[1].toLowerCase();
-
-        // Find region
-        const regionMap = { serenity: 'coast', vibrancy: 'medina', awe: 'sahara', legacy: 'kasbah' };
-        const region = regionMap[intention];
-
-        if (!region) {
-            terminal.log(`Invalid intention: ${intention}`, "error");
-            return;
-        }
-
-        const path = `${intention}.${region}.${time}`;
-        const targetLocation = locations[path];
-
-        if (targetLocation) {
-            terminal.log(`Initiating jump to ${targetLocation.title}...`, "success");
-            state.intention = intention;
-            state.region = region;
-            state.time = time;
-
-            resonanceEngine.startAmbience(intention, time);
-            showScreen('riad');
-            showRiad(targetLocation);
-            terminal.toggle(); // Close terminal on success
-        } else {
-            terminal.log(`Location not found: ${path}`, "error");
-        }
-    });
-
-    terminal.registerCommand('weave', 'Weave current location into tapestry', async () => {
-        if (tapestryLedger.status === 'LOCKED') { terminal.log("ACCESS DENIED.", "error"); return; }
-        if (state.activeScreen !== 'riad') {
-            terminal.log("Error: Must be at a Riad location to weave.", "error");
-            return;
-        }
-        terminal.log("Initiating weave protocol...", "info");
-        await weaveThread();
-        terminal.log("Thread woven successfully.", "success");
-    });
-
-    terminal.registerCommand('analyze', 'Run strategic horizon analysis', () => {
-         if (tapestryLedger.status === 'LOCKED') { terminal.log("ACCESS DENIED.", "error"); return; }
-         const threads = tapestryLedger.getThreads();
-         const analysis = horizonEngine.analyze(threads);
-
-         terminal.log("--- HORIZON ANALYSIS ---", "system");
-         terminal.log(`Dominance: ${analysis.dominance.intention} (${analysis.dominance.percent}%)`, "info");
-         terminal.log(`Balance Score: ${analysis.balanceScore}/100`, analysis.balanceScore > 70 ? "success" : "warning");
-         terminal.log(`Trajectory: ${analysis.lastIntention || 'None'} (Streak: ${analysis.streak})`, "info");
-
-         const insights = horizonEngine.project(threads);
-         if (insights.length > 0) {
-             terminal.log("Projected Vectors:", "system");
-             insights.forEach(ghost => {
-                 terminal.log(`  [${ghost.type.toUpperCase()}] ${ghost.intention} @ ${ghost.time}`, "info");
-             });
-         }
-    });
-
-    terminal.registerCommand('history', 'List woven threads', () => {
-        if (tapestryLedger.status === 'LOCKED') { terminal.log("ACCESS DENIED.", "error"); return; }
-        const threads = tapestryLedger.getThreads();
-        if (threads.length === 0) {
-            terminal.log("The Tapestry is empty.", "info");
-            return;
-        }
-        terminal.log(`--- TAPESTRY LEDGER (${threads.length} threads) ---`, "system");
-        threads.forEach((t, i) => {
-            terminal.log(`[${i}] ${t.id} | ${t.intention.toUpperCase()} | ${t.title}`, "info");
-        });
-    });
-
-    terminal.registerCommand('synthesize', 'Fuse two threads (e.g., synthesize 0 1)', async (args) => {
-        if (tapestryLedger.status === 'LOCKED') { terminal.log("ACCESS DENIED.", "error"); return; }
-        if (args.length < 2) {
-            terminal.log("Usage: synthesize <index1> <index2>", "warning");
-            return;
-        }
-        const i1 = parseInt(args[0]);
-        const i2 = parseInt(args[1]);
-        const threads = tapestryLedger.getThreads();
-
-        if (isNaN(i1) || isNaN(i2) || !threads[i1] || !threads[i2]) {
-            terminal.log("Invalid thread indices.", "error");
-            return;
-        }
-
-        terminal.log(`Fusing threads ${threads[i1].id} and ${threads[i2].id}...`, "info");
-
-        try {
-            const phantom = await alchemy.fuse(threads[i1], threads[i2]);
-            resonanceEngine.playInteractionSound('weave');
-
-            showScreen('riad');
-            showRiad(phantom);
-
-            // Visual cues (copied from UI logic)
-            elements.riad.title.style.color = '#c67605';
-            elements.riad.subtitle.textContent = "✧ A PHANTOM REALM ✧";
-
-            terminal.log("Synthesis Complete. Visualizing Phantom Realm.", "success");
-            terminal.toggle();
-        } catch (e) {
-            terminal.log(`Synthesis failed: ${e.message}`, "error");
-        }
-    });
-
-    terminal.registerCommand('forge', 'Create a steganographic shard from current tapestry', async () => {
-        if (tapestryLedger.status === 'LOCKED') { terminal.log("ACCESS DENIED.", "error"); return; }
-        const threads = tapestryLedger.getThreads();
-        if (threads.length === 0) {
-            terminal.log("Tapestry is empty. Cannot forge shard.", "warning");
-            return;
-        }
-
-        try {
-            terminal.log("Initiating Codex encryption...", "info");
-            const blob = await codex.forgeShard(threads);
-            const url = URL.createObjectURL(blob);
-
-            // In a real terminal we might output base64, here we trigger download
-            const a = document.createElement('a');
-            a.href = url;
-            a.download = `codex_shard_${Date.now()}.png`;
-            a.click();
-            URL.revokeObjectURL(url);
-
-            terminal.log("Shard forged and deployed to local system.", "success");
-        } catch (e) {
-            terminal.log(`Forge Protocol Failed: ${e.message}`, "error");
-        }
-    });
-
-    terminal.registerCommand('scan', 'Initiate Shard scan sequence', () => {
-        if (tapestryLedger.status === 'LOCKED') { terminal.log("ACCESS DENIED.", "error"); return; }
-        terminal.log("Engaging optical scanners...", "info");
-        // Trigger the file input programmatically
-        elements.tapestry.shardInput.click();
-        terminal.toggle(); // Close terminal so user can see the file dialog/UI
-    });
-
-    // Command for Map Overwatch
-    terminal.registerCommand('overwatch', 'Toggle geospatial tactical display', () => {
-         if (tapestryLedger.status === 'LOCKED') { terminal.log("ACCESS DENIED.", "error"); return; }
-         elements.tapestry.mapToggle.click();
-         terminal.log(`Overwatch Display: ${state.isMapActive ? 'ACTIVE' : 'STANDBY'}`, "success");
-    });
-
-    // Oracle Command Suite
-    terminal.registerCommand('oracle', 'Strategic Operations Interface', (args) => {
-        if (tapestryLedger.status === 'LOCKED') { terminal.log("ACCESS DENIED.", "error"); return; }
-
-        const subcmd = args[0] || 'status';
-
-        if (subcmd === 'status') {
-             const ghosts = oracleEngine ? oracleEngine.generateStrategicMap(tapestryLedger.getThreads()) : [];
-             terminal.log("--- ORACLE STRATEGIC FORECAST ---", "system");
-             if (ghosts.length === 0) {
-                 terminal.log("No data available for projection.", "warning");
-             } else {
-                 ghosts.forEach(g => {
-                     terminal.log(`[${g.type.toUpperCase()}] Target: ${g.locationTitle}`, "info");
-                     terminal.log(`   > Vector: ${g.intention} @ ${g.time}`, "info");
-                     terminal.log(`   > Region: ${g.region}`, "info");
-                 });
-             }
-        } else if (subcmd === 'visual') {
-             // Force map active
-             if (!state.isMapActive) elements.tapestry.mapToggle.click();
-
-             // Toggle Oracle Mode
-             if (oracleEngine) {
-                 const isActive = oracleEngine.toggle();
-                 terminal.log(`Oracle Visual Layer: ${isActive ? 'ENGAGED' : 'DISENGAGED'}`, isActive ? "success" : "warning");
-                 renderTapestry();
-             } else {
-                 terminal.log("Oracle Engine not initialized (Visit Tapestry first).", "error");
-             }
-             terminal.toggle();
-        } else {
-             terminal.log("Usage: oracle [status|visual]", "warning");
-        }
-    });
-
-    // Spectra Command Suite (Signal Intelligence)
-    terminal.registerCommand('signal', 'Audio Steganography Operations', async (args) => {
-        if (tapestryLedger.status === 'LOCKED') { terminal.log("ACCESS DENIED.", "error"); return; }
-        const subcmd = args[0];
-
-        if (subcmd === 'encode') {
-            const threads = tapestryLedger.getThreads();
-            if (threads.length === 0) {
-                terminal.log("Tapestry is empty. No signal to broadcast.", "warning");
-                return;
-            }
-            terminal.log("Modulating FSK carrier wave...", "info");
-            try {
-                const blob = await spectra.forgeSignal(threads);
-                const url = URL.createObjectURL(blob);
-                const a = document.createElement('a');
-                a.href = url;
-                a.download = `spectra_signal_${Date.now()}.wav`;
-                a.click();
-                URL.revokeObjectURL(url);
-                terminal.log("Signal broadcast generated. (WAV download)", "success");
-            } catch (e) {
-                terminal.log(`Signal Generation Failed: ${e.message}`, "error");
-            }
-
-        } else if (subcmd === 'decode') {
-            terminal.log("Listening for incoming signals...", "info");
-            elements.tapestry.sonicShardInput.click();
-            terminal.toggle();
-
-        } else if (subcmd === 'analyze') {
-             // In a full implementation, this would open a spectral visualizer
-             terminal.log("Spectral Analysis: FSK Carrier Protocol v1.0", "info");
-             terminal.log("Freq: 16kHz/18kHz | Baud: 200", "info");
-        } else {
-            terminal.log("Usage: signal [encode|decode|analyze]", "warning");
-        }
-    });
-
-    elements.tapestry.sonicShardInput.addEventListener('change', async (e) => {
-        const file = e.target.files[0];
-        if (!file) return;
-
-        try {
-            ui.showNotification('Decoding Signal...', 'info');
-            const arrayBuffer = await file.arrayBuffer();
-            const data = await spectra.scanSignal(arrayBuffer);
-
-            // Import logic
-            const jsonString = JSON.stringify(data);
-            await tapestryLedger.importScroll(jsonString);
-
-            ui.showNotification('Signal Decoded and Integrated.', 'success');
-            resonanceEngine.playInteractionSound('snap');
-            renderTapestry();
-        } catch (err) {
-            ui.showNotification(`Signal Decode Failed: ${err.message}`, 'error');
-        }
-        e.target.value = '';
-    });
-
-    // Sentinel Command Suite
-    terminal.registerCommand('sentinel', 'Automated Threat Detection System', (args) => {
-        if (tapestryLedger.status === 'LOCKED') { terminal.log("ACCESS DENIED.", "error"); return; }
-        const subcmd = args[0] || 'status';
-
-        if (subcmd === 'status') {
-            const report = sentinel.assess(tapestryLedger.getThreads());
-            const color = report.defcon < 3 ? 'error' : (report.defcon < 5 ? 'warning' : 'success');
-            terminal.log(`--- SENTINEL WATCHTOWER ---`, "system");
-            terminal.log(`DEFCON: ${report.defcon}`, color);
-            terminal.log(`Status: ${report.status}`, "info");
-
-            if (report.threats.length > 0) {
-                terminal.log("DETECTED THREATS:", "warning");
-                report.threats.forEach(t => {
-                    terminal.log(`[${t.level}] ${t.type}: ${t.message}`, "error");
-                });
-            } else {
-                terminal.log("No active threats detected.", "success");
-            }
-        } else if (subcmd === 'scan') {
-            terminal.log("Initiating full spectrum scan...", "info");
-            setTimeout(() => {
-                const report = sentinel.assess(tapestryLedger.getThreads());
-                if (report.threats.length > 0) {
-                    terminal.log(`SCAN COMPLETE. ${report.threats.length} ANOMALIES DETECTED.`, "warning");
-                } else {
-                    terminal.log("SCAN COMPLETE. SYSTEM CLEAN.", "success");
-                }
-            }, 800);
-        } else {
-            terminal.log("Usage: sentinel [status|scan]", "warning");
-        }
-    });
-
-    // Aegis Command Suite
-    terminal.registerCommand('aegis', 'Tactical Operations Control', (args) => {
-        if (tapestryLedger.status === 'LOCKED') { terminal.log("ACCESS DENIED.", "error"); return; }
-        const subcmd = args[0] || 'status';
-
-        if (subcmd === 'status') {
-             const report = aegis.getReport();
-             terminal.log("--- PROJECT AEGIS: OPERATIONAL REPORT ---", "tactical");
-             terminal.log(`Rank: ${report.rank.toUpperCase()}`, "info");
-             terminal.log(`XP: ${report.xp}`, "info");
-             terminal.log(`Completed Directives: ${report.completedCount}/${report.totalCount}`, "info");
-             terminal.log("-----------------------------------------", "tactical");
-
-             if (report.active.length > 0) {
-                 terminal.log("ACTIVE DIRECTIVES:", "system");
-                 report.active.forEach(m => {
-                     terminal.log(`[ ] ${m.codename}: ${m.description}`, "info");
-                 });
-             } else {
-                 terminal.log("ALL DIRECTIVES COMPLETE.", "success");
-             }
-        } else if (subcmd === 'report') {
-            // Detailed report including badges
-             const report = aegis.getReport();
-             terminal.log("--- SERVICE RECORD ---", "tactical");
-             if (report.badges.length > 0) {
-                 report.badges.forEach(b => terminal.log(` * ${b}`, "success"));
-             } else {
-                 terminal.log("No commendations recorded.", "info");
-             }
-        } else if (subcmd === 'hud') {
-             elements.tapestry.aegisToggle.click();
-             terminal.log("Toggling Tactical HUD...", "info");
-             terminal.toggle();
-        } else {
-            terminal.log("Usage: aegis [status|report|hud]", "warning");
+    // --- Register Terminal Commands ---
+    registerCommands(terminal, {
+        state,
+        tapestryLedger,
+        engines: {
+            resonance: resonanceEngine,
+            horizon: horizonEngine,
+            get oracle() {
+                return oracleEngine;
+            },
+            spectra,
+            sentinel,
+            aegis,
+            codex,
+            alchemy
+        },
+        ui,
+        elements,
+        actions: {
+            showScreen,
+            showRiad,
+            weaveThread,
+            renderTapestry
         }
     });
 
@@ -1316,7 +1096,10 @@ document.addEventListener('DOMContentLoaded', async () => {
     setupTapestryInteractions();
 
     elements.astrolabe.center.addEventListener('click', () => {
-        if (tapestryLedger.status === 'LOCKED') { ui.showNotification("ACCESS DENIED", "error"); return; }
+        if (tapestryLedger.status === 'LOCKED') {
+            ui.showNotification('ACCESS DENIED', 'error');
+            return;
+        }
         const path = `${state.intention}.${state.region}.${state.time}`;
         const targetLocation = locations[path];
         if (targetLocation) {
@@ -1324,7 +1107,15 @@ document.addEventListener('DOMContentLoaded', async () => {
             showScreen('riad');
             showRiad(targetLocation);
         } else {
-            elements.astrolabe.center.animate([{ transform: 'translateX(0px)' }, { transform: 'translateX(-5px)' }, { transform: 'translateX(5px)' }, { transform: 'translateX(0px)' }], { duration: 300, iterations: 1 });
+            elements.astrolabe.center.animate(
+                [
+                    { transform: 'translateX(0px)' },
+                    { transform: 'translateX(-5px)' },
+                    { transform: 'translateX(5px)' },
+                    { transform: 'translateX(0px)' }
+                ],
+                { duration: 300, iterations: 1 }
+            );
             elements.astrolabe.centerText.textContent = 'No path found';
             setTimeout(updateCenterText, 2000);
         }

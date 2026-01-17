@@ -2,7 +2,7 @@ export class SpectraEngine {
     constructor() {
         // Protocol Constants
         this.SAMPLE_RATE = 44100;
-        this.HEADER = "SPCT"; // Spectra
+        this.HEADER = 'SPCT'; // Spectra
         this.VERSION = 1;
 
         // FSK Parameters
@@ -42,10 +42,10 @@ export class SpectraEngine {
         messageBuffer[4] = this.VERSION;
         // Length (Big Endian)
         const len = payloadBytes.length;
-        messageBuffer[5] = (len >> 24) & 0xFF;
-        messageBuffer[6] = (len >> 16) & 0xFF;
-        messageBuffer[7] = (len >> 8) & 0xFF;
-        messageBuffer[8] = len & 0xFF;
+        messageBuffer[5] = (len >> 24) & 0xff;
+        messageBuffer[6] = (len >> 16) & 0xff;
+        messageBuffer[7] = (len >> 8) & 0xff;
+        messageBuffer[8] = len & 0xff;
         // Payload
         messageBuffer.set(payloadBytes, 9);
 
@@ -57,7 +57,11 @@ export class SpectraEngine {
         const duration = Math.max(signalDuration, 10); // Minimum 10 seconds for ambience
 
         // Create Offline Context
-        const offlineCtx = new OfflineAudioContext(1, duration * this.SAMPLE_RATE, this.SAMPLE_RATE);
+        const offlineCtx = new OfflineAudioContext(
+            1,
+            duration * this.SAMPLE_RATE,
+            this.SAMPLE_RATE
+        );
 
         // 1. Generate Ambience (Drone)
         this._generateDrone(offlineCtx, duration);
@@ -99,7 +103,11 @@ export class SpectraEngine {
 
         const noise = ctx.createBufferSource();
         const noiseBufferSize = ctx.sampleRate * 2;
-        const noiseBuffer = ctx.createBuffer(1, noiseBufferSize, ctx.sampleRate);
+        const noiseBuffer = ctx.createBuffer(
+            1,
+            noiseBufferSize,
+            ctx.sampleRate
+        );
         const output = noiseBuffer.getChannelData(0);
         for (let i = 0; i < noiseBufferSize; i++) {
             output[i] = Math.random() * 2 - 1;
@@ -151,7 +159,7 @@ export class SpectraEngine {
             const freq = bit === 1 ? this.MARK_FREQ : this.SPACE_FREQ;
             osc.frequency.setValueAtTime(freq, currentTime);
 
-            currentTime += (1 / this.BAUD_RATE);
+            currentTime += 1 / this.BAUD_RATE;
             bitIndex++;
             if (bitIndex === 8) {
                 bitIndex = 0;
@@ -186,14 +194,14 @@ export class SpectraEngine {
         const correlate = (startSample, freq) => {
             let sumI = 0;
             let sumQ = 0;
-            const omega = 2 * Math.PI * freq / sampleRate;
+            const omega = (2 * Math.PI * freq) / sampleRate;
 
             for (let i = 0; i < samplesPerBit; i++) {
                 const s = pcmData[startSample + i];
                 sumI += s * Math.cos(omega * i);
                 sumQ += s * Math.sin(omega * i);
             }
-            return Math.sqrt(sumI*sumI + sumQ*sumQ);
+            return Math.sqrt(sumI * sumI + sumQ * sumQ);
         };
 
         // Read bits
@@ -227,16 +235,26 @@ export class SpectraEngine {
 
         // Validate Header
         // Header: S P C T (83 80 67 84)
-        if (bytes[0] !== 0x53 || bytes[1] !== 0x50 || bytes[2] !== 0x43 || bytes[3] !== 0x54) {
-             throw new Error("Invalid Sonic Shard: Header not found or signal corrupted.");
+        if (
+            bytes[0] !== 0x53 ||
+            bytes[1] !== 0x50 ||
+            bytes[2] !== 0x43 ||
+            bytes[3] !== 0x54
+        ) {
+            throw new Error(
+                'Invalid Sonic Shard: Header not found or signal corrupted.'
+            );
         }
 
         const version = bytes[4];
-        if (version !== this.VERSION) throw new Error("Unsupported Protocol Version");
+        if (version !== this.VERSION)
+            throw new Error('Unsupported Protocol Version');
 
-        const len = (bytes[5] << 24) | (bytes[6] << 16) | (bytes[7] << 8) | bytes[8];
+        const len =
+            (bytes[5] << 24) | (bytes[6] << 16) | (bytes[7] << 8) | bytes[8];
 
-        if (len <= 0 || len > 1000000) throw new Error("Invalid payload length");
+        if (len <= 0 || len > 1000000)
+            throw new Error('Invalid payload length');
 
         const payloadBytes = new Uint8Array(bytes.slice(9, 9 + len));
         const textDecoder = new TextDecoder();
@@ -245,7 +263,7 @@ export class SpectraEngine {
         try {
             return JSON.parse(jsonString);
         } catch (e) {
-            throw new Error("Corrupted Signal: Invalid JSON");
+            throw new Error('Corrupted Signal: Invalid JSON');
         }
     }
 
@@ -255,7 +273,10 @@ export class SpectraEngine {
         const buffer = new ArrayBuffer(length);
         const view = new DataView(buffer);
         const channels = [];
-        let i, sample, offset = 0, pos = 0;
+        let i,
+            sample,
+            offset = 0,
+            pos = 0;
 
         // write string
         function writeString(s) {
@@ -264,20 +285,29 @@ export class SpectraEngine {
             }
         }
 
-        writeString("RIFF");
-        view.setUint32(pos, length - 8, true); pos += 4;
-        writeString("WAVE");
-        writeString("fmt ");
-        view.setUint32(pos, 16, true); pos += 4;
-        view.setUint16(pos, 1, true); pos += 2; // PCM
-        view.setUint16(pos, numOfChan, true); pos += 2;
-        view.setUint32(pos, abuffer.sampleRate, true); pos += 4;
-        view.setUint32(pos, abuffer.sampleRate * 2 * numOfChan, true); pos += 4;
-        view.setUint16(pos, numOfChan * 2, true); pos += 2;
-        view.setUint16(pos, 16, true); pos += 2; // 16-bit
+        writeString('RIFF');
+        view.setUint32(pos, length - 8, true);
+        pos += 4;
+        writeString('WAVE');
+        writeString('fmt ');
+        view.setUint32(pos, 16, true);
+        pos += 4;
+        view.setUint16(pos, 1, true);
+        pos += 2; // PCM
+        view.setUint16(pos, numOfChan, true);
+        pos += 2;
+        view.setUint32(pos, abuffer.sampleRate, true);
+        pos += 4;
+        view.setUint32(pos, abuffer.sampleRate * 2 * numOfChan, true);
+        pos += 4;
+        view.setUint16(pos, numOfChan * 2, true);
+        pos += 2;
+        view.setUint16(pos, 16, true);
+        pos += 2; // 16-bit
 
-        writeString("data");
-        view.setUint32(pos, length - pos - 4, true); pos += 4;
+        writeString('data');
+        view.setUint32(pos, length - pos - 4, true);
+        pos += 4;
 
         for (i = 0; i < abuffer.numberOfChannels; i++)
             channels.push(abuffer.getChannelData(i));
@@ -285,13 +315,14 @@ export class SpectraEngine {
         while (pos < length) {
             for (i = 0; i < numOfChan; i++) {
                 sample = Math.max(-1, Math.min(1, channels[i][offset]));
-                sample = (0.5 + sample < 0 ? sample * 32768 : sample * 32767) | 0;
+                sample =
+                    (0.5 + sample < 0 ? sample * 32768 : sample * 32767) | 0;
                 view.setInt16(pos, sample, true);
                 pos += 2;
             }
             offset++;
         }
 
-        return new Blob([buffer], { type: "audio/wav" });
+        return new Blob([buffer], { type: 'audio/wav' });
     }
 }

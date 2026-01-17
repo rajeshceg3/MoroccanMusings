@@ -1,7 +1,6 @@
-
 // Codex Worker - Handles computationally expensive steganography operations
 
-const MAGIC = [0x4D, 0x41, 0x52, 0x51]; // 'MARQ'
+const MAGIC = [0x4d, 0x41, 0x52, 0x51]; // 'MARQ'
 const VERSION = 1;
 const HEADER_SIZE = 9;
 
@@ -10,7 +9,10 @@ self.onmessage = async (e) => {
 
     try {
         if (type === 'forge') {
-            const result = await forgeShard(payload.data, payload.carrierBitmap);
+            const result = await forgeShard(
+                payload.data,
+                payload.carrierBitmap
+            );
             // Blobs are not transferable, only ArrayBuffers, ImageBitmaps, etc.
             // Structured cloning is sufficient and efficient for Blobs.
             self.postMessage({ type: 'success', id, result });
@@ -52,7 +54,9 @@ async function forgeShard(data, carrierBitmap = null) {
     }
 
     if (width * height < requiredPixels) {
-        throw new Error(`Carrier image too small. Need ${requiredPixels} pixels, got ${width * height}.`);
+        throw new Error(
+            `Carrier image too small. Need ${requiredPixels} pixels, got ${width * height}.`
+        );
     }
 
     const imageData = ctx.getImageData(0, 0, width, height);
@@ -62,10 +66,10 @@ async function forgeShard(data, carrierBitmap = null) {
     fullData.set(MAGIC, 0);
     fullData[4] = VERSION;
     // Length (Big Endian)
-    fullData[5] = (payloadData.length >> 24) & 0xFF;
-    fullData[6] = (payloadData.length >> 16) & 0xFF;
-    fullData[7] = (payloadData.length >> 8) & 0xFF;
-    fullData[8] = payloadData.length & 0xFF;
+    fullData[5] = (payloadData.length >> 24) & 0xff;
+    fullData[6] = (payloadData.length >> 16) & 0xff;
+    fullData[7] = (payloadData.length >> 8) & 0xff;
+    fullData[8] = payloadData.length & 0xff;
     fullData.set(payloadData, 9);
 
     let dataIndex = 0;
@@ -80,7 +84,7 @@ async function forgeShard(data, carrierBitmap = null) {
             const byte = fullData[dataIndex];
             const bit = (byte >> (7 - bitIndex)) & 1;
 
-            pixels[i + c] = (pixels[i + c] & 0xFE) | bit;
+            pixels[i + c] = (pixels[i + c] & 0xfe) | bit;
 
             bitIndex++;
             if (bitIndex === 8) {
@@ -107,11 +111,13 @@ async function scanShard(imageBitmap) {
     // 1. Read Header
     const headerBytes = _readBytes(pixels, 9);
 
-    if (headerBytes[0] !== MAGIC[0] ||
+    if (
+        headerBytes[0] !== MAGIC[0] ||
         headerBytes[1] !== MAGIC[1] ||
         headerBytes[2] !== MAGIC[2] ||
-        headerBytes[3] !== MAGIC[3]) {
-        throw new Error("Invalid Codex Shard: Magic header mismatch.");
+        headerBytes[3] !== MAGIC[3]
+    ) {
+        throw new Error('Invalid Codex Shard: Magic header mismatch.');
     }
 
     const version = headerBytes[4];
@@ -119,10 +125,14 @@ async function scanShard(imageBitmap) {
         throw new Error(`Unsupported Codex version: ${version}`);
     }
 
-    const dataLength = (headerBytes[5] << 24) | (headerBytes[6] << 16) | (headerBytes[7] << 8) | headerBytes[8];
+    const dataLength =
+        (headerBytes[5] << 24) |
+        (headerBytes[6] << 16) |
+        (headerBytes[7] << 8) |
+        headerBytes[8];
 
     if (dataLength <= 0 || dataLength > 5000000) {
-         throw new Error(`Invalid data length: ${dataLength}`);
+        throw new Error(`Invalid data length: ${dataLength}`);
     }
 
     // 2. Read Payload
@@ -133,7 +143,7 @@ async function scanShard(imageBitmap) {
     try {
         return JSON.parse(jsonString);
     } catch (e) {
-        throw new Error("Corrupted Shard: Invalid JSON payload.");
+        throw new Error('Corrupted Shard: Invalid JSON payload.');
     }
 }
 
@@ -151,18 +161,18 @@ function _readBytes(pixels, length, byteOffset = 0) {
         if (byteIndex >= length) break;
 
         for (let c = channelIndex; c < 3; c++) {
-             if (byteIndex >= length) break;
+            if (byteIndex >= length) break;
 
-             const bit = pixels[i + c] & 1;
-             currentByte = (currentByte << 1) | bit;
-             bitsRead++;
+            const bit = pixels[i + c] & 1;
+            currentByte = (currentByte << 1) | bit;
+            bitsRead++;
 
-             if (bitsRead === 8) {
-                 result[byteIndex] = currentByte;
-                 byteIndex++;
-                 currentByte = 0;
-                 bitsRead = 0;
-             }
+            if (bitsRead === 8) {
+                result[byteIndex] = currentByte;
+                byteIndex++;
+                currentByte = 0;
+                bitsRead = 0;
+            }
         }
         channelIndex = 0;
     }
@@ -176,8 +186,8 @@ function _generateCamouflage(ctx, width, height) {
 
     const cols = ['#1a1a1a', '#222', '#0f0f0f', '#2a2a2a'];
 
-    for(let i=0; i<width; i+=4) {
-        for(let j=0; j<height; j+=4) {
+    for (let i = 0; i < width; i += 4) {
+        for (let j = 0; j < height; j += 4) {
             if (Math.random() > 0.5) {
                 ctx.fillStyle = cols[Math.floor(Math.random() * cols.length)];
                 ctx.fillRect(i, j, 4, 4);
@@ -188,9 +198,9 @@ function _generateCamouflage(ctx, width, height) {
     ctx.strokeStyle = '#333';
     ctx.lineWidth = 1;
     ctx.beginPath();
-    for(let i=0; i<10; i++) {
-         ctx.moveTo(0, Math.random() * height);
-         ctx.lineTo(width, Math.random() * height);
+    for (let i = 0; i < 10; i++) {
+        ctx.moveTo(0, Math.random() * height);
+        ctx.lineTo(width, Math.random() * height);
     }
     ctx.stroke();
 

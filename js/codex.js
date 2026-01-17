@@ -1,4 +1,3 @@
-
 // The Crystalline Codex: Steganographic Data Transport
 // Refactored to use Web Workers for performance (Operation Thread Breaker)
 
