@@ -1,3 +1,5 @@
+import { PrometheusEngine } from './prometheus.js';
+
 export class MapRenderer {
     constructor(canvas) {
         this.canvas = canvas;
@@ -5,6 +7,9 @@ export class MapRenderer {
         this.dpr = window.devicePixelRatio || 1;
         this.threads = [];
         this.activeNodeIndex = -1;
+
+        // Initialize Prometheus Heatmap Engine
+        this.prometheus = new PrometheusEngine();
 
         // Simplified Morocco Vector Path (0-100 coordinate space)
         // Tangier (50, 5), Oujda (85, 20), Figuig (90, 60), Zagora (60, 80), Dakhla (10, 95) - simplified
@@ -44,6 +49,9 @@ export class MapRenderer {
         this.ghosts = ghosts;
         this.threatZones = threatZones;
 
+        // Update Prometheus Heatmap
+        this.prometheus.update(threads, locations, this.width, this.height);
+
         this.ctx.clearRect(0, 0, this.width, this.height);
 
         // Map Scale Factor to fit canvas with padding
@@ -51,7 +59,13 @@ export class MapRenderer {
         const mapWidth = this.width - padding * 2;
         const mapHeight = this.height - padding * 2;
 
-        // Draw Map Background
+        // Draw Prometheus Heatmap Layer (Background Intelligence)
+        this.ctx.save();
+        this.ctx.globalAlpha = 0.8; // Subtle blend
+        this.ctx.drawImage(this.prometheus.canvas, 0, 0);
+        this.ctx.restore();
+
+        // Draw Map Background (Vector Overlay)
         this.ctx.save();
         this.ctx.translate(padding, padding);
 
@@ -68,7 +82,9 @@ export class MapRenderer {
         this.ctx.strokeStyle = '#334433';
         this.ctx.lineWidth = 2;
         this.ctx.stroke();
-        this.ctx.fillStyle = '#0a1a0a';
+
+        // Semi-transparent fill to reveal heatmap underneath
+        this.ctx.fillStyle = 'rgba(10, 26, 10, 0.4)';
         this.ctx.fill();
 
         // Draw Grid Lines
