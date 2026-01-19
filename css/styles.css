@@ -1130,3 +1130,106 @@ body {
 .toast-error {
     border-left-color: #ff0055;
 }
+
+/* Project ECHO Overlay */
+#echo-overlay {
+    display: flex;
+    justify-content: center;
+    align-items: center;
+    background: rgba(0, 5, 10, 0.95);
+    z-index: 5000;
+}
+
+#echo-overlay.hidden {
+    opacity: 0;
+    pointer-events: none;
+    display: none;
+}
+
+.overlay {
+    position: fixed;
+    top: 0;
+    left: 0;
+    width: 100%;
+    height: 100%;
+    transition: opacity 0.3s;
+}
+
+.echo-container {
+    width: 90%;
+    max-width: 600px;
+    border: 1px solid var(--ochre-gold);
+    background: #000;
+    padding: 2px;
+    box-shadow: 0 0 30px rgba(198, 118, 5, 0.1);
+}
+
+.echo-header {
+    background: rgba(198, 118, 5, 0.1);
+    padding: 1rem;
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    border-bottom: 1px solid rgba(198, 118, 5, 0.3);
+}
+
+.echo-title {
+    font-family: 'Share Tech Mono', monospace;
+    color: var(--ochre-gold);
+    letter-spacing: 2px;
+}
+
+.echo-status {
+    font-family: 'Share Tech Mono', monospace;
+    font-size: 0.8rem;
+    color: #666;
+    animation: blink 2s infinite;
+}
+
+.echo-visualizer-container {
+    height: 200px;
+    background: #050505;
+    position: relative;
+    overflow: hidden;
+    border-bottom: 1px solid rgba(198, 118, 5, 0.3);
+}
+
+#echo-visualizer {
+    width: 100%;
+    height: 100%;
+}
+
+.echo-controls {
+    padding: 1.5rem;
+    text-align: center;
+}
+
+#echo-message {
+    font-family: 'Share Tech Mono', monospace;
+    color: #aaa;
+    margin-bottom: 1.5rem;
+    font-size: 0.9rem;
+}
+
+.echo-btn {
+    background: transparent;
+    border: 1px solid var(--ochre-gold);
+    color: var(--ochre-gold);
+    padding: 0.8rem 2rem;
+    font-family: 'Share Tech Mono', monospace;
+    cursor: pointer;
+    transition: all 0.2s;
+    text-transform: uppercase;
+    letter-spacing: 1px;
+}
+
+.echo-btn:hover {
+    background: var(--ochre-gold);
+    color: #000;
+    box-shadow: 0 0 15px var(--ochre-gold);
+}
+
+@keyframes blink {
+    0%, 100% { opacity: 1; }
+    50% { opacity: 0.5; }
+}

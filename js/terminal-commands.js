@@ -654,4 +654,96 @@ export function registerCommands(terminal, context) {
             terminal.log(`Advisory: ${report.advisory}`, 'warning');
         }
     );
+
+    terminal.registerCommand(
+        'echo',
+        'Real-time encrypted audio data link',
+        async (args) => {
+            if (!checkAccess()) return;
+            const subcmd = args[0] || 'help';
+
+            if (subcmd === 'broadcast') {
+                const target = args[1] || 'profile';
+                let data = null;
+
+                if (target === 'profile') {
+                    // Small payload: Aegis Profile
+                    data = { type: 'profile', payload: context.engines.aegis.getReport() };
+                } else if (target === 'thread') {
+                     // Broadcast latest thread
+                     const threads = tapestryLedger.getThreads();
+                     if (threads.length === 0) {
+                         terminal.log('No threads to broadcast.', 'error');
+                         return;
+                     }
+                     data = { type: 'thread', payload: threads[threads.length - 1] };
+                } else {
+                    terminal.log('Usage: echo broadcast [profile|thread]', 'warning');
+                    return;
+                }
+
+                terminal.toggle(); // Close terminal to show overlay
+
+                const { close } = context.ui.showEchoInterface('broadcast', context.engines.spectra, () => {
+                    // On manual close
+                    terminal.log('Broadcast interrupted.', 'warning');
+                });
+
+                try {
+                    await context.engines.spectra.broadcastSignal(data);
+                    // broadcastSignal is blocking (awaits duration).
+                    close(); // Close UI
+                    terminal.log('Broadcast complete. Signal terminated.', 'success');
+                    terminal.toggle(); // Re-open terminal
+                } catch (e) {
+                    close();
+                    terminal.log(`Broadcast failed: ${e.message}`, 'error');
+                }
+
+            } else if (subcmd === 'listen') {
+                terminal.toggle();
+                let stopListening = null;
+
+                const { close } = context.ui.showEchoInterface('listen', context.engines.spectra, () => {
+                     // If user closes manually, we must stop listener
+                     if (stopListening) stopListening();
+                     terminal.log('Listener terminated.', 'warning');
+                });
+
+                try {
+                    stopListening = await context.engines.spectra.listenSignal(
+                        (data) => {
+                            // On Data
+                            close(); // Close UI
+
+                            terminal.log('SIGNAL ACQUIRED. DECRYPTING...', 'success');
+                            terminal.log(`Packet Type: ${data.type || 'UNKNOWN'}`, 'info');
+
+                            // Handle Data
+                            if (data.type === 'profile') {
+                                terminal.log(`Contact: ${data.payload.rank} // XP: ${data.payload.xp}`, 'info');
+                            } else if (data.type === 'thread') {
+                                terminal.log(`Intel: ${data.payload.title}`, 'info');
+                                terminal.log('Thread data verified. Security protocols active.', 'success');
+                            } else {
+                                terminal.log('Unknown payload structure.', 'warning');
+                            }
+                            terminal.toggle();
+                        },
+                        (status) => {
+                            // Status update (optional)
+                        }
+                    );
+                } catch (e) {
+                    close();
+                    terminal.log(`Listen initialization failed: ${e.message}`, 'error');
+                    terminal.toggle();
+                }
+
+            } else {
+                terminal.log('Usage: echo [broadcast|listen]', 'warning');
+                terminal.log('  broadcast <profile|thread>', 'info');
+            }
+        }
+    );
 }

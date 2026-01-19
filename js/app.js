@@ -1177,4 +1177,6 @@ document.addEventListener('DOMContentLoaded', async () => {
     });
     window.aegis = aegis; // Expose for verification/CLI interaction
     window.sentinel = sentinel;
+    window.terminal = terminal; // Expose for verification
+    window.spectra = spectra;
 });

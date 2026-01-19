@@ -226,6 +226,22 @@
         </div>
         <div class="color-wash"></div>
 
+        <div id="echo-overlay" class="overlay hidden">
+            <div class="echo-container">
+                <div class="echo-header">
+                    <div class="echo-title">PROJECT ECHO // SIGNAL SYNC</div>
+                    <div class="echo-status" id="echo-status">STANDBY</div>
+                </div>
+                <div class="echo-visualizer-container">
+                    <canvas id="echo-visualizer"></canvas>
+                </div>
+                <div class="echo-controls">
+                    <div id="echo-message">Ready to transmit or receive.</div>
+                    <button id="echo-close-btn" class="echo-btn">TERMINATE LINK</button>
+                </div>
+            </div>
+        </div>
+
         <script type="module" src="js/crypto-guard.js"></script>
         <script type="module" src="js/spectra.js"></script>
         <script type="module" src="js/app.js"></script>

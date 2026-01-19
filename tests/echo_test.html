@@ -1,0 +1,84 @@
+<!DOCTYPE html>
+<html>
+<body>
+<script type="module">
+    import { SpectraEngine } from '../js/spectra.js';
+
+    async function runTests() {
+        try {
+            const engine = new SpectraEngine();
+            const data = { msg: "EchoTest", timestamp: 12345 };
+
+            // 1. Test Shared Logic (Forge -> Scan)
+            // This tests _preparePayload, _generateFSK, and _decodeFSK
+            console.log("Step 1: Forging Signal...");
+            const blob = await engine.forgeSignal(data);
+            const arrayBuffer = await blob.arrayBuffer();
+
+            console.log("Step 2: Scanning Signal...");
+            const result = await engine.scanSignal(arrayBuffer);
+
+            if (result.msg === "EchoTest") {
+                console.log("Logic Test: PASSED");
+            } else {
+                console.error("Logic Test: FAILED", result);
+                return;
+            }
+
+            // 2. Test Real-Time Decode Logic specifically
+            // We simulate a buffer that contains silence + leader + signal
+            console.log("Step 3: Simulating Real-Time Buffer...");
+
+            // Create a dummy buffer
+            const sr = 44100;
+            const baud = 40; // Live baud
+            const mark = 18000;
+            const space = 16000;
+
+            // Generate payload bits
+            const payload = engine._preparePayload(data);
+            const bits = [];
+            const bytes = payload.buffer;
+
+            for(let i=0; i<payload.totalSize; i++) {
+                const b = bytes[i];
+                for(let j=0; j<8; j++) {
+                    bits.push( (b >> (7-j)) & 1 );
+                }
+            }
+
+            // Generate PCM samples
+            const samplesPerBit = Math.floor(sr / baud);
+            const pcm = new Float32Array(samplesPerBit * (bits.length + 10)); // +10 for padding
+
+            let pos = 0;
+            // Leader (Space)
+            // Note: The decoder expects just the bits. It relies on header matching.
+            // But we should inject some noise or offset to test robustness?
+            // For this unit test, let's keep it aligned to verify the core correlation.
+
+            for(let b of bits) {
+                const freq = b ? mark : space;
+                const omega = 2 * Math.PI * freq / sr;
+                for(let k=0; k<samplesPerBit; k++) {
+                    pcm[pos++] = Math.sin(omega * k);
+                }
+            }
+
+            // Decode
+            const decoded = engine._decodeFSK(pcm, sr, baud);
+            if (decoded && decoded.msg === "EchoTest") {
+                console.log("Real-Time Logic: PASSED");
+            } else {
+                console.error("Real-Time Logic: FAILED", decoded);
+            }
+
+        } catch (e) {
+            console.error("Exception:", e);
+        }
+    }
+
+    runTests();
+</script>
+</body>
+</html>

@@ -298,4 +298,107 @@ export class UISystem {
             );
         });
     }
+
+    showEchoInterface(mode, spectraEngine, onClose) {
+        const overlay = document.getElementById('echo-overlay');
+        const statusEl = document.getElementById('echo-status');
+        const msgEl = document.getElementById('echo-message');
+        const canvas = document.getElementById('echo-visualizer');
+        const closeBtn = document.getElementById('echo-close-btn');
+
+        if (!overlay || !canvas) return;
+
+        overlay.classList.remove('hidden');
+        statusEl.textContent = mode === 'broadcast' ? 'BROADCASTING' : 'LISTENING';
+        msgEl.textContent = mode === 'broadcast'
+            ? 'Transmitting encrypted signal... keep device steady.'
+            : 'Listening for Echo signal...';
+
+        const ctx = canvas.getContext('2d');
+        const dpr = window.devicePixelRatio || 1;
+        const rect = canvas.parentElement.getBoundingClientRect();
+        canvas.width = rect.width * dpr;
+        canvas.height = rect.height * dpr;
+        ctx.scale(dpr, dpr);
+
+        let animationFrame;
+        let isRunning = true;
+
+        const draw = () => {
+            if (!isRunning) return;
+            animationFrame = requestAnimationFrame(draw);
+
+            ctx.fillStyle = '#050505';
+            ctx.fillRect(0, 0, rect.width, rect.height);
+
+            // If listening, use real analyser. If broadcast, simulate.
+            const analyser = spectraEngine.getAnalyser();
+
+            if (mode === 'broadcast' || !analyser) {
+                 this._drawFakeWaveform(ctx, rect.width, rect.height);
+                 return;
+            }
+
+            const bufferLength = analyser.frequencyBinCount;
+            const dataArray = new Uint8Array(bufferLength);
+            analyser.getByteTimeDomainData(dataArray);
+
+            ctx.lineWidth = 2;
+            ctx.strokeStyle = '#c67605';
+            ctx.beginPath();
+
+            const sliceWidth = rect.width * 1.0 / bufferLength;
+            let x = 0;
+
+            for (let i = 0; i < bufferLength; i++) {
+                const v = dataArray[i] / 128.0;
+                const y = v * rect.height / 2;
+
+                if (i === 0) {
+                    ctx.moveTo(x, y);
+                } else {
+                    ctx.lineTo(x, y);
+                }
+                x += sliceWidth;
+            }
+
+            ctx.lineTo(rect.width, rect.height / 2);
+            ctx.stroke();
+        };
+
+        draw();
+
+        // Handler Wrapper
+        const handleClose = () => {
+            if (!isRunning) return;
+            isRunning = false;
+            cancelAnimationFrame(animationFrame);
+            overlay.classList.add('hidden');
+            if (onClose) onClose();
+            // Cleanup listeners to prevent leak
+            closeBtn.removeEventListener('click', handleClose);
+        };
+
+        closeBtn.addEventListener('click', handleClose);
+
+        // Return a method to programmatically close it (e.g. on success)
+        return { close: handleClose };
+    }
+
+    _drawFakeWaveform(ctx, width, height) {
+        ctx.beginPath();
+        ctx.lineWidth = 2;
+        ctx.strokeStyle = '#c67605';
+
+        const time = Date.now() * 0.005;
+        for (let x = 0; x < width; x++) {
+            // Complex sine sum to look cool
+            const y = height / 2 +
+                      Math.sin(x * 0.02 + time) * 30 +
+                      Math.sin(x * 0.05 - time * 2) * 15;
+            if (x === 0) ctx.moveTo(x, y);
+            else ctx.lineTo(x, y);
+        }
+        ctx.stroke();
+    }
 }
