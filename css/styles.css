@@ -1233,3 +1233,197 @@ body {
     0%, 100% { opacity: 1; }
     50% { opacity: 0.5; }
 }
+
+/* Panopticon UI (Project PANOPTICON) */
+.panopticon-overlay {
+    position: fixed;
+    bottom: 2rem;
+    left: 50%;
+    transform: translateX(-50%);
+    width: 80%;
+    max-width: 800px;
+    background: rgba(10, 16, 20, 0.95);
+    border: 1px solid #334455;
+    border-top: 2px solid var(--ochre-gold);
+    z-index: 4000;
+    padding: 1rem;
+    font-family: 'Share Tech Mono', monospace;
+    box-shadow: 0 0 30px rgba(0, 0, 0, 0.8);
+    transition: opacity 0.3s, transform 0.3s;
+}
+
+.panopticon-overlay.hidden {
+    opacity: 0;
+    pointer-events: none;
+    transform: translateX(-50%) translateY(20px);
+}
+
+.panopticon-header {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    margin-bottom: 1rem;
+    border-bottom: 1px solid #223344;
+    padding-bottom: 0.5rem;
+}
+
+.panopticon-title {
+    color: var(--ochre-gold);
+    font-weight: bold;
+    letter-spacing: 1px;
+}
+
+.panopticon-status {
+    color: #55ffaa;
+    font-size: 0.8rem;
+    animation: blink 2s infinite;
+}
+
+.panopticon-status.warning {
+    color: #ffaa00;
+    animation: none;
+}
+
+.panopticon-close-btn {
+    background: transparent;
+    border: none;
+    color: #666;
+    font-size: 1.5rem;
+    cursor: pointer;
+    line-height: 1;
+}
+
+.panopticon-close-btn:hover {
+    color: #fff;
+}
+
+.panopticon-track {
+    position: relative;
+    height: 30px;
+    margin-bottom: 1rem;
+    display: flex;
+    align-items: center;
+}
+
+.panopticon-timeline-bg {
+    position: absolute;
+    top: 50%;
+    left: 0;
+    width: 100%;
+    height: 2px;
+    background: #333;
+    z-index: 1;
+}
+
+#panopticon-scrubber {
+    position: relative;
+    width: 100%;
+    z-index: 10;
+    margin: 0;
+    cursor: ew-resize;
+    -webkit-appearance: none;
+    background: transparent;
+}
+
+#panopticon-scrubber:disabled {
+    cursor: not-allowed;
+    opacity: 0.5;
+}
+
+#panopticon-scrubber::-webkit-slider-thumb {
+    -webkit-appearance: none;
+    height: 16px;
+    width: 8px;
+    background: var(--ochre-gold);
+    cursor: ew-resize;
+    margin-top: -7px; /* vertical center fix for some browsers */
+    box-shadow: 0 0 5px var(--ochre-gold);
+}
+
+#panopticon-scrubber::-webkit-slider-runnable-track {
+    width: 100%;
+    height: 2px;
+    cursor: ew-resize;
+    background: transparent;
+}
+
+.panopticon-markers {
+    position: absolute;
+    top: 0;
+    left: 0;
+    width: 100%;
+    height: 100%;
+    pointer-events: none;
+    z-index: 5;
+}
+
+.p-marker {
+    position: absolute;
+    top: 50%;
+    width: 6px;
+    height: 6px;
+    border-radius: 50%;
+    transform: translate(-50%, -50%);
+    background: #fff;
+}
+
+.p-marker.defcon-1 { background: #ff0055; box-shadow: 0 0 5px #ff0055; width: 8px; height: 8px; }
+.p-marker.defcon-2 { background: #ffaa00; }
+
+.panopticon-controls {
+    display: flex;
+    justify-content: center;
+    gap: 1rem;
+    margin-bottom: 1rem;
+}
+
+.panopticon-btn {
+    background: rgba(255,255,255,0.05);
+    border: 1px solid #334455;
+    color: #888;
+    padding: 0.5rem 1rem;
+    font-family: inherit;
+    cursor: pointer;
+    font-size: 0.8rem;
+    display: flex;
+    align-items: center;
+    gap: 0.5rem;
+    transition: all 0.2s;
+}
+
+.panopticon-btn:hover:not(:disabled) {
+    border-color: #fff;
+    color: #fff;
+}
+
+.panopticon-btn:disabled {
+    opacity: 0.3;
+    cursor: not-allowed;
+}
+
+.panopticon-btn.active {
+    background: rgba(85, 255, 170, 0.1);
+    border-color: #55ffaa;
+    color: #55ffaa;
+}
+
+.panopticon-metadata {
+    display: flex;
+    justify-content: space-around;
+    font-size: 0.8rem;
+    color: #aaa;
+    border-top: 1px dashed #333;
+    padding-top: 0.5rem;
+}
+
+.meta-item {
+    display: inline-block;
+}
+
+.meta-item.defcon-1 { color: #ff0055; font-weight: bold; }
+.meta-item.defcon-2 { color: #ffaa00; font-weight: bold; }
+
+/* Force Panopticon overlay to show when body class active if needed */
+body.panopticon-active .panopticon-overlay {
+    /* Potential state styling */
+}
