@@ -746,4 +746,27 @@ export function registerCommands(terminal, context) {
             }
         }
     );
+
+    terminal.registerCommand(
+        'panopticon',
+        'Tactical Replay System (Time Travel)',
+        (args) => {
+            if (!checkAccess()) return;
+            const panopticon = context.engines.panopticon;
+
+            if (!panopticon) {
+                terminal.log('Panopticon Engine not initialized.', 'error');
+                return;
+            }
+
+            // Ensure we are on the tapestry screen, or switch to it
+            if (state.activeScreen !== 'tapestry') {
+                actions.showScreen('tapestry');
+            }
+
+            panopticon.toggleInterface(true);
+            terminal.log('PANOPTICON INTERFACE ENGAGED.', 'success');
+            terminal.toggle(); // Close terminal to show UI
+        }
+    );
 }

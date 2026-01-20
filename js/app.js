@@ -12,6 +12,7 @@ import { SpectraEngine } from './spectra.js';
 import { AegisEngine } from './aegis.js';
 import { SentinelEngine } from './sentinel.js';
 import { ChronosEngine } from './chronos.js';
+import { PanopticonEngine } from './panopticon.js';
 import { registerCommands } from './terminal-commands.js';
 
 document.addEventListener('DOMContentLoaded', async () => {
@@ -62,6 +63,11 @@ document.addEventListener('DOMContentLoaded', async () => {
     const aegis = new AegisEngine(ui, horizonEngine);
     const sentinel = new SentinelEngine(horizonEngine);
     const chronos = new ChronosEngine(horizonEngine, SentinelEngine);
+
+    // Panopticon initialization is deferred until renderers are ready,
+    // but we can instantiate the class structure now or lazily.
+    // We'll instantiate it inside the main flow once renderers are accessible or via a getter.
+    let panopticon = null;
 
     // Auto-Lock Mechanism
     let idleTimer;
@@ -699,6 +705,13 @@ document.addEventListener('DOMContentLoaded', async () => {
 
     async function weaveThread() {
         if (state.isWeaving) return;
+
+        // Prevent weaving if in Replay Mode
+        if (panopticon && panopticon.isReplaying) {
+            ui.showNotification('SYSTEM HALTED: REPLAY MODE ACTIVE', 'error');
+            return;
+        }
+
         state.isWeaving = true;
 
         resonanceEngine.playInteractionSound('weave');
@@ -710,6 +723,9 @@ document.addEventListener('DOMContentLoaded', async () => {
             region: state.region,
             title: state.activeLocation.title
         });
+
+        // Capture state for Panopticon (Time Travel)
+        if (panopticon) panopticon.capture();
 
         // Trigger Aegis Tactical Analysis
         aegis.analyze(tapestryLedger.getThreads());
@@ -1145,7 +1161,10 @@ document.addEventListener('DOMContentLoaded', async () => {
             aegis,
             codex,
             alchemy,
-            chronos
+            chronos,
+            get panopticon() {
+                return panopticon;
+            }
         },
         ui,
         elements,
@@ -1156,6 +1175,26 @@ document.addEventListener('DOMContentLoaded', async () => {
             renderTapestry
         }
     });
+
+    // Initialize Panopticon (Tactical Replay)
+    // It needs access to renderTapestry which handles both map and mandala
+    // But renderTapestry relies on closure variables (mapRenderer, etc).
+    // We can pass a proxy object to Panopticon.
+    try {
+        panopticon = new PanopticonEngine(
+            tapestryLedger,
+            sentinel,
+            {
+                get mandala() { return mandalaRenderer; },
+                get map() { return mapRenderer; },
+                updateAlchemy: updateAlchemyUI
+            },
+            ui
+        );
+        console.log("Panopticon initialized:", panopticon);
+    } catch (e) {
+        console.error("Panopticon Init Error:", e);
+    }
 
     initSplash();
     updateAstrolabeState();
@@ -1215,4 +1254,5 @@ document.addEventListener('DOMContentLoaded', async () => {
     window.sentinel = sentinel;
     window.terminal = terminal; // Expose for verification
     window.spectra = spectra;
+    window.panopticon = panopticon; // Direct exposure for easier testing
 });
