@@ -1168,6 +1168,9 @@ document.addEventListener('DOMContentLoaded', async () => {
     Object.defineProperty(window, 'mandalaRenderer', {
         get: () => mandalaRenderer
     });
+    Object.defineProperty(window, 'mapRenderer', {
+        get: () => mapRenderer
+    });
     window.ui = ui; // Expose UI system
     // Backward compatibility for tests/debugging if needed, though we prefer ui.showNotification
     window.showNotification = (msg, type) => ui.showNotification(msg, type);

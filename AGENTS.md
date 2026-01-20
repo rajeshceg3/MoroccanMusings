@@ -13,6 +13,7 @@
 - **Modularity:** Keep concerns separated.
     - `tapestry.js`: Visuals & Ledger.
     - `cartographer.js`: Map & Geospatial.
+    - `prometheus.js`: Geospatial Heatmap Engine.
     - `alchemy.js`: Logic/Synthesis.
 - **State Management:** `js/app.js` is the single source of truth for UI state.
 - **Tooling:** Use `npm run lint` and `npm run format` to maintain code hygiene.
