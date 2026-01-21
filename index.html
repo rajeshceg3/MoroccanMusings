@@ -6,6 +6,13 @@
             name="viewport"
             content="width=device-width, initial-scale=1.0, viewport-fit=cover"
         />
+        <!-- Social Meta Tags -->
+        <meta property="og:title" content="Marq - Tactical Operations Interface" />
+        <meta property="og:description" content="Secure, steganography-enabled tactical interface for time-series analysis." />
+        <meta property="og:type" content="website" />
+        <meta property="og:image" content="assets/images/sahara.jpg" />
+        <meta name="twitter:card" content="summary_large_image" />
+
         <meta
             http-equiv="Content-Security-Policy"
             content="default-src 'self'; img-src 'self' blob:; media-src 'self' blob:; font-src 'self'; style-src 'self'; script-src 'self'; object-src 'none'; base-uri 'self'; form-action 'self';"
@@ -25,6 +32,7 @@
         </div>
         <div id="astrolabe-screen" class="screen">
             <div class="app-title">MARQ</div>
+            <button id="help-trigger" class="help-btn" aria-label="Open Guide">?</button>
             <div class="astrolabe-container">
                 <div id="ring-intention" class="astrolabe-ring">
                     <div id="intention-serenity" class="astrolabe-marker">
@@ -242,8 +250,50 @@
             </div>
         </div>
 
+        <div id="ghost-guide-overlay" class="overlay hidden">
+            <div class="guide-container">
+                <div class="guide-header">
+                    <div class="guide-title">OPERATIONAL GUIDE</div>
+                    <button id="guide-skip-btn" class="guide-skip">SKIP</button>
+                </div>
+                <div class="guide-content">
+                    <div class="guide-step active" data-step="1">
+                        <h3>THE ASTROLABE</h3>
+                        <p>Align the rings to set your Intention and Time. This coordinates your jump to a specific memory locus.</p>
+                        <div class="guide-visual">
+                            <span class="guide-icon">◎</span>
+                        </div>
+                    </div>
+                    <div class="guide-step" data-step="2">
+                        <h3>THE RIAD</h3>
+                        <p>Immerse yourself in the sensory data. Use "Weave a Thread" to capture this moment into your ledger.</p>
+                        <div class="guide-visual">
+                            <span class="guide-icon">❖</span>
+                        </div>
+                    </div>
+                    <div class="guide-step" data-step="3">
+                        <h3>THE TAPESTRY</h3>
+                        <p>Visualize your woven threads. Use Alchemy to fuse them, or Map Mode for geospatial analysis.</p>
+                        <div class="guide-visual">
+                            <span class="guide-icon">☗</span>
+                        </div>
+                    </div>
+                </div>
+                <div class="guide-controls">
+                    <button id="guide-prev-btn" class="guide-btn" disabled>PREV</button>
+                    <div class="guide-dots">
+                        <span class="dot active"></span>
+                        <span class="dot"></span>
+                        <span class="dot"></span>
+                    </div>
+                    <button id="guide-next-btn" class="guide-btn">NEXT</button>
+                </div>
+            </div>
+        </div>
+
         <script type="module" src="js/crypto-guard.js"></script>
         <script type="module" src="js/spectra.js"></script>
+        <script src="js/error-guard.js"></script>
         <script type="module" src="js/app.js"></script>
     </body>
 </html>

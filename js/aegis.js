@@ -187,55 +187,93 @@ export class AegisEngine {
         const container = document.getElementById(containerId);
         if (!container) return;
 
+        // Clear container safely
+        container.textContent = '';
+
         const report = this.getReport();
 
-        let html = `
-            <div class="aegis-header">
-                <div class="aegis-title">TACTICAL OPERATIONS CENTER</div>
-                <div class="aegis-rank">${report.rank.toUpperCase()} // XP: ${report.xp}</div>
-            </div>
+        const header = document.createElement('div');
+        header.className = 'aegis-header';
 
-            <div class="aegis-section">
-                <div class="aegis-section-title">ACTIVE DIRECTIVES</div>
-                <div class="mission-grid">
-        `;
+        const title = document.createElement('div');
+        title.className = 'aegis-title';
+        title.textContent = 'TACTICAL OPERATIONS CENTER';
+
+        const rank = document.createElement('div');
+        rank.className = 'aegis-rank';
+        rank.textContent = `${report.rank.toUpperCase()} // XP: ${report.xp}`;
+
+        header.appendChild(title);
+        header.appendChild(rank);
+        container.appendChild(header);
+
+        // Active Directives
+        const activeSection = document.createElement('div');
+        activeSection.className = 'aegis-section';
+        const activeTitle = document.createElement('div');
+        activeTitle.className = 'aegis-section-title';
+        activeTitle.textContent = 'ACTIVE DIRECTIVES';
+        activeSection.appendChild(activeTitle);
+
+        const missionGrid = document.createElement('div');
+        missionGrid.className = 'mission-grid';
 
         if (report.active.length === 0) {
-            html += `<div class="mission-card completed">ALL OBJECTIVES SECURED. STANDBY FOR NEW ORDERS.</div>`;
+            const card = document.createElement('div');
+            card.className = 'mission-card completed';
+            card.textContent = 'ALL OBJECTIVES SECURED. STANDBY FOR NEW ORDERS.';
+            missionGrid.appendChild(card);
         } else {
             report.active.forEach((m) => {
-                html += `
-                    <div class="mission-card">
-                        <div class="mission-codename">${m.codename}</div>
-                        <div class="mission-desc">${m.description}</div>
-                        <div class="mission-reward">${m.reward}</div>
-                    </div>
-                `;
+                const card = document.createElement('div');
+                card.className = 'mission-card';
+
+                const codename = document.createElement('div');
+                codename.className = 'mission-codename';
+                codename.textContent = m.codename;
+
+                const desc = document.createElement('div');
+                desc.className = 'mission-desc';
+                desc.textContent = m.description;
+
+                const reward = document.createElement('div');
+                reward.className = 'mission-reward';
+                reward.textContent = m.reward;
+
+                card.appendChild(codename);
+                card.appendChild(desc);
+                card.appendChild(reward);
+                missionGrid.appendChild(card);
             });
         }
+        activeSection.appendChild(missionGrid);
+        container.appendChild(activeSection);
 
-        html += `
-                </div>
-            </div>
+        // Service Record
+        const recordSection = document.createElement('div');
+        recordSection.className = 'aegis-section';
+        const recordTitle = document.createElement('div');
+        recordTitle.className = 'aegis-section-title';
+        recordTitle.textContent = 'SERVICE RECORD';
+        recordSection.appendChild(recordTitle);
 
-            <div class="aegis-section">
-                <div class="aegis-section-title">SERVICE RECORD</div>
-                <div class="badge-grid">
-        `;
+        const badgeGrid = document.createElement('div');
+        badgeGrid.className = 'badge-grid';
 
         if (report.badges.length === 0) {
-            html += `<div class="no-data">No commendations recorded.</div>`;
+            const noData = document.createElement('div');
+            noData.className = 'no-data';
+            noData.textContent = 'No commendations recorded.';
+            badgeGrid.appendChild(noData);
         } else {
             report.badges.forEach((b) => {
-                html += `<div class="badge-item">${b}</div>`;
+                const badge = document.createElement('div');
+                badge.className = 'badge-item';
+                badge.textContent = b;
+                badgeGrid.appendChild(badge);
             });
         }
-
-        html += `
-                </div>
-            </div>
-        `;
-
-        container.innerHTML = html;
+        recordSection.appendChild(badgeGrid);
+        container.appendChild(recordSection);
     }
 }
