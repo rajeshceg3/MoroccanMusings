@@ -769,4 +769,47 @@ export function registerCommands(terminal, context) {
             terminal.toggle(); // Close terminal to show UI
         }
     );
+
+    terminal.registerCommand(
+        'cortex',
+        'Neural Association Engine',
+        (args) => {
+            if (!checkAccess()) return;
+
+            const cmd = args[0] || 'status';
+            const threads = tapestryLedger.getThreads();
+            const analysis = context.engines.cortex.analyze(threads);
+
+            if (cmd === 'status') {
+                terminal.log('--- CORTEX NEURAL GRID ---', 'system');
+                terminal.log(`Nodes: ${analysis.nodes.length}`, 'info');
+                terminal.log(`Edges: ${analysis.edges.length}`, 'info');
+                terminal.log(`Tactical Clusters: ${analysis.clusters.length}`, 'info');
+            } else if (cmd === 'analyze') {
+                terminal.log('--- NEURAL ANALYSIS ---', 'system');
+                if (analysis.edges.length === 0) {
+                    terminal.log('No semantic correlations detected.', 'warning');
+                    return;
+                }
+                const strongest = analysis.edges.sort((a,b) => b.weight - a.weight)[0];
+                terminal.log('Top Correlation:', 'success');
+                const src = analysis.nodes[strongest.sourceIndex].data;
+                const tgt = analysis.nodes[strongest.targetIndex].data;
+                terminal.log(`  ${src.title} <--> ${tgt.title}`, 'info');
+                terminal.log(`  Weight: ${strongest.weight}`, 'info');
+                terminal.log(`  Vectors: ${strongest.types.join(', ')}`, 'info');
+            } else if (cmd === 'cluster') {
+                 if (analysis.clusters.length === 0) {
+                     terminal.log('No clusters identified.', 'warning');
+                     return;
+                 }
+                 terminal.log(`Identified ${analysis.clusters.length} clusters:`, 'system');
+                 analysis.clusters.forEach((c, i) => {
+                     terminal.log(`  Cluster ${i+1}: ${c.length} Nodes`, 'info');
+                 });
+            } else {
+                terminal.log('Usage: cortex [status|analyze|cluster]', 'warning');
+            }
+        }
+    );
 }
