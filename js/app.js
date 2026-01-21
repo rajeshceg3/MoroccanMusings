@@ -13,6 +13,8 @@ import { AegisEngine } from './aegis.js';
 import { SentinelEngine } from './sentinel.js';
 import { ChronosEngine } from './chronos.js';
 import { PanopticonEngine } from './panopticon.js';
+import { CortexEngine } from './cortex.js';
+import { SynapseRenderer } from './synapse.js';
 import { registerCommands } from './terminal-commands.js';
 
 document.addEventListener('DOMContentLoaded', async () => {
@@ -52,7 +54,8 @@ document.addEventListener('DOMContentLoaded', async () => {
         isWeaving: false,
         selectedThreads: [], // Array of indices
         isHorizonActive: false,
-        isMapActive: false
+        isMapActive: false,
+        isSynapseActive: false
     };
 
     const resonanceEngine = new ResonanceEngine();
@@ -63,6 +66,7 @@ document.addEventListener('DOMContentLoaded', async () => {
     const aegis = new AegisEngine(ui, horizonEngine);
     const sentinel = new SentinelEngine(horizonEngine);
     const chronos = new ChronosEngine(horizonEngine, SentinelEngine);
+    const cortex = new CortexEngine();
 
     // Panopticon initialization is deferred until renderers are ready,
     // but we can instantiate the class structure now or lazily.
@@ -103,6 +107,7 @@ document.addEventListener('DOMContentLoaded', async () => {
 
     let mandalaRenderer = null;
     let mapRenderer = null;
+    let synapseRenderer = null;
     let oracleEngine = null;
 
     const elements = {
@@ -176,6 +181,7 @@ document.addEventListener('DOMContentLoaded', async () => {
             fuseBtn: document.getElementById('alchemy-fuse-btn'),
             horizonToggle: document.getElementById('horizon-toggle'),
             mapToggle: document.getElementById('map-toggle'),
+            synapseToggle: document.getElementById('synapse-toggle'),
             aegisToggle: document.getElementById('aegis-toggle'),
             horizonDashboard: document.getElementById('horizon-dashboard'),
             horizonDominance: document.getElementById('horizon-dominance'),
@@ -228,6 +234,11 @@ document.addEventListener('DOMContentLoaded', async () => {
                         locations
                     );
                 }
+            }
+
+            if (!synapseRenderer && elements.tapestry.canvas) {
+                // Reuse the main canvas for Synapse, logic switches in renderTapestry
+                synapseRenderer = new SynapseRenderer(elements.tapestry.canvas);
             }
 
             mandalaRenderer.setSelection(state.selectedThreads);
@@ -961,6 +972,26 @@ document.addEventListener('DOMContentLoaded', async () => {
             }
         );
 
+        // Synapse Interaction (Mouse)
+        ['mousedown', 'mousemove', 'mouseup'].forEach(evt => {
+            elements.tapestry.canvas.addEventListener(evt, (e) => {
+                if (state.isSynapseActive && synapseRenderer) {
+                    const rect = elements.tapestry.canvas.getBoundingClientRect();
+                    // Just pass raw coordinates, renderer handles scale
+                    // But wait, renderer needs client relative to canvas.
+                    // The renderer expects "client" relative to top-left?
+                    // SynapseRenderer handleInput uses getBoundingClientRect internally.
+                    // So we pass clientX/Y.
+                    const type = evt === 'mousedown' ? 'down' : evt === 'mousemove' ? 'move' : 'up';
+                    synapseRenderer.handleInput(type, e.clientX, e.clientY);
+
+                    if (synapseRenderer.isSimulating) {
+                         startHorizonLoop(); // Ensure loop is running for physics
+                    }
+                }
+            });
+        });
+
         elements.tapestry.fuseBtn.addEventListener('click', async () => {
             const threads = tapestryLedger.getThreads();
             if (state.selectedThreads.length !== 2) return;
@@ -1007,24 +1038,54 @@ document.addEventListener('DOMContentLoaded', async () => {
         // Map Interaction (Overwatch)
         elements.tapestry.mapToggle.addEventListener('click', () => {
             state.isMapActive = !state.isMapActive;
-            elements.tapestry.mapToggle.classList.toggle(
-                'active',
-                state.isMapActive
-            );
+            elements.tapestry.mapToggle.classList.toggle('active', state.isMapActive);
 
-            // Toggle Canvas Visibility
+            // Exclusive Mode Logic
             if (state.isMapActive) {
+                state.isSynapseActive = false;
+                elements.tapestry.synapseToggle.classList.remove('active');
+
                 elements.tapestry.canvas.style.display = 'none';
                 elements.tapestry.mapCanvas.style.display = 'block';
-                if (!mapRenderer)
-                    mapRenderer = new MapRenderer(elements.tapestry.mapCanvas);
+                if (!mapRenderer) mapRenderer = new MapRenderer(elements.tapestry.mapCanvas);
                 mapRenderer.resize();
                 mapRenderer.render(tapestryLedger.getThreads(), locations);
             } else {
+                // Return to previous state or default?
+                // If map is off, we show mandala (or synapse if it was active? No, we turned it off).
+                // Default to Mandala.
                 elements.tapestry.canvas.style.display = 'block';
                 elements.tapestry.mapCanvas.style.display = 'none';
-                if (mandalaRenderer)
-                    mandalaRenderer.render(tapestryLedger.getThreads());
+                renderTapestry();
+            }
+            resonanceEngine.playInteractionSound('click');
+        });
+
+        // Synapse Interaction
+        elements.tapestry.synapseToggle.addEventListener('click', () => {
+            state.isSynapseActive = !state.isSynapseActive;
+            elements.tapestry.synapseToggle.classList.toggle('active', state.isSynapseActive);
+
+            if (state.isSynapseActive) {
+                // Disable Map
+                state.isMapActive = false;
+                elements.tapestry.mapToggle.classList.remove('active');
+                elements.tapestry.mapCanvas.style.display = 'none';
+
+                // Enable Canvas
+                elements.tapestry.canvas.style.display = 'block';
+
+                // Initialize Graph
+                const threads = tapestryLedger.getThreads();
+                const graph = cortex.analyze(threads);
+                if (!synapseRenderer) synapseRenderer = new SynapseRenderer(elements.tapestry.canvas);
+                synapseRenderer.render(graph);
+
+                startHorizonLoop(); // Start physics loop
+            } else {
+                renderTapestry(); // Back to Mandala
+                stopHorizonLoop(); // Unless Horizon is active?
+                if (state.isHorizonActive) startHorizonLoop();
             }
             resonanceEngine.playInteractionSound('click');
         });
@@ -1095,13 +1156,16 @@ document.addEventListener('DOMContentLoaded', async () => {
     }
 
     function renderTapestry() {
+        const threads = tapestryLedger.getThreads();
+
+        // 1. Map Mode
         if (state.isMapActive) {
             if (oracleEngine && oracleEngine.activeMode) {
-                oracleEngine.render(tapestryLedger.getThreads());
+                oracleEngine.render(threads);
             } else if (mapRenderer) {
                 const threatReport = sentinel.getReport();
                 mapRenderer.render(
-                    tapestryLedger.getThreads(),
+                    threads,
                     locations,
                     [],
                     threatReport.zones
@@ -1110,10 +1174,22 @@ document.addEventListener('DOMContentLoaded', async () => {
             return;
         }
 
-        if (!mandalaRenderer) return;
-        const threads = tapestryLedger.getThreads();
-        let projections = [];
+        // 2. Synapse Mode
+        if (state.isSynapseActive && synapseRenderer) {
+             // If simulating, render is called in loop
+             // We just ensure we call render which handles simulation step
+             // Note: analyze is expensive, so we only re-analyze if needed or rely on stored graph.
+             // But synapseRenderer keeps state. We just call render.
+             // If threads changed, we might need to update graph.
+             // For now, simple loop:
+             synapseRenderer.render();
+             return;
+        }
 
+        // 3. Mandala Mode (Default)
+        if (!mandalaRenderer) return;
+
+        let projections = [];
         if (state.isHorizonActive) {
             projections = horizonEngine.project(threads);
         }
@@ -1162,6 +1238,7 @@ document.addEventListener('DOMContentLoaded', async () => {
             codex,
             alchemy,
             chronos,
+            cortex,
             get panopticon() {
                 return panopticon;
             }
