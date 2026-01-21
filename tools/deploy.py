@@ -3,6 +3,7 @@ import re
 import shutil
 import hashlib
 import json
+import time
 
 # Configuration
 DIST_DIR = 'dist'
@@ -28,34 +29,41 @@ def minify_css(content):
     return content
 
 def minify_js(content):
-    # Very basic minification: remove comments and whitespace
-    # Note: For production JS, a real parser/minifier (terser) is better, but this is a python script without deps.
-    # We will just strip comments and extra whitespace carefully.
-    # Actually, simplistic regex JS minification is dangerous.
-    # Let's just strip comments and leave whitespace mostly alone to avoid breaking code,
-    # or rely on the user having a node environment.
-    # Given the constraint of "no external deps", we will limit minification to safe whitespace reduction.
-
+    # Safe JS Minification: Remove comments and whitespace mostly
     lines = content.split('\n')
     minified_lines = []
     for line in lines:
         line = line.strip()
         if not line: continue
         if line.startswith('//'): continue
-        # Remove trailing comments? Risky if inside string.
+        if line.startswith('/*') and line.endswith('*/'): continue
         minified_lines.append(line)
     return '\n'.join(minified_lines)
 
-def hash_file(content):
-    return hashlib.md5(content.encode('utf-8')).hexdigest()[:8]
+def generate_build_id():
+    return str(int(time.time()))
+
+def generate_robots_txt():
+    content = """User-agent: *
+Allow: /
+Disallow: /private/
+Disallow: /temp/
+
+Sitemap: /sitemap.xml
+"""
+    with open(os.path.join(DIST_DIR, 'robots.txt'), 'w') as f:
+        f.write(content)
 
 def build():
     print("Initializing deployment sequence...")
     clean_dist()
+    build_id = generate_build_id()
+    print(f"Build ID: {build_id}")
 
-    file_map = {}
+    # Process CSS (Copy + Minify + No Rename for now to simplify, relying on Query Param)
+    # Actually, the original script renamed CSS. That's fine, we can keep that or switch to query param.
+    # The requirement is "cache busting". Query param is easiest for everything.
 
-    # Process CSS
     print("Processing CSS...")
     for filename in os.listdir(CSS_DIR):
         if filename.endswith('.css'):
@@ -63,13 +71,9 @@ def build():
                 content = f.read()
 
             minified = minify_css(content)
-            file_hash = hash_file(minified)
-            new_filename = f"{filename[:-4]}.{file_hash}.css"
-
-            with open(os.path.join(DIST_DIR, 'css', new_filename), 'w') as f:
+            # Write to dist without renaming
+            with open(os.path.join(DIST_DIR, 'css', filename), 'w') as f:
                 f.write(minified)
-
-            file_map[f"css/{filename}"] = f"css/{new_filename}"
 
     # Process JS
     print("Processing JS...")
@@ -78,38 +82,16 @@ def build():
             with open(os.path.join(JS_DIR, filename), 'r') as f:
                 content = f.read()
 
-            # minified = minify_js(content) # Skip dangerous JS minification for now
-            minified = content # Copy as is for safety, maybe just strip comments later
-
-            # However, we need to update imports inside JS files if we rename them!
-            # Since we are using ES modules, `import { x } from './other.js'` needs to become `./other.hash.js`
-            # This is complex without a bundler.
-            # STRATEGY CHANGE:
-            # We cannot easily rename JS files because of internal imports without parsing the AST.
-            # We will ONLY hash the entry point (app.js) in the HTML, but app.js imports others by name.
-            # So, for ES modules without an import map or bundler, we generally can't rename the files
-            # unless we rewrite all imports.
-
-            # Alternative: Use a Service Worker to handle versioning or just append ?v=hash in index.html for the main file.
-            # But deep imports won't be cached-busted.
-
-            # Solution: We will NOT rename JS files. We will just copy them.
-            # We will relies on Service Worker versioning or just accept that deep cache busting is hard without bundler.
-            # Wait, the prompt asked for "minification" and "cache busting".
-            # Let's just minify CSS and rename it. For JS, let's keep names but maybe minify content.
-
+            minified = minify_js(content)
             with open(os.path.join(DIST_DIR, 'js', filename), 'w') as f:
                 f.write(minified)
 
-            # We won't map JS files in file_map because we aren't renaming them.
-            # EXCEPT the Service Worker!
-            if filename == 'sw.js': # Wait sw.js is in root usually
-                pass
-
-    # Copy SW.js from root
+    # Copy SW.js
     if os.path.exists('sw.js'):
         with open('sw.js', 'r') as f:
             content = f.read()
+            # Inject build ID into cache name if possible?
+            # It's hard without parsing sw.js. For now just copy.
         with open(os.path.join(DIST_DIR, 'sw.js'), 'w') as f:
             f.write(content)
 
@@ -118,9 +100,18 @@ def build():
     with open('index.html', 'r') as f:
         html = f.read()
 
-    # Replace CSS links
-    for original, hashed in file_map.items():
-        html = html.replace(original, hashed)
+    # Inject Cache Busting Query Params
+    # Regex to find .css and .js references
+    # Replace href="css/styles.css" with href="css/styles.css?v=BUILD_ID"
+
+    def cache_bust_replacer(match):
+        return f'{match.group(1)}?v={build_id}{match.group(2)}'
+
+    # Cache bust CSS
+    html = re.sub(r'(href="css/[^"]+\.css)(")', cache_bust_replacer, html)
+
+    # Cache bust JS Modules
+    html = re.sub(r'(src="js/[^"]+\.js)(")', cache_bust_replacer, html)
 
     # Minify HTML
     html = re.sub(r'<!--.*?-->', '', html, flags=re.DOTALL)
@@ -128,6 +119,8 @@ def build():
 
     with open(os.path.join(DIST_DIR, 'index.html'), 'w') as f:
         f.write(html)
+
+    generate_robots_txt()
 
     print("Deployment artifact ready in /dist")
     print("Mission Accomplished.")

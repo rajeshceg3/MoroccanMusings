@@ -95,6 +95,28 @@ body {
     font-size: 1.2rem;
 }
 
+.help-btn {
+    position: absolute;
+    top: 2rem;
+    right: 2rem;
+    background: transparent;
+    border: 1px solid rgba(255, 255, 255, 0.2);
+    color: rgba(255, 255, 255, 0.5);
+    width: 30px;
+    height: 30px;
+    border-radius: 50%;
+    cursor: pointer;
+    font-family: 'Courier New', monospace;
+    font-weight: bold;
+    z-index: 20;
+    transition: all 0.3s;
+}
+
+.help-btn:hover {
+    border-color: var(--ochre-gold);
+    color: var(--ochre-gold);
+}
+
 .astrolabe-container {
     position: absolute;
     top: 50%;
@@ -1423,7 +1445,144 @@ body {
 .meta-item.defcon-1 { color: #ff0055; font-weight: bold; }
 .meta-item.defcon-2 { color: #ffaa00; font-weight: bold; }
 
-/* Force Panopticon overlay to show when body class active if needed */
+/* Ghost Guide */
+#ghost-guide-overlay {
+    display: flex;
+    justify-content: center;
+    align-items: center;
+    background: rgba(0, 5, 10, 0.85);
+    z-index: 6000;
+}
+
+#ghost-guide-overlay.hidden {
+    opacity: 0;
+    pointer-events: none;
+    display: none;
+}
+
+.guide-container {
+    width: 90%;
+    max-width: 500px;
+    background: #0a1015;
+    border: 1px solid var(--ochre-gold);
+    box-shadow: 0 0 40px rgba(198, 118, 5, 0.2);
+    padding: 0;
+}
+
+.guide-header {
+    background: rgba(198, 118, 5, 0.1);
+    padding: 1rem 1.5rem;
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    border-bottom: 1px solid rgba(198, 118, 5, 0.2);
+}
+
+.guide-title {
+    font-family: 'Share Tech Mono', monospace;
+    color: var(--ochre-gold);
+    letter-spacing: 1px;
+    font-weight: bold;
+}
+
+.guide-skip {
+    background: transparent;
+    border: none;
+    color: #666;
+    font-size: 0.8rem;
+    cursor: pointer;
+    text-transform: uppercase;
+}
+.guide-skip:hover { color: #fff; }
+
+.guide-content {
+    padding: 2rem;
+    text-align: center;
+    min-height: 200px;
+    display: flex;
+    flex-direction: column;
+    justify-content: center;
+}
+
+.guide-step {
+    display: none;
+    animation: fadeIn 0.5s;
+}
+
+.guide-step.active {
+    display: block;
+}
+
+.guide-step h3 {
+    color: #fff;
+    font-family: 'Cinzel', serif;
+    margin-bottom: 1rem;
+    font-size: 1.5rem;
+}
+
+.guide-step p {
+    color: #ccc;
+    line-height: 1.6;
+    margin-bottom: 2rem;
+}
+
+.guide-visual {
+    margin-top: 1rem;
+}
+
+.guide-icon {
+    font-size: 4rem;
+    color: var(--ochre-gold);
+    opacity: 0.8;
+}
+
+.guide-controls {
+    padding: 1rem 2rem;
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    border-top: 1px solid #223344;
+}
+
+.guide-btn {
+    background: transparent;
+    border: 1px solid #334455;
+    color: #888;
+    padding: 0.5rem 1rem;
+    font-family: 'Share Tech Mono', monospace;
+    cursor: pointer;
+    transition: all 0.2s;
+    min-width: 80px;
+}
+
+.guide-btn:hover:not(:disabled) {
+    border-color: #fff;
+    color: #fff;
+    background: rgba(255,255,255,0.05);
+}
+
+.guide-btn:disabled {
+    opacity: 0.3;
+    cursor: not-allowed;
+}
+
+.guide-dots {
+    display: flex;
+    gap: 0.5rem;
+}
+
+.dot {
+    width: 8px;
+    height: 8px;
+    background: #333;
+    border-radius: 50%;
+    transition: background 0.3s;
+}
+
+.dot.active {
+    background: var(--ochre-gold);
+}
+
 body.panopticon-active .panopticon-overlay {
     /* Potential state styling */
 }

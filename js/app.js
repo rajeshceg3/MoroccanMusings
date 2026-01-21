@@ -1201,6 +1201,65 @@ document.addEventListener('DOMContentLoaded', async () => {
     setupRiadInteractions();
     setupTapestryInteractions();
 
+    // --- Operation Ghost Guide ---
+    function initGhostGuide() {
+        const overlay = document.getElementById('ghost-guide-overlay');
+        const steps = overlay.querySelectorAll('.guide-step');
+        const dots = overlay.querySelectorAll('.dot');
+        const nextBtn = document.getElementById('guide-next-btn');
+        const prevBtn = document.getElementById('guide-prev-btn');
+        const skipBtn = document.getElementById('guide-skip-btn');
+        const helpBtn = document.getElementById('help-trigger');
+
+        let currentStep = 0;
+
+        const updateGuide = () => {
+            steps.forEach((s, i) => s.classList.toggle('active', i === currentStep));
+            dots.forEach((d, i) => d.classList.toggle('active', i === currentStep));
+            prevBtn.disabled = currentStep === 0;
+            nextBtn.textContent = currentStep === steps.length - 1 ? 'FINISH' : 'NEXT';
+        };
+
+        const showGuide = () => {
+            currentStep = 0;
+            updateGuide();
+            overlay.classList.remove('hidden');
+        };
+
+        const closeGuide = () => {
+            overlay.classList.add('hidden');
+            localStorage.setItem('marq_onboarded', 'true');
+        };
+
+        nextBtn.addEventListener('click', () => {
+            if (currentStep < steps.length - 1) {
+                currentStep++;
+                updateGuide();
+            } else {
+                closeGuide();
+            }
+        });
+
+        prevBtn.addEventListener('click', () => {
+            if (currentStep > 0) {
+                currentStep--;
+                updateGuide();
+            }
+        });
+
+        skipBtn.addEventListener('click', closeGuide);
+
+        helpBtn.addEventListener('click', showGuide);
+
+        // Auto-show on first run
+        if (!localStorage.getItem('marq_onboarded')) {
+            // Slight delay to allow splash screen to clear
+            setTimeout(showGuide, 2000);
+        }
+    }
+
+    initGhostGuide();
+
     elements.astrolabe.center.addEventListener('click', () => {
         if (tapestryLedger.status === 'LOCKED') {
             ui.showNotification('ACCESS DENIED', 'error');
