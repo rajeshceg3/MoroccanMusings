@@ -2,6 +2,16 @@ export class UISystem {
     constructor() {
         this.container = this.ensureContainer();
         this.loadingOverlay = this.ensureLoadingOverlay();
+        this.setupNetworkMonitoring();
+    }
+
+    setupNetworkMonitoring() {
+        window.addEventListener('offline', () => {
+            this.showNotification('CONNECTION SEVERED. OFFLINE MODE.', 'offline');
+        });
+        window.addEventListener('online', () => {
+            this.showNotification('LINK RESTORED. SYSTEMS ONLINE.', 'success');
+        });
     }
 
     ensureContainer() {

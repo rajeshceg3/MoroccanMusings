@@ -366,6 +366,7 @@ document.addEventListener('DOMContentLoaded', async () => {
         };
 
         const endDrag = () => {
+            ringElement.classList.remove('dragging');
             ringElement.style.transition =
                 'transform 0.8s var(--ease-out-quint)';
             document.body.style.cursor = 'default';
@@ -398,6 +399,7 @@ document.addEventListener('DOMContentLoaded', async () => {
         };
 
         const startDrag = (e) => {
+            ringElement.classList.add('dragging');
             ringElement.style.transition = 'none';
             startAngle = getAngle(e) - currentRotation;
             document.body.style.cursor = 'grabbing';
@@ -976,7 +978,6 @@ document.addEventListener('DOMContentLoaded', async () => {
         ['mousedown', 'mousemove', 'mouseup'].forEach(evt => {
             elements.tapestry.canvas.addEventListener(evt, (e) => {
                 if (state.isSynapseActive && synapseRenderer) {
-                    const rect = elements.tapestry.canvas.getBoundingClientRect();
                     // Just pass raw coordinates, renderer handles scale
                     // But wait, renderer needs client relative to canvas.
                     // The renderer expects "client" relative to top-left?
@@ -1268,7 +1269,7 @@ document.addEventListener('DOMContentLoaded', async () => {
             },
             ui
         );
-        console.log("Panopticon initialized:", panopticon);
+        // DEBUG: console.log("Panopticon initialized:", panopticon);
     } catch (e) {
         console.error("Panopticon Init Error:", e);
     }
@@ -1368,27 +1369,28 @@ document.addEventListener('DOMContentLoaded', async () => {
         resonanceEngine.stopAmbience();
     });
 
-    // --- DEBUG / TESTING EXPOSURE ---
+    // --- DEBUG / TESTING EXPOSURE (REQUIRED FOR VERIFICATION SCRIPTS) ---
+    // These exposures are strictly for automated testing (tests/verify_app.py)
+    // and runtime debugging. In a compiled production environment, these
+    // should be stripped or gated behind a flag.
     window.tapestryLedger = tapestryLedger;
     window.state = state;
-    window.codex = codex; // Expose Codex for verification
-    // We need a getter for renderer since it's lazy loaded
+    window.codex = codex;
     Object.defineProperty(window, 'mandalaRenderer', {
         get: () => mandalaRenderer
     });
     Object.defineProperty(window, 'mapRenderer', {
         get: () => mapRenderer
     });
-    window.ui = ui; // Expose UI system
-    // Backward compatibility for tests/debugging if needed, though we prefer ui.showNotification
+    window.ui = ui;
     window.showNotification = (msg, type) => ui.showNotification(msg, type);
-    window.showScreen = showScreen; // Expose for testing
+    window.showScreen = showScreen;
     Object.defineProperty(window, 'oracle', {
         get: () => oracleEngine
     });
-    window.aegis = aegis; // Expose for verification/CLI interaction
+    window.aegis = aegis;
     window.sentinel = sentinel;
-    window.terminal = terminal; // Expose for verification
+    window.terminal = terminal;
     window.spectra = spectra;
-    window.panopticon = panopticon; // Direct exposure for easier testing
+    window.panopticon = panopticon;
 });
