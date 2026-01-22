@@ -132,7 +132,7 @@ export class PrometheusEngine {
 
         // Map grayscale alpha/intensity to color palette
         for (let i = 0; i < len; i += 4) {
-            const alpha = data[i + 3]; // The accumulated alpha from 'lighter' drawing?
+            // const alpha = data[i + 3]; // Unused
             // Wait, if we drew white (255,255,255) with alpha, 'lighter' adds RGB and Alpha.
             // If we used white, R=G=B. We can use the Red channel as the intensity value.
             // However, browsers handle 'lighter' differently with Alpha.

@@ -1,33 +1,52 @@
 # AGENTS.md
 
-## Codebase Guidelines
+## ⚠️ OPERATIONAL PROTOCOLS: CLASSIFIED
 
-### 1. Security & Compliance
+**COMMANDER:** NAVSPECWARCOM / CYBER WARFARE DIVISION
+**MISSION:** PROJECT MARQ
+**STATUS:** ACTIVE
 
-- **Strict CSP:** The application is now a "Fortress". `default-src 'self'` is enforced. No external scripts, styles, images, or media are permitted. All assets must be served from `assets/`.
-- **Input Validation:** All data entering the `TapestryLedger` (import/export) must be strictly validated against the schema.
-- **Crypto:** All cryptographic operations must occur within the `CryptoGuard` module. Keys must never be logged.
+### 1. CODEBASE INTEGRITY (ZERO TOLERANCE)
 
-### 2. Architecture
+All personnel (agents) interacting with this repository must adhere to the following strict standards. Failure to comply will result in immediate rollback.
 
-- **Modularity:** Keep concerns separated.
-    - `tapestry.js`: Visuals & Ledger.
-    - `cartographer.js`: Map & Geospatial.
-    - `prometheus.js`: Geospatial Heatmap Engine.
-    - `alchemy.js`: Logic/Synthesis.
-- **State Management:** `js/app.js` is the single source of truth for UI state.
-- **Tooling:** Use `npm run lint` and `npm run format` to maintain code hygiene.
+*   **"Fortress" Security Policy:**
+    *   **CSP Enforcement:** `default-src 'self'` is absolute. No external CDNs, fonts, or analytics. All assets must be local.
+    *   **Sanitization:** All inputs into the `TapestryLedger` must pass strict regex validation. Trust nothing.
+    *   **Crypto:** Keys exist *only* in memory (`CryptoGuard`). Never log keys or persistence tokens.
+    *   **DOM Safety:** Use `textContent` over `innerHTML`. If `innerHTML` is tactically necessary, it must be sanitized and justified.
 
-### 3. Verification
+*   **Code Hygiene:**
+    *   **Linting:** `npm run lint` must pass with **zero warnings**.
+    *   **Formatting:** `npm run format` must be applied before every commit.
+    *   **Explicitness:** Global exposures (e.g., on `window`) for testing must be explicitly documented with `// DEBUG EXPOSURE`.
 
-- Run `tests/verify_app.py` after any UI/Architecture change.
-- Run `tests/verify_map.py` after changes to `cartographer.js` or `data.js` coordinates.
-- Ensure all tests pass before deployment.
+### 2. ARCHITECTURAL DOCTRINE
 
-### 4. User Experience (UX)
+*   **Separation of Concerns:**
+    *   `app.js`: Mission Control (Orchestration only).
+    *   `ui-system.js`: Visual output and HUD management.
+    *   `tapestry.js`: Core Ledger and Visualization logic.
+    *   `terminal-commands.js`: CLI logic (Dependency Injected).
+*   **State Management:**
+    *   `app.js` holds the Single Source of Truth (`state` object).
+    *   Engines (Alchemy, Horizon, Sentinel) are stateless processors where possible.
 
-- **Feedback:** Every async operation must utilize the `UISystem.showLoading()` overlay.
-- **Accessibility:**
-    - Ensure all interactive elements have `tabindex`, `role`, and `aria-label`.
-    - Maintain `:focus-visible` styles for keyboard navigation.
-    - Respect `prefers-reduced-motion`.
+### 3. VERIFICATION PROTOCOLS
+
+Before declaring "Mission Accomplished" (Submit), you must execute:
+1.  **Static Analysis:** `npm run lint`
+2.  **Unit Verification:** `node tests/unit_test.mjs` (New Protocol)
+3.  **Integration Drills:** `python3 tests/verify_app.py`
+
+### 4. USER EXPERIENCE (THE "HEARTS AND MINDS" DOCTRINE)
+
+*   **Feedback is Mandatory:** Every user action must have an immediate visual or auditory response.
+*   **Accessibility:** The interface must be operable by all agents. Maintain ARIA roles and keyboard focus visibility.
+*   **Resilience:** The system must degrade gracefully. Handle offline states and errors with tactical notifications, not white screens.
+*   **Performance:** 60 FPS on the Tapestry Canvas. Optimize render loops.
+
+### 5. GIT DISCIPLINE
+
+*   Commit messages must be imperative and descriptive (e.g., "Fortify input validation in Ledger").
+*   Do not commit broken builds.

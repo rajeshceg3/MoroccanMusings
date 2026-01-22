@@ -117,6 +117,17 @@ body {
     color: var(--ochre-gold);
 }
 
+.help-btn {
+    animation: help-pulse 4s infinite;
+}
+
+@keyframes help-pulse {
+    0% { transform: scale(1); box-shadow: 0 0 0 0 rgba(255, 255, 255, 0); }
+    10% { transform: scale(1.1); box-shadow: 0 0 0 5px rgba(255, 255, 255, 0.1); }
+    20% { transform: scale(1); box-shadow: 0 0 0 0 rgba(255, 255, 255, 0); }
+    100% { transform: scale(1); }
+}
+
 .astrolabe-container {
     position: absolute;
     top: 50%;
@@ -137,9 +148,11 @@ body {
     touch-action: none;
 }
 
-.astrolabe-ring:active {
+.astrolabe-ring:active,
+.astrolabe-ring.dragging {
     cursor: grabbing;
     border-color: var(--ochre-gold);
+    box-shadow: 0 0 15px rgba(198, 118, 5, 0.3);
 }
 
 #ring-intention {
@@ -1151,6 +1164,12 @@ body {
 }
 .toast-error {
     border-left-color: #ff0055;
+}
+
+.toast-offline {
+    border-left-color: #8d8d8d;
+    background: #1a1a1a;
+    color: #aaa;
 }
 
 /* Project ECHO Overlay */

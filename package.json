@@ -2,6 +2,7 @@
   "name": "marq-operations",
   "version": "1.0.0",
   "description": "Project MARQ: A secure, steganography-enabled tactical interface.",
+  "type": "module",
   "main": "js/app.js",
   "scripts": {
     "start": "python3 -m http.server 8080",
