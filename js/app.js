@@ -14,6 +14,7 @@ import { SentinelEngine } from './sentinel.js';
 import { ChronosEngine } from './chronos.js';
 import { PanopticonEngine } from './panopticon.js';
 import { CortexEngine } from './cortex.js';
+import { ValkyrieEngine } from './valkyrie.js';
 import { SynapseRenderer } from './synapse.js';
 import { registerCommands } from './terminal-commands.js';
 
@@ -67,6 +68,7 @@ document.addEventListener('DOMContentLoaded', async () => {
     const sentinel = new SentinelEngine(horizonEngine);
     const chronos = new ChronosEngine(horizonEngine, SentinelEngine);
     const cortex = new CortexEngine();
+    // Valkyrie init deferred until ledger is ready
 
     // Panopticon initialization is deferred until renderers are ready,
     // but we can instantiate the class structure now or lazily.
@@ -104,6 +106,8 @@ document.addEventListener('DOMContentLoaded', async () => {
 
     const tapestryLedger = new TapestryLedger();
     const initStatus = await tapestryLedger.initialize();
+
+    const valkyrie = new ValkyrieEngine(terminal, ui, tapestryLedger);
 
     let mandalaRenderer = null;
     let mapRenderer = null;
@@ -745,6 +749,10 @@ document.addEventListener('DOMContentLoaded', async () => {
 
         // Trigger Sentinel Threat Assessment
         const threatReport = sentinel.assess(tapestryLedger.getThreads());
+
+        // Trigger Valkyrie Response Matrix
+        valkyrie.evaluate(threatReport, tapestryLedger.getThreads());
+
         if (threatReport.status !== 'STANDBY') {
             ui.showNotification(
                 `SENTINEL ALERT: DEFCON ${threatReport.defcon}`,
@@ -1240,6 +1248,7 @@ document.addEventListener('DOMContentLoaded', async () => {
             alchemy,
             chronos,
             cortex,
+            valkyrie,
             get panopticon() {
                 return panopticon;
             }
@@ -1393,4 +1402,5 @@ document.addEventListener('DOMContentLoaded', async () => {
     window.terminal = terminal;
     window.spectra = spectra;
     window.panopticon = panopticon;
+    window.valkyrie = valkyrie;
 });

@@ -812,4 +812,46 @@ export function registerCommands(terminal, context) {
             }
         }
     );
+
+    terminal.registerCommand(
+        'valkyrie',
+        'Autonomous Response Matrix Interface',
+        (args) => {
+            if (!checkAccess()) return;
+
+            const subcmd = args[0] || 'status';
+            const valkyrie = context.engines.valkyrie;
+
+            if (subcmd === 'status') {
+                terminal.log('--- PROJECT VALKYRIE: RESPONSE MATRIX ---', 'system');
+                terminal.log(`Status: ${valkyrie.status}`, valkyrie.status === 'ACTIVE' ? 'success' : 'warning');
+                terminal.log('Active Protocols:', 'info');
+                valkyrie.getProtocols().forEach(p => {
+                    terminal.log(`  [${p.active ? 'ON' : 'OFF'}] ${p.id}: ${p.name}`, p.active ? 'success' : 'warning');
+                });
+            } else if (subcmd === 'list') {
+                 terminal.log('--- PROTOCOL DEFINITIONS ---', 'system');
+                 valkyrie.getProtocols().forEach(p => {
+                     terminal.log(`${p.id}`, 'info');
+                     terminal.log(`  > ${p.description}`, 'info');
+                 });
+            } else if (subcmd === 'arm') {
+                const id = args[1];
+                if (valkyrie.toggleProtocol(id, true)) {
+                    terminal.log(`Protocol ${id} ARMED.`, 'success');
+                } else {
+                    terminal.log(`Protocol ${id} not found.`, 'error');
+                }
+            } else if (subcmd === 'disarm') {
+                const id = args[1];
+                if (valkyrie.toggleProtocol(id, false)) {
+                    terminal.log(`Protocol ${id} DISARMED.`, 'warning');
+                } else {
+                    terminal.log(`Protocol ${id} not found.`, 'error');
+                }
+            } else {
+                terminal.log('Usage: valkyrie [status|list|arm <id>|disarm <id>]', 'warning');
+            }
+        }
+    );
 }

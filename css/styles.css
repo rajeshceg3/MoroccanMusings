@@ -1605,3 +1605,4 @@ body {
 body.panopticon-active .panopticon-overlay {
     /* Potential state styling */
 }
+.valkyrie-alert { color: var(--tactical-red); font-weight: bold; animation: pulse 1s infinite; }
