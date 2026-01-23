@@ -1611,3 +1611,139 @@ body.panopticon-active .panopticon-overlay {
     /* Potential state styling */
 }
 .valkyrie-alert { color: var(--tactical-red); font-weight: bold; animation: pulse 1s infinite; }
+
+/* --- Project GEMINI: Tactical Uplink Modes --- */
+
+/* Base Uplink UI */
+.uplink-status {
+    position: fixed;
+    top: 2rem;
+    left: 50%;
+    transform: translateX(-50%);
+    background: rgba(10, 16, 20, 0.9);
+    border: 1px solid var(--ochre-gold);
+    padding: 0.5rem 1rem;
+    border-radius: 20px;
+    display: flex;
+    align-items: center;
+    gap: 0.8rem;
+    z-index: 9999;
+    font-family: 'Share Tech Mono', monospace;
+    font-size: 0.8rem;
+    color: var(--sand);
+    box-shadow: 0 4px 12px rgba(0,0,0,0.5);
+    opacity: 0;
+    pointer-events: none;
+    transition: opacity 0.5s;
+}
+
+.uplink-status.visible {
+    opacity: 1;
+    pointer-events: auto;
+}
+
+.uplink-led {
+    width: 8px;
+    height: 8px;
+    border-radius: 50%;
+    background: #333;
+    box-shadow: 0 0 5px rgba(0,0,0,0.5);
+    transition: background 0.3s;
+}
+
+.uplink-led.active {
+    background: #55ffaa;
+    box-shadow: 0 0 8px #55ffaa;
+}
+
+.uplink-controls {
+    position: fixed;
+    bottom: 2rem;
+    left: 50%;
+    transform: translateX(-50%);
+    display: flex;
+    gap: 1rem;
+    z-index: 80;
+    pointer-events: none; /* Only buttons clickable */
+}
+
+.uplink-btn {
+    pointer-events: auto;
+    background: rgba(0,0,0,0.6);
+    border: 1px solid rgba(255,255,255,0.2);
+    color: #aaa;
+    padding: 0.5rem 1rem;
+    border-radius: 4px;
+    cursor: pointer;
+    font-family: 'Share Tech Mono', monospace;
+    font-size: 0.75rem;
+    transition: all 0.2s;
+}
+
+.uplink-btn:hover {
+    border-color: var(--ochre-gold);
+    color: var(--ochre-gold);
+    background: rgba(198, 118, 5, 0.1);
+}
+
+/* Mode: MAP ONLY */
+body.mode-map #splash-screen,
+body.mode-map #astrolabe-screen,
+body.mode-map #riad-screen,
+body.mode-map .tapestry-header,
+body.mode-map .tapestry-actions,
+body.mode-map .alchemy-ui,
+body.mode-map .horizon-dashboard,
+body.mode-map .aegis-hud,
+body.mode-map .uplink-controls {
+    display: none !important;
+}
+
+body.mode-map #tapestry-screen {
+    opacity: 1 !important;
+    pointer-events: auto !important;
+    display: block !important;
+}
+
+body.mode-map #tapestry-canvas {
+    display: none !important; /* Force hide mandala */
+}
+
+body.mode-map #map-canvas {
+    display: block !important;
+    opacity: 1 !important;
+    width: 100vw;
+    height: 100vh;
+}
+
+/* Mode: TERMINAL ONLY */
+body.mode-terminal #splash-screen,
+body.mode-terminal #astrolabe-screen,
+body.mode-terminal #riad-screen,
+body.mode-terminal #tapestry-screen,
+body.mode-terminal .uplink-controls {
+    display: none !important;
+}
+
+body.mode-terminal #terminal-container {
+    opacity: 1 !important;
+    pointer-events: auto !important;
+    background: rgba(0,0,0,0.95);
+    display: block !important;
+    height: 100vh;
+}
+
+/* Mode: TAPESTRY ONLY */
+body.mode-tapestry #splash-screen,
+body.mode-tapestry #astrolabe-screen,
+body.mode-tapestry #riad-screen,
+body.mode-tapestry .tapestry-header,
+body.mode-tapestry .uplink-controls {
+    display: none !important;
+}
+
+body.mode-tapestry #tapestry-screen {
+    opacity: 1 !important;
+    pointer-events: auto !important;
+    display: block !important;
+}

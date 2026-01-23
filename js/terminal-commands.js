@@ -854,4 +854,55 @@ export function registerCommands(terminal, context) {
             }
         }
     );
+
+    terminal.registerCommand(
+        'gemini',
+        'Tactical Uplink Operations',
+        (args) => {
+            if (!checkAccess()) return;
+            const subcmd = args[0] || 'status';
+            const gemini = context.engines.gemini;
+
+            if (!gemini) {
+                terminal.log('Gemini Uplink not initialized.', 'error');
+                return;
+            }
+
+            if (subcmd === 'status') {
+                const peers = gemini.getPeerCount();
+                terminal.log(
+                    '--- PROJECT GEMINI: UPLINK STATUS ---',
+                    'system'
+                );
+                terminal.log(
+                    `Status: ${peers > 0 ? 'ACTIVE' : 'STANDBY'}`,
+                    peers > 0 ? 'success' : 'warning'
+                );
+                terminal.log(`Connected Nodes: ${peers}`, 'info');
+                terminal.log(`Local ID: ${gemini.id}`, 'info');
+            } else if (subcmd === 'sync') {
+                terminal.log('Forcing state synchronization...', 'info');
+                gemini.broadcast('STATE_UPDATE', state); // Broadcast current state
+                terminal.log('Sync packet broadcasted.', 'success');
+            } else if (subcmd === 'detach') {
+                // Open both
+                context.ui.showNotification(
+                    'Detaching Tactical Modules...',
+                    'success'
+                );
+                window.open(
+                    '?mode=map&uplink=true',
+                    'MarqMap',
+                    'width=1000,height=800'
+                );
+                window.open(
+                    '?mode=terminal&uplink=true',
+                    'MarqTerm',
+                    'width=600,height=400'
+                );
+            } else {
+                terminal.log('Usage: gemini [status|sync|detach]', 'warning');
+            }
+        }
+    );
 }
