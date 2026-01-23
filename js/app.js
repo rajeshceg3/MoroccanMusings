@@ -16,6 +16,7 @@ import { PanopticonEngine } from './panopticon.js';
 import { CortexEngine } from './cortex.js';
 import { ValkyrieEngine } from './valkyrie.js';
 import { SynapseRenderer } from './synapse.js';
+import { GeminiEngine } from './gemini.js';
 import { registerCommands } from './terminal-commands.js';
 
 document.addEventListener('DOMContentLoaded', async () => {
@@ -108,6 +109,32 @@ document.addEventListener('DOMContentLoaded', async () => {
     const initStatus = await tapestryLedger.initialize();
 
     const valkyrie = new ValkyrieEngine(terminal, ui, tapestryLedger);
+
+    // Parse Mode for Tactical Uplink
+    const urlParams = new URLSearchParams(window.location.search);
+    const mode = urlParams.get('mode');
+    if (mode) {
+        document.body.classList.add(`mode-${mode}`);
+    }
+
+    // Initialize Gemini Uplink
+    const gemini = new GeminiEngine(state, tapestryLedger, terminal, ui);
+    gemini.connect();
+
+    if (!mode) {
+        ui.renderUplinkControls();
+    }
+
+    // Ledger Sync Listener (Cross-Window)
+    window.addEventListener('storage', async (e) => {
+        if (e.key === tapestryLedger.storageKey) {
+            await tapestryLedger.reload();
+            renderTapestry();
+            updateAlchemyUI();
+            // Optional: Notify
+            // ui.showNotification('Data synchronized via Uplink.', 'info');
+        }
+    });
 
     let mandalaRenderer = null;
     let mapRenderer = null;
@@ -1249,6 +1276,7 @@ document.addEventListener('DOMContentLoaded', async () => {
             chronos,
             cortex,
             valkyrie,
+            gemini,
             get panopticon() {
                 return panopticon;
             }

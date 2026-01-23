@@ -222,6 +222,55 @@ export class TapestryLedger {
         return thread;
     }
 
+    async reload() {
+        const raw = this._loadRaw();
+        if (!raw) {
+            this.threads = [];
+            return;
+        }
+
+        let parsed;
+        try {
+            parsed = JSON.parse(raw);
+        } catch (e) {
+            console.error('Corrupt storage during reload.');
+            return;
+        }
+
+        // Check if encrypted
+        if (parsed && parsed.tag === 'AEGIS_SECURE') {
+            if (this.crypto.hasSession()) {
+                // Try to auto-decrypt with current key
+                try {
+                    const password = this.crypto.getSessionPassword();
+                    const decrypted = await this.crypto.decrypt(
+                        parsed,
+                        password
+                    );
+                    this.threads = decrypted;
+                    await this.verifyIntegrity();
+                } catch (e) {
+                    console.error(
+                        'Reload failed: Key mismatch or corruption',
+                        e
+                    );
+                    this.status = 'LOCKED';
+                    this.threads = [];
+                }
+            } else {
+                this.status = 'LOCKED';
+                this.threads = [];
+            }
+        } else {
+            // Plaintext
+            if (Array.isArray(parsed)) {
+                this.threads = parsed;
+                await this.verifyIntegrity();
+                this.status = 'READY';
+            }
+        }
+    }
+
     getThreads() {
         if (this.status === 'LOCKED') return [];
         return [...this.threads];

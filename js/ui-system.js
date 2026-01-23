@@ -441,4 +441,57 @@ export class UISystem {
         }
         ctx.stroke();
     }
+
+    renderUplinkControls() {
+        const controls = document.createElement('div');
+        controls.className = 'uplink-controls';
+
+        const mapBtn = document.createElement('button');
+        mapBtn.className = 'uplink-btn';
+        mapBtn.textContent = 'DETACH MAP';
+        mapBtn.onclick = () =>
+            window.open(
+                '?mode=map&uplink=true',
+                'MarqMap',
+                'width=1000,height=800'
+            );
+
+        const termBtn = document.createElement('button');
+        termBtn.className = 'uplink-btn';
+        termBtn.textContent = 'DETACH TERMINAL';
+        termBtn.onclick = () =>
+            window.open(
+                '?mode=terminal&uplink=true',
+                'MarqTerm',
+                'width=600,height=400'
+            );
+
+        controls.appendChild(mapBtn);
+        controls.appendChild(termBtn);
+        document.body.appendChild(controls);
+
+        // Link Status
+        const status = document.createElement('div');
+        status.className = 'uplink-status';
+        status.innerHTML = `<div class="uplink-led"></div><span id="uplink-text">LINK INACTIVE</span>`;
+        document.body.appendChild(status);
+
+        this.uplinkLed = status.querySelector('.uplink-led');
+        this.uplinkText = status.querySelector('#uplink-text');
+        this.uplinkStatusEl = status;
+    }
+
+    updateGeminiStatus(peerCount) {
+        if (!this.uplinkStatusEl) return;
+
+        if (peerCount > 0) {
+            this.uplinkStatusEl.classList.add('visible');
+            this.uplinkLed.classList.add('active');
+            this.uplinkText.textContent = `LINK ACTIVE: ${peerCount} NODE${peerCount > 1 ? 'S' : ''}`;
+        } else {
+            this.uplinkStatusEl.classList.remove('visible');
+            this.uplinkLed.classList.remove('active');
+            this.uplinkText.textContent = 'LINK INACTIVE';
+        }
+    }
 }
