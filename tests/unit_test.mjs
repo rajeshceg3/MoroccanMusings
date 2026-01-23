@@ -1,7 +1,38 @@
-import { test, describe, it } from 'node:test';
+import { test, describe, it, before, beforeEach } from 'node:test';
 import assert from 'node:assert';
 import { HorizonEngine } from '../js/horizon.js';
 import { SynthesisEngine } from '../js/alchemy.js';
+import { TapestryLedger } from '../js/tapestry.js';
+
+// --- TACTICAL SHIMS ---
+// Simulate Browser Environment for Testing
+if (!global.window) {
+    global.window = {
+        crypto: global.crypto,
+        btoa: global.btoa,
+        atob: global.atob
+    };
+}
+
+// Mock LocalStorage
+const localStorageMock = (function() {
+    let store = {};
+    return {
+        getItem: function(key) {
+            return store[key] || null;
+        },
+        setItem: function(key, value) {
+            store[key] = value.toString();
+        },
+        clear: function() {
+            store = {};
+        },
+        removeItem: function(key) {
+            delete store[key];
+        }
+    };
+})();
+global.localStorage = localStorageMock;
 
 describe('Tactical Unit Verification', () => {
 
@@ -90,6 +121,96 @@ describe('Tactical Unit Verification', () => {
 
              assert.strictEqual(r1.title, r2.title);
              assert.strictEqual(r1.sensory.sight.color, r2.sensory.sight.color);
+        });
+    });
+
+    describe('TapestryLedger (Mission Log)', () => {
+        let ledger;
+
+        beforeEach(async () => {
+            localStorage.clear();
+            ledger = new TapestryLedger('test_ledger');
+            await ledger.initialize();
+        });
+
+        it('should start empty and ready', () => {
+            assert.strictEqual(ledger.status, 'READY');
+            assert.strictEqual(ledger.getThreads().length, 0);
+        });
+
+        it('should add a thread and generate a valid hash', async () => {
+            const data = {
+                intention: 'serenity',
+                time: 'dawn',
+                region: 'coast',
+                title: 'Test Thread'
+            };
+            const thread = await ledger.addThread(data);
+
+            assert.strictEqual(ledger.getThreads().length, 1);
+            assert.strictEqual(thread.title, 'Test Thread');
+            assert.ok(thread.hash);
+            assert.match(thread.hash, /^[a-f0-9]{64}$/i);
+            assert.strictEqual(thread.previousHash, 'GENESIS_HASH');
+        });
+
+        it('should link threads via hash (Blockchain Logic)', async () => {
+             const t1 = await ledger.addThread({ intention: 'serenity', time: 'dawn', region: 'coast', title: 'T1' });
+             const t2 = await ledger.addThread({ intention: 'vibrancy', time: 'midday', region: 'medina', title: 'T2' });
+
+             assert.strictEqual(t2.previousHash, t1.hash);
+        });
+
+        it('should verify integrity of a valid chain', async () => {
+             await ledger.addThread({ intention: 'serenity', time: 'dawn', region: 'coast', title: 'T1' });
+             await ledger.addThread({ intention: 'vibrancy', time: 'midday', region: 'medina', title: 'T2' });
+
+             const isValid = await ledger.verifyIntegrity();
+             assert.strictEqual(isValid, true);
+        });
+
+        it('should detect corruption', async () => {
+             await ledger.addThread({ intention: 'serenity', time: 'dawn', region: 'coast', title: 'T1' });
+
+             // Tamper with the ledger in memory
+             ledger.threads[0].title = 'CORRUPTED TITLE';
+
+             const isValid = await ledger.verifyIntegrity();
+             assert.strictEqual(isValid, false);
+             assert.strictEqual(ledger.threads[0].integrityStatus, 'corrupted');
+        });
+
+        it('should validate imported scroll schema', async () => {
+            // Invalid thread (missing hash)
+            const badData = JSON.stringify([{
+                id: '123',
+                title: 'Bad Thread'
+            }]);
+
+            await assert.rejects(async () => {
+                await ledger.importScroll(badData);
+            }, /Invalid schema/);
+        });
+
+        it('should reject XSS attempts in imported data', async () => {
+            // Thread with script tag in title
+            // Note: We need to mock a valid hash/structure to even get to the regex check,
+            // or just rely on the regex check failing.
+            const maliciousThread = {
+                id: '123',
+                intention: 'serenity',
+                time: 'dawn',
+                region: 'coast',
+                title: '<script>alert(1)</script>',
+                timestamp: 1234567890,
+                hash: 'a'.repeat(64) // valid length
+            };
+
+            const json = JSON.stringify([maliciousThread]);
+
+            await assert.rejects(async () => {
+                await ledger.importScroll(json);
+            }, /Invalid schema/);
         });
     });
 
