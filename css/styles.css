@@ -99,22 +99,25 @@ body {
     position: absolute;
     top: 2rem;
     right: 2rem;
-    background: transparent;
-    border: 1px solid rgba(255, 255, 255, 0.2);
-    color: rgba(255, 255, 255, 0.5);
-    width: 30px;
-    height: 30px;
+    background: rgba(0, 0, 0, 0.4);
+    border: 1px solid rgba(255, 255, 255, 0.4);
+    color: rgba(255, 255, 255, 0.8);
+    width: 44px;
+    height: 44px;
     border-radius: 50%;
     cursor: pointer;
     font-family: 'Courier New', monospace;
     font-weight: bold;
+    font-size: 1.2rem;
     z-index: 20;
     transition: all 0.3s;
+    backdrop-filter: blur(4px);
 }
 
 .help-btn:hover {
     border-color: var(--ochre-gold);
     color: var(--ochre-gold);
+    background: rgba(198, 118, 5, 0.1);
 }
 
 .help-btn {
@@ -152,7 +155,9 @@ body {
 .astrolabe-ring.dragging {
     cursor: grabbing;
     border-color: var(--ochre-gold);
-    box-shadow: 0 0 15px rgba(198, 118, 5, 0.3);
+    box-shadow: 0 0 25px rgba(198, 118, 5, 0.6);
+    background: rgba(198, 118, 5, 0.05);
+    transform: scale(1.02);
 }
 
 #ring-intention {

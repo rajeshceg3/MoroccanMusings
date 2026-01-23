@@ -1,0 +1,34 @@
+name: Tactical Verification
+
+on:
+  push:
+    branches: [ "main" ]
+  pull_request:
+    branches: [ "main" ]
+
+jobs:
+  verify:
+    name: Operational Verification
+    runs-on: ubuntu-latest
+
+    strategy:
+      matrix:
+        node-version: [22.x]
+
+    steps:
+    - uses: actions/checkout@v4
+
+    - name: Use Node.js ${{ matrix.node-version }}
+      uses: actions/setup-node@v4
+      with:
+        node-version: ${{ matrix.node-version }}
+        cache: 'npm'
+
+    - name: Install Dependencies
+      run: npm ci
+
+    - name: Static Analysis (Lint)
+      run: npm run lint
+
+    - name: Unit Verification (Test)
+      run: npm run test:unit
