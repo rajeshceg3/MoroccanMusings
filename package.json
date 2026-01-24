@@ -12,9 +12,11 @@
     "format": "prettier --write '**/*.{js,css,html,md}'"
   },
   "devDependencies": {
-    "eslint": "^8.56.0",
-    "prettier": "^3.2.4",
-    "@playwright/test": "^1.41.0"
+    "@eslint/js": "^9.39.2",
+    "@playwright/test": "^1.41.0",
+    "eslint": "^9.0.0",
+    "globals": "^17.1.0",
+    "prettier": "^3.2.4"
   },
   "private": true
 }
