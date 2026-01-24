@@ -15,6 +15,7 @@ import { ChronosEngine } from './chronos.js';
 import { PanopticonEngine } from './panopticon.js';
 import { CortexEngine } from './cortex.js';
 import { ValkyrieEngine } from './valkyrie.js';
+import { ValkyrieUI } from './valkyrie-ui.js';
 import { SynapseRenderer } from './synapse.js';
 import { GeminiEngine } from './gemini.js';
 import { registerCommands } from './terminal-commands.js';
@@ -108,7 +109,8 @@ document.addEventListener('DOMContentLoaded', async () => {
     const tapestryLedger = new TapestryLedger();
     const initStatus = await tapestryLedger.initialize();
 
-    const valkyrie = new ValkyrieEngine(terminal, ui, tapestryLedger);
+    const valkyrie = new ValkyrieEngine(terminal, ui, tapestryLedger, horizonEngine);
+    const valkyrieUI = new ValkyrieUI(valkyrie);
 
     // Parse Mode for Tactical Uplink
     const urlParams = new URLSearchParams(window.location.search);
@@ -1276,6 +1278,7 @@ document.addEventListener('DOMContentLoaded', async () => {
             chronos,
             cortex,
             valkyrie,
+            valkyrieUI,
             gemini,
             get panopticon() {
                 return panopticon;
