@@ -1,37 +1,50 @@
 from playwright.sync_api import sync_playwright
-import time
+import sys
+import os
 
 def verify_ux():
+    print("Starting UX Verification Protocol...")
+
     with sync_playwright() as p:
-        browser = p.chromium.launch(headless=True, args=['--disable-web-security'])
+        # Launch browser with security disabled to allow local file access/manipulation if needed
+        # and to bypass strict CSP during testing if necessary (though we want to test with it)
+        browser = p.chromium.launch(args=["--disable-web-security"])
         page = browser.new_page()
 
-        # Navigate
+        # Navigate to local server
         page.goto("http://localhost:8080")
+        print("Navigated to target.")
 
-        # 1. Splash Screen interaction
-        page.click("#splash-screen")
+        # Wait for Astrolabe to be visible
+        page.wait_for_selector(".astrolabe-ring")
 
-        # Wait for Astrolabe screen
-        page.wait_for_selector("#astrolabe-screen.active")
-        time.sleep(1)
+        # 1. Verify Astrolabe Drag State
+        print("Verifying Astrolabe Drag State...")
+        # Simulate drag: Mouse down on ring
+        ring = page.locator(".astrolabe-ring")
+        box = ring.bounding_box()
+        page.mouse.move(box["x"] + box["width"]/2, box["y"] + box["height"]/2)
+        page.mouse.down()
 
-        # Close the Ghost Guide if open
-        if page.is_visible("#ghost-guide-overlay"):
-            page.click("#guide-skip-btn")
-            time.sleep(0.5) # Wait for fade out
+        # Take screenshot of dragging state
+        screenshot_path = "verification/ring_drag.png"
+        page.screenshot(path=screenshot_path)
+        print(f"Captured drag state artifact: {screenshot_path}")
 
-        # 2. Verify Ghost Guide Trigger (#help-trigger)
+        page.mouse.up()
+
+        # 2. Verify Help Button Hover
+        print("Verifying Ghost Guide Trigger...")
         help_btn = page.locator("#help-trigger")
+        help_btn.hover()
 
-        # 3. Simulate Dragging State on Ring
-        # Force the class
-        page.evaluate("document.querySelector('#ring-intention').classList.add('dragging')")
-
-        # 4. Take Screenshot
-        page.screenshot(path="verification/ux_verification_clean.png")
+        # Take screenshot of hover state
+        screenshot_path_btn = "verification/help_btn_hover.png"
+        page.screenshot(path=screenshot_path_btn)
+        print(f"Captured hover state artifact: {screenshot_path_btn}")
 
         browser.close()
+        print("UX Verification Protocol Complete.")
 
 if __name__ == "__main__":
     verify_ux()

@@ -26,7 +26,7 @@ export class GeminiEngine {
             this._prunePeers();
         }, 3000);
 
-        console.log(`[GEMINI] Uplink established. ID: ${this.id}`);
+        console.info(`[GEMINI] Uplink established. ID: ${this.id}`);
     }
 
     connect() {
