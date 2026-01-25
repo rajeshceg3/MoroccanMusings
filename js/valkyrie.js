@@ -1,14 +1,36 @@
 export class ValkyrieEngine {
-    constructor(terminal, ui, ledger) {
+    constructor(terminal, ui, ledger, horizon) {
         this.terminal = terminal;
         this.ui = ui;
         this.ledger = ledger;
+        this.horizon = horizon;
         this.status = 'ACTIVE';
-        this.protocols = this._initProtocols();
+        this.storageKey = 'marq_valkyrie_protocols';
+        this.protocols = this._loadProtocols();
         this.executionLog = [];
     }
 
-    _initProtocols() {
+    _loadProtocols() {
+        const stored = localStorage.getItem(this.storageKey);
+        const defaults = this._defaultProtocols();
+
+        if (stored) {
+            try {
+                const parsed = JSON.parse(stored);
+                // Merge defaults with stored to ensure defaults always exist?
+                // Or just use stored?
+                // Strategy: Use stored. If user deleted defaults, so be it.
+                // But for first run, use defaults.
+                return parsed;
+            } catch (e) {
+                console.error('Valkyrie: Failed to load protocols', e);
+                return defaults;
+            }
+        }
+        return defaults;
+    }
+
+    _defaultProtocols() {
         return [
             {
                 id: 'OMEGA_PROTOCOL',
@@ -17,11 +39,8 @@ export class ValkyrieEngine {
                 active: true,
                 cooldown: 30000,
                 lastTriggered: 0,
-                condition: (report) => report.defcon <= 3,
-                action: () => {
-                    this.ui.showNotification('WARNING: THREAT LEVEL ESCALATING. INITIATE CONTAINMENT.', 'error');
-                    this.terminal.log('VALKYRIE: OMEGA PROTOCOL ACTIVE. MONITORING SYSTEM INTEGRITY.', 'warning');
-                }
+                condition: 'defcon <= 3',
+                action: 'ALERT_HIGH'
             },
             {
                 id: 'POLARITY_DAMPENER',
@@ -30,14 +49,8 @@ export class ValkyrieEngine {
                 active: true,
                 cooldown: 60000,
                 lastTriggered: 0,
-                condition: (report) => {
-                    const polarityThreat = report.threats.find(t => t.type === 'POLARIZATION');
-                    return !!polarityThreat;
-                },
-                action: () => {
-                    this.ui.showNotification('STABILITY CRITICAL. DIVERSIFY INTENTION VECTORS.', 'warning');
-                    this.terminal.log('VALKYRIE: MEMETIC INSTABILITY DETECTED. SUGGESTING VECTOR SHIFT.', 'info');
-                }
+                condition: 'balance < 30',
+                action: 'ALERT_STABILITY'
             },
             {
                 id: 'TEMPORAL_BRAKE',
@@ -46,28 +59,112 @@ export class ValkyrieEngine {
                 active: true,
                 cooldown: 15000,
                 lastTriggered: 0,
-                condition: (report) => {
-                    return report.threats.some(t => t.type === 'TEMPORAL_SURGE');
-                },
-                action: () => {
-                    this.ui.showNotification('TEMPORAL SURGE. SLOW DOWN.', 'warning');
-                }
+                condition: 'threats CONTAINS TEMPORAL_SURGE',
+                action: 'WARN_SURGE'
             }
         ];
+    }
+
+    saveProtocols() {
+        try {
+            localStorage.setItem(this.storageKey, JSON.stringify(this.protocols));
+        } catch (e) {
+            console.error('Valkyrie: Failed to save protocols', e);
+        }
+    }
+
+    addProtocol(protocol) {
+        if (!protocol.id || !protocol.condition || !protocol.action) {
+            throw new Error('Invalid Protocol Definition');
+        }
+        // Ensure uniqueness
+        if (this.protocols.find(p => p.id === protocol.id)) {
+            throw new Error(`Protocol ID ${protocol.id} already exists.`);
+        }
+
+        // Defaults
+        const p = {
+            active: true,
+            cooldown: 0,
+            lastTriggered: 0,
+            name: protocol.id,
+            description: 'User defined protocol',
+            ...protocol
+        };
+
+        this.protocols.push(p);
+        this.saveProtocols();
+        return p;
+    }
+
+    removeProtocol(id) {
+        const idx = this.protocols.findIndex(p => p.id === id);
+        if (idx !== -1) {
+            this.protocols.splice(idx, 1);
+            this.saveProtocols();
+            return true;
+        }
+        return false;
     }
 
     evaluate(sentinelReport, threads) {
         if (this.status !== 'ACTIVE') return;
 
         const now = Date.now();
+        let balance = 50;
+        if (this.horizon) {
+            const analysis = this.horizon.analyze(threads);
+            balance = analysis.balanceScore;
+        }
+
+        const context = {
+            defcon: sentinelReport.defcon,
+            balance: balance,
+            threats: sentinelReport.threats.map(t => t.type),
+            threadCount: threads.length
+        };
 
         this.protocols.forEach(p => {
             if (p.active && (now - p.lastTriggered > p.cooldown)) {
-                if (p.condition(sentinelReport, threads)) {
+                if (this._checkCondition(p.condition, context)) {
                     this._execute(p);
                 }
             }
         });
+    }
+
+    _checkCondition(conditionStr, context) {
+        if (typeof conditionStr !== 'string') return false;
+
+        const parts = conditionStr.trim().split(/\s+/);
+        if (parts.length < 3) return false;
+
+        const field = parts[0];
+        const operator = parts[1];
+        const valueStr = parts.slice(2).join(' ');
+
+        // Resolve Field
+        let actualValue = context[field];
+        if (actualValue === undefined) return false;
+
+        // Resolve Target Value
+        let targetValue = valueStr;
+        if (!isNaN(parseFloat(valueStr))) {
+            targetValue = parseFloat(valueStr);
+        }
+
+        switch (operator) {
+            case '<': return actualValue < targetValue;
+            case '>': return actualValue > targetValue;
+            case '<=': return actualValue <= targetValue;
+            case '>=': return actualValue >= targetValue;
+            case '=': return actualValue == targetValue; // loose equality
+            case 'CONTAINS':
+                if (Array.isArray(actualValue)) return actualValue.includes(targetValue);
+                if (typeof actualValue === 'string') return actualValue.includes(targetValue);
+                return false;
+            default: return false;
+        }
     }
 
     _execute(protocol) {
@@ -78,7 +175,42 @@ export class ValkyrieEngine {
         });
 
         // Execute payload
-        protocol.action(this.terminal, this.ui, this.ledger);
+        this._executeAction(protocol.action);
+    }
+
+    _executeAction(actionStr) {
+        const parts = actionStr.split(' ');
+        const cmd = parts[0];
+        const args = parts.slice(1).join(' ');
+
+        switch (cmd) {
+            case 'ALERT_HIGH':
+                this.ui.showNotification('WARNING: THREAT LEVEL ESCALATING. INITIATE CONTAINMENT.', 'error');
+                this.terminal.log('VALKYRIE: OMEGA PROTOCOL ACTIVE.', 'warning');
+                break;
+            case 'ALERT_STABILITY':
+                this.ui.showNotification('STABILITY CRITICAL. DIVERSIFY INTENTION VECTORS.', 'warning');
+                break;
+            case 'WARN_SURGE':
+                this.ui.showNotification('TEMPORAL SURGE. SLOW DOWN.', 'warning');
+                break;
+            case 'SYS_LOCK':
+                this.ui.showNotification('SYSTEM LOCKDOWN INITIATED.', 'error');
+                setTimeout(() => this.ledger.lock(), 1000);
+                break;
+            case 'NOTIFY':
+                this.ui.showNotification(`VALKYRIE: ${args}`, 'info');
+                break;
+            case 'LOG':
+                this.terminal.log(`VALKYRIE LOG: ${args}`, 'info');
+                break;
+            case 'CLEAR_CACHE':
+                 this.ui.showNotification('CLEARING LOCAL CACHE...', 'warning');
+                 // Only clear non-essential? Or do nothing for now as it's dangerous.
+                 break;
+            default:
+                this.terminal.log(`VALKYRIE: Unknown Action ${cmd}`, 'error');
+        }
     }
 
     getProtocols() {
@@ -89,6 +221,7 @@ export class ValkyrieEngine {
         const p = this.protocols.find(proto => proto.id === id);
         if (p) {
             p.active = state;
+            this.saveProtocols();
             return true;
         }
         return false;

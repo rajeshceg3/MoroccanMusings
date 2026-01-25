@@ -1747,3 +1747,212 @@ body.mode-tapestry #tapestry-screen {
     pointer-events: auto !important;
     display: block !important;
 }
+
+/* --- Project OMEGA: Valkyrie UI --- */
+.valkyrie-overlay {
+    position: fixed;
+    top: 0;
+    left: 0;
+    width: 100%;
+    height: 100%;
+    background: rgba(0, 0, 0, 0.85);
+    backdrop-filter: blur(8px);
+    z-index: 7000;
+    display: flex;
+    justify-content: center;
+    align-items: center;
+    transition: opacity 0.3s;
+}
+
+.valkyrie-overlay.hidden {
+    opacity: 0;
+    pointer-events: none;
+    display: none;
+}
+
+.valkyrie-container {
+    width: 90%;
+    max-width: 800px;
+    background: #0a1015;
+    border: 1px solid var(--ochre-gold);
+    box-shadow: 0 0 50px rgba(198, 118, 5, 0.15);
+    display: flex;
+    flex-direction: column;
+    max-height: 90vh;
+}
+
+.valkyrie-header {
+    background: rgba(198, 118, 5, 0.1);
+    padding: 1rem 1.5rem;
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    border-bottom: 1px solid rgba(198, 118, 5, 0.3);
+}
+
+.valkyrie-title {
+    margin: 0;
+    font-family: 'Share Tech Mono', monospace;
+    color: var(--ochre-gold);
+    font-size: 1.2rem;
+    letter-spacing: 2px;
+}
+
+.valkyrie-close-btn {
+    background: transparent;
+    border: none;
+    color: #888;
+    font-size: 1.5rem;
+    cursor: pointer;
+    line-height: 1;
+}
+
+.valkyrie-close-btn:hover {
+    color: #fff;
+}
+
+.valkyrie-content {
+    padding: 1.5rem;
+    overflow-y: auto;
+    flex-grow: 1;
+    display: flex;
+    flex-direction: column;
+    gap: 2rem;
+}
+
+.valkyrie-list {
+    display: flex;
+    flex-direction: column;
+    gap: 1rem;
+    max-height: 40vh;
+    overflow-y: auto;
+    padding-right: 0.5rem;
+}
+
+.valkyrie-item {
+    background: rgba(255, 255, 255, 0.03);
+    border: 1px solid #334455;
+    padding: 1rem;
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    transition: all 0.2s;
+}
+
+.valkyrie-item.disabled {
+    opacity: 0.5;
+    border-color: #333;
+}
+
+.valkyrie-item:hover {
+    border-color: var(--ochre-gold);
+}
+
+.valkyrie-item-info {
+    font-family: 'Share Tech Mono', monospace;
+}
+
+.v-name {
+    color: #fff;
+    font-weight: bold;
+    font-size: 0.9rem;
+    margin-bottom: 0.3rem;
+}
+
+.v-cond {
+    color: #888;
+    font-size: 0.8rem;
+}
+
+.valkyrie-item-actions {
+    display: flex;
+    gap: 0.5rem;
+}
+
+.v-btn {
+    background: transparent;
+    border: 1px solid #55aaff;
+    color: #55aaff;
+    padding: 0.3rem 0.8rem;
+    font-family: 'Share Tech Mono', monospace;
+    font-size: 0.75rem;
+    cursor: pointer;
+    transition: all 0.2s;
+}
+
+.v-btn:hover {
+    background: rgba(85, 170, 255, 0.1);
+}
+
+.v-del {
+    border-color: #ff0055;
+    color: #ff0055;
+}
+
+.v-del:hover {
+    background: rgba(255, 0, 85, 0.1);
+}
+
+.valkyrie-form {
+    border-top: 1px dashed #334455;
+    padding-top: 1.5rem;
+}
+
+.valkyrie-form-title {
+    font-family: 'Share Tech Mono', monospace;
+    color: #aaa;
+    font-size: 0.9rem;
+    margin-top: 0;
+    margin-bottom: 1rem;
+}
+
+.valkyrie-form-grid {
+    display: grid;
+    grid-template-columns: repeat(auto-fit, minmax(150px, 1fr));
+    gap: 1rem;
+    margin-bottom: 1.5rem;
+}
+
+.v-input-group {
+    display: flex;
+    flex-direction: column;
+    gap: 0.5rem;
+}
+
+.v-input-group label {
+    font-family: 'Share Tech Mono', monospace;
+    font-size: 0.75rem;
+    color: #666;
+}
+
+.v-input-group input,
+.v-input-group select {
+    background: #000;
+    border: 1px solid #334455;
+    color: #fff;
+    padding: 0.5rem;
+    font-family: 'Share Tech Mono', monospace;
+    font-size: 0.85rem;
+}
+
+.v-input-group input:focus,
+.v-input-group select:focus {
+    border-color: var(--ochre-gold);
+}
+
+.valkyrie-create-btn {
+    width: 100%;
+    background: rgba(198, 118, 5, 0.1);
+    border: 1px solid var(--ochre-gold);
+    color: var(--ochre-gold);
+    padding: 0.8rem;
+    font-family: 'Share Tech Mono', monospace;
+    font-weight: bold;
+    cursor: pointer;
+    transition: all 0.2s;
+}
+
+.valkyrie-create-btn:hover {
+    background: var(--ochre-gold);
+    color: #000;
+}

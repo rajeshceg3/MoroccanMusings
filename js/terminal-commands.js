@@ -821,6 +821,7 @@ export function registerCommands(terminal, context) {
 
             const subcmd = args[0] || 'status';
             const valkyrie = context.engines.valkyrie;
+            const valkyrieUI = context.engines.valkyrieUI;
 
             if (subcmd === 'status') {
                 terminal.log('--- PROJECT VALKYRIE: RESPONSE MATRIX ---', 'system');
@@ -833,8 +834,41 @@ export function registerCommands(terminal, context) {
                  terminal.log('--- PROTOCOL DEFINITIONS ---', 'system');
                  valkyrie.getProtocols().forEach(p => {
                      terminal.log(`${p.id}`, 'info');
-                     terminal.log(`  > ${p.description}`, 'info');
+                     terminal.log(`  > IF [${p.condition}] THEN [${p.action}]`, 'info');
                  });
+            } else if (subcmd === 'edit') {
+                 if (valkyrieUI) {
+                     valkyrieUI.toggle(true);
+                     terminal.toggle(); // Close terminal to show UI
+                     terminal.log('OPENING PROTOCOL EDITOR...', 'success');
+                 } else {
+                     terminal.log('Valkyrie UI not initialized.', 'error');
+                 }
+            } else if (subcmd === 'create') {
+                if (args.length < 4) {
+                    terminal.log('Usage: valkyrie create <ID> <CONDITION> <ACTION>', 'warning');
+                    terminal.log('Example: valkyrie create RED_ALERT defcon<2 ALERT_HIGH', 'info');
+                    return;
+                }
+                const id = args[1].toUpperCase();
+                const condition = args[2];
+                const action = args[3];
+
+                try {
+                    valkyrie.addProtocol({
+                        id, condition, action, active: true
+                    });
+                    terminal.log(`Protocol ${id} CREATED.`, 'success');
+                } catch (e) {
+                    terminal.log(`Creation failed: ${e.message}`, 'error');
+                }
+            } else if (subcmd === 'delete') {
+                const id = args[1];
+                if (valkyrie.removeProtocol(id)) {
+                    terminal.log(`Protocol ${id} DELETED.`, 'success');
+                } else {
+                    terminal.log(`Protocol ${id} not found.`, 'error');
+                }
             } else if (subcmd === 'arm') {
                 const id = args[1];
                 if (valkyrie.toggleProtocol(id, true)) {
@@ -850,7 +884,7 @@ export function registerCommands(terminal, context) {
                     terminal.log(`Protocol ${id} not found.`, 'error');
                 }
             } else {
-                terminal.log('Usage: valkyrie [status|list|arm <id>|disarm <id>]', 'warning');
+                terminal.log('Usage: valkyrie [status|list|edit|create|delete|arm|disarm]', 'warning');
             }
         }
     );
