@@ -1642,18 +1642,37 @@ body.panopticon-active .panopticon-overlay {
     pointer-events: auto;
 }
 
-.uplink-led {
-    width: 8px;
-    height: 8px;
-    border-radius: 50%;
-    background: #333;
-    box-shadow: 0 0 5px rgba(0,0,0,0.5);
-    transition: background 0.3s;
+.uplink-signal {
+    display: flex;
+    gap: 3px;
+    align-items: flex-end;
+    height: 12px;
 }
 
-.uplink-led.active {
+.uplink-bar {
+    width: 4px;
+    background: #333;
+    border-radius: 1px;
+    transition: all 0.3s;
+}
+
+.uplink-bar.b1 { height: 40%; }
+.uplink-bar.b2 { height: 70%; }
+.uplink-bar.b3 { height: 100%; }
+
+.uplink-bar.active {
     background: #55ffaa;
-    box-shadow: 0 0 8px #55ffaa;
+    box-shadow: 0 0 5px #55ffaa;
+    animation: signal-pulse 2s infinite;
+}
+
+.uplink-bar.b1.active { animation-delay: 0s; }
+.uplink-bar.b2.active { animation-delay: 0.2s; }
+.uplink-bar.b3.active { animation-delay: 0.4s; }
+
+@keyframes signal-pulse {
+    0%, 100% { opacity: 1; height: 100%; }
+    50% { opacity: 0.7; height: 80%; } /* Subtle fluctuation */
 }
 
 .uplink-controls {
@@ -1955,4 +1974,30 @@ body.mode-tapestry #tapestry-screen {
 .valkyrie-create-btn:hover {
     background: var(--ochre-gold);
     color: #000;
+}
+
+/* Neural Link UX Enhancements */
+.terminal-input-line.processing {
+    opacity: 0.7;
+    animation: terminal-pulse 0.5s infinite;
+}
+
+.terminal-input-line.glitch {
+    animation: terminal-glitch 0.3s cubic-bezier(.25, .46, .45, .94) both infinite;
+    color: #ff0055;
+}
+
+@keyframes terminal-pulse {
+    0% { opacity: 0.7; }
+    50% { opacity: 0.3; }
+    100% { opacity: 0.7; }
+}
+
+@keyframes terminal-glitch {
+    0% { transform: translate(0); }
+    20% { transform: translate(-2px, 2px); }
+    40% { transform: translate(-2px, -2px); }
+    60% { transform: translate(2px, 2px); }
+    80% { transform: translate(2px, -2px); }
+    100% { transform: translate(0); }
 }

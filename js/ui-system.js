@@ -473,10 +473,17 @@ export class UISystem {
         // Link Status
         const status = document.createElement('div');
         status.className = 'uplink-status';
-        status.innerHTML = `<div class="uplink-led"></div><span id="uplink-text">LINK INACTIVE</span>`;
+        // Multi-bar signal strength indicator
+        status.innerHTML = `
+            <div class="uplink-signal">
+                <div class="uplink-bar b1"></div>
+                <div class="uplink-bar b2"></div>
+                <div class="uplink-bar b3"></div>
+            </div>
+            <span id="uplink-text">LINK INACTIVE</span>`;
         document.body.appendChild(status);
 
-        this.uplinkLed = status.querySelector('.uplink-led');
+        this.uplinkBars = status.querySelectorAll('.uplink-bar');
         this.uplinkText = status.querySelector('#uplink-text');
         this.uplinkStatusEl = status;
     }
@@ -486,12 +493,18 @@ export class UISystem {
 
         if (peerCount > 0) {
             this.uplinkStatusEl.classList.add('visible');
-            this.uplinkLed.classList.add('active');
+            // Animate bars based on count (simulated strength)
+            this.uplinkBars.forEach((bar, i) => {
+                bar.classList.add('active');
+                // Staggered animation delay handled in CSS
+            });
             this.uplinkText.textContent = `LINK ACTIVE: ${peerCount} NODE${peerCount > 1 ? 'S' : ''}`;
+            this.uplinkText.style.color = '#55ffaa';
         } else {
             this.uplinkStatusEl.classList.remove('visible');
-            this.uplinkLed.classList.remove('active');
+            this.uplinkBars.forEach(bar => bar.classList.remove('active'));
             this.uplinkText.textContent = 'LINK INACTIVE';
+            this.uplinkText.style.color = 'var(--sand)';
         }
     }
 }

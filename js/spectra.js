@@ -131,7 +131,7 @@ export class SpectraEngine {
                         onData(result);
                         stop();
                     }
-                } catch (err) {
+                } catch {
                     // Ignore decoding errors (noise)
                 } finally {
                     isProcessing = false;
@@ -412,7 +412,7 @@ export class SpectraEngine {
         try {
             const jsonString = textDecoder.decode(payloadBytes);
             return JSON.parse(jsonString);
-        } catch (e) {
+        } catch {
             return null;
         }
     }

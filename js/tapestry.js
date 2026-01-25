@@ -50,7 +50,7 @@ export class TapestryLedger {
         let parsed;
         try {
             parsed = JSON.parse(raw);
-        } catch (e) {
+        } catch {
             console.error('Corrupt storage.');
             this.threads = [];
             return 'READY';
@@ -232,7 +232,7 @@ export class TapestryLedger {
         let parsed;
         try {
             parsed = JSON.parse(raw);
-        } catch (e) {
+        } catch {
             console.error('Corrupt storage during reload.');
             return;
         }

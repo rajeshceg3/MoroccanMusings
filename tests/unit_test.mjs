@@ -212,6 +212,32 @@ describe('Tactical Unit Verification', () => {
                 await ledger.importScroll(json);
             }, /Invalid schema/);
         });
+
+        it('should clear the ledger', async () => {
+            await ledger.addThread({ intention: 'serenity', time: 'dawn', region: 'coast', title: 'T1' });
+            assert.strictEqual(ledger.getThreads().length, 1);
+            ledger.clear();
+            assert.strictEqual(ledger.getThreads().length, 0);
+        });
+
+        it('should lock and unlock the ledger with encryption', async () => {
+             const password = 'tactical_password';
+             await ledger.addThread({ intention: 'serenity', time: 'dawn', region: 'coast', title: 'Secret Thread' });
+
+             // Encrypt/Lock
+             await ledger.enableEncryption(password);
+             await ledger.lock();
+
+             assert.strictEqual(ledger.status, 'LOCKED');
+             assert.strictEqual(ledger.getThreads().length, 0); // Memory cleared
+
+             // Unlock
+             const success = await ledger.unlock(password);
+             assert.strictEqual(success, true);
+             assert.strictEqual(ledger.status, 'READY');
+             assert.strictEqual(ledger.getThreads().length, 1);
+             assert.strictEqual(ledger.getThreads()[0].title, 'Secret Thread');
+        });
     });
 
 });
