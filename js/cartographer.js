@@ -43,11 +43,12 @@ export class MapRenderer {
         this.height = rect.height;
     }
 
-    render(threads, locations, ghosts = [], threatZones = []) {
+    render(threads, locations, ghosts = [], threatZones = [], vanguardUnits = []) {
         this.threads = threads;
         this.locations = locations;
         this.ghosts = ghosts;
         this.threatZones = threatZones;
+        this.vanguardUnits = vanguardUnits;
 
         // Update Prometheus Heatmap
         this.prometheus.update(threads, locations, this.width, this.height);
@@ -131,6 +132,52 @@ export class MapRenderer {
                 this.ctx.arc(x, y, r * 1.5, 0, Math.PI * 2);
                 this.ctx.stroke();
                 this.ctx.setLineDash([]);
+            });
+        }
+
+        // Plot Vanguard Units (Tactical Drones)
+        if (this.vanguardUnits && this.vanguardUnits.length > 0) {
+            this.vanguardUnits.forEach((unit) => {
+                const x = (unit.x / 100) * mapWidth;
+                const y = (unit.y / 100) * mapHeight;
+
+                this.ctx.save();
+                this.ctx.translate(x, y);
+                this.ctx.rotate(unit.heading);
+
+                // Draw FOV Cone
+                this.ctx.fillStyle = unit.type === 'INTERCEPTOR'
+                    ? 'rgba(255, 165, 0, 0.1)'
+                    : 'rgba(0, 255, 255, 0.1)';
+                this.ctx.beginPath();
+                this.ctx.moveTo(0, 0);
+                this.ctx.arc(0, 0, 40, -Math.PI / 4, Math.PI / 4);
+                this.ctx.fill();
+
+                // Draw Unit (Triangle)
+                this.ctx.fillStyle = unit.type === 'INTERCEPTOR' ? '#ffaa00' : '#00ffff';
+                this.ctx.beginPath();
+                this.ctx.moveTo(6, 0);
+                this.ctx.lineTo(-4, 4);
+                this.ctx.lineTo(-4, -4);
+                this.ctx.closePath();
+                this.ctx.fill();
+
+                // Draw Scan Pulse if scanning
+                if (unit.status === 'SCANNING') {
+                    this.ctx.strokeStyle = unit.type === 'INTERCEPTOR' ? '#ffaa00' : '#00ffff';
+                    this.ctx.globalAlpha = Math.max(0, 1 - (unit.scanPulse % 1));
+                    this.ctx.beginPath();
+                    this.ctx.arc(0, 0, unit.scanPulse * 10, 0, Math.PI * 2);
+                    this.ctx.stroke();
+                }
+
+                this.ctx.restore();
+
+                // Draw Label
+                this.ctx.fillStyle = '#ffffff';
+                this.ctx.font = '9px Courier New';
+                this.ctx.fillText(unit.id, x + 8, y);
             });
         }
 
@@ -248,14 +295,16 @@ export class MapRenderer {
         if (
             this.activeNodeIndex !== -1 ||
             (this.ghosts && this.ghosts.length > 0) ||
-            (this.threatZones && this.threatZones.length > 0)
+            (this.threatZones && this.threatZones.length > 0) ||
+            (this.vanguardUnits && this.vanguardUnits.length > 0)
         ) {
             requestAnimationFrame(() =>
                 this.render(
                     this.threads,
                     this.locations,
                     this.ghosts,
-                    this.threatZones
+                    this.threatZones,
+                    this.vanguardUnits
                 )
             );
         }
