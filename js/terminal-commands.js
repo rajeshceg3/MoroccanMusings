@@ -771,6 +771,59 @@ export function registerCommands(terminal, context) {
     );
 
     terminal.registerCommand(
+        'vanguard',
+        'Autonomous Tactical Unit Control',
+        (args) => {
+            if (!checkAccess()) return;
+            const subcmd = args[0] || 'status';
+            const vanguard = context.engines.vanguard;
+
+            if (subcmd === 'status') {
+                const units = vanguard.getUnits();
+                terminal.log('--- PROJECT VANGUARD: TACTICAL DRONE WING ---', 'system');
+                if (units.length === 0) {
+                    terminal.log('No units deployed.', 'warning');
+                } else {
+                    units.forEach(u => {
+                        terminal.log(`[${u.id}] ${u.type} | Status: ${u.status} | Battery: ${Math.floor(u.battery)}%`, 'info');
+                    });
+                }
+            } else if (subcmd === 'deploy') {
+                const type = args[1] || 'SCOUT';
+                const region = args[2] || 'coast';
+
+                if (!['SCOUT', 'INTERCEPTOR'].includes(type.toUpperCase())) {
+                    terminal.log('Invalid Unit Type. Options: SCOUT, INTERCEPTOR', 'error');
+                    return;
+                }
+
+                const unit = vanguard.deploy(type, region);
+                terminal.log(`Unit ${unit.id} (${unit.type}) deployed to ${region}.`, 'success');
+
+                // Switch to map view if not active
+                if (!state.isMapActive) {
+                    elements.tapestry.mapToggle.click();
+                    terminal.toggle();
+                }
+
+            } else if (subcmd === 'recall') {
+                const id = args[1];
+                if (!id) {
+                    terminal.log('Usage: vanguard recall <ID>', 'warning');
+                    return;
+                }
+                if (vanguard.recall(id)) {
+                    terminal.log(`Unit ${id} recalled to base.`, 'success');
+                } else {
+                    terminal.log(`Unit ${id} not found.`, 'error');
+                }
+            } else {
+                terminal.log('Usage: vanguard [status|deploy|recall]', 'warning');
+            }
+        }
+    );
+
+    terminal.registerCommand(
         'cortex',
         'Neural Association Engine',
         (args) => {

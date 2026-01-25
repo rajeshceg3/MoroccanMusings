@@ -16,6 +16,7 @@ import { PanopticonEngine } from './panopticon.js';
 import { CortexEngine } from './cortex.js';
 import { ValkyrieEngine } from './valkyrie.js';
 import { ValkyrieUI } from './valkyrie-ui.js';
+import { VanguardEngine } from './vanguard.js';
 import { SynapseRenderer } from './synapse.js';
 import { GeminiEngine } from './gemini.js';
 import { registerCommands } from './terminal-commands.js';
@@ -70,7 +71,7 @@ document.addEventListener('DOMContentLoaded', async () => {
     const sentinel = new SentinelEngine(horizonEngine);
     const chronos = new ChronosEngine(horizonEngine, SentinelEngine);
     const cortex = new CortexEngine();
-    // Valkyrie init deferred until ledger is ready
+    // Valkyrie/Vanguard init deferred until ledger is ready
 
     // Panopticon initialization is deferred until renderers are ready,
     // but we can instantiate the class structure now or lazily.
@@ -111,6 +112,9 @@ document.addEventListener('DOMContentLoaded', async () => {
 
     const valkyrie = new ValkyrieEngine(terminal, ui, tapestryLedger, horizonEngine);
     const valkyrieUI = new ValkyrieUI(valkyrie);
+
+    // Initialize Vanguard (Tactical Units)
+    const vanguard = new VanguardEngine(sentinel, aegis, tapestryLedger);
 
     // Parse Mode for Tactical Uplink
     const urlParams = new URLSearchParams(window.location.search);
@@ -1196,6 +1200,9 @@ document.addEventListener('DOMContentLoaded', async () => {
     function renderTapestry() {
         const threads = tapestryLedger.getThreads();
 
+        // Update Tactical Units
+        vanguard.tick();
+
         // 1. Map Mode
         if (state.isMapActive) {
             if (oracleEngine && oracleEngine.activeMode) {
@@ -1206,8 +1213,14 @@ document.addEventListener('DOMContentLoaded', async () => {
                     threads,
                     locations,
                     [],
-                    threatReport.zones
+                    threatReport.zones,
+                    vanguard.getUnits()
                 );
+            }
+            // Force animation loop if map is active and units are present,
+            // even if horizon loop isn't running.
+            if (vanguard.getUnits().length > 0) {
+                 requestAnimationFrame(renderTapestry);
             }
             return;
         }
@@ -1279,6 +1292,7 @@ document.addEventListener('DOMContentLoaded', async () => {
             cortex,
             valkyrie,
             valkyrieUI,
+            vanguard,
             gemini,
             get panopticon() {
                 return panopticon;
@@ -1434,4 +1448,5 @@ document.addEventListener('DOMContentLoaded', async () => {
     window.spectra = spectra;
     window.panopticon = panopticon;
     window.valkyrie = valkyrie;
+    window.vanguard = vanguard;
 });
