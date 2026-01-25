@@ -84,7 +84,7 @@ export class AegisEngine {
         if (raw) {
             try {
                 return JSON.parse(raw);
-            } catch (e) {
+            } catch {
                 console.error('Aegis Profile Corrupt. Resetting.');
             }
         }
