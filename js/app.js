@@ -882,14 +882,17 @@ document.addEventListener('DOMContentLoaded', async () => {
             const file = e.target.files[0];
             if (!file) return;
             try {
+                ui.showLoading('DECODING SCROLL...');
                 const text = await file.text();
                 await tapestryLedger.importScroll(text);
                 ui.showNotification('Scroll imported successfully.', 'success');
                 renderTapestry();
             } catch (err) {
                 ui.showNotification(`Import error: ${err.message}`, 'error');
+            } finally {
+                ui.hideLoading();
+                e.target.value = ''; // Reset
             }
-            e.target.value = ''; // Reset
         });
 
         // --- CODEX INTEGRATION ---
