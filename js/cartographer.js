@@ -7,6 +7,7 @@ export class MapRenderer {
         this.dpr = window.devicePixelRatio || 1;
         this.threads = [];
         this.activeNodeIndex = -1;
+        this.activeUnitId = null;
 
         // Initialize Prometheus Heatmap Engine
         this.prometheus = new PrometheusEngine();
@@ -178,6 +179,15 @@ export class MapRenderer {
                 this.ctx.fillStyle = '#ffffff';
                 this.ctx.font = '9px Courier New';
                 this.ctx.fillText(unit.id, x + 8, y);
+
+                // Draw Selection Ring
+                if (unit.id === this.activeUnitId) {
+                    this.ctx.strokeStyle = '#00ff00';
+                    this.ctx.lineWidth = 1;
+                    this.ctx.beginPath();
+                    this.ctx.arc(x, y, 15, 0, Math.PI * 2);
+                    this.ctx.stroke();
+                }
             });
         }
 
@@ -334,42 +344,101 @@ export class MapRenderer {
             const mouseX = e.clientX - rect.left;
             const mouseY = e.clientY - rect.top;
 
-            // Check collisions
-            let found = -1;
+            const drawW = rect.width - 80;
+            const drawH = rect.height - 80;
+
+            // Check Thread Collisions
+            let foundThread = -1;
             this.threads.forEach((t, i) => {
                 const coords = this._getThreadCoords(t);
                 if (coords) {
-                    // Let's re-calculate cleanly.
-                    // Map drawing area in CSS pixels:
-                    const drawW = rect.width - 80; // 40px padding left/right
-                    const drawH = rect.height - 80;
-
                     const tx = 40 + (coords.x / 100) * drawW;
                     const ty = 40 + (coords.y / 100) * drawH;
-
-                    const d = Math.sqrt(
-                        Math.pow(mouseX - tx, 2) + Math.pow(mouseY - ty, 2)
-                    );
-                    if (d < 15) {
-                        found = i;
+                    if (Math.hypot(mouseX - tx, mouseY - ty) < 15) {
+                        foundThread = i;
                     }
                 }
             });
 
-            if (this.activeNodeIndex !== found) {
-                this.activeNodeIndex = found;
-                this.canvas.style.cursor = found !== -1 ? 'pointer' : 'default';
-                this.render(this.threads, this.locations);
+            // Check Unit Collisions
+            let foundUnit = null;
+            if (this.vanguardUnits) {
+                this.vanguardUnits.forEach(u => {
+                    const ux = 40 + (u.x / 100) * drawW;
+                    const uy = 40 + (u.y / 100) * drawH;
+                    if (Math.hypot(mouseX - ux, mouseY - uy) < 15) {
+                        foundUnit = u.id;
+                    }
+                });
+            }
+
+            if (this.activeNodeIndex !== foundThread) {
+                this.activeNodeIndex = foundThread;
+                this.render(this.threads, this.locations, this.ghosts, this.threatZones, this.vanguardUnits);
+            }
+
+            this.canvas.style.cursor = (foundThread !== -1 || foundUnit !== null) ? 'pointer' : 'default';
+        });
+
+        this.canvas.addEventListener('click', (e) => {
+            const rect = this.canvas.getBoundingClientRect();
+            const mouseX = e.clientX - rect.left;
+            const mouseY = e.clientY - rect.top;
+            const drawW = rect.width - 80;
+            const drawH = rect.height - 80;
+
+            // Unit Selection Logic
+            let clickedUnit = null;
+            if (this.vanguardUnits) {
+                this.vanguardUnits.forEach(u => {
+                    const ux = 40 + (u.x / 100) * drawW;
+                    const uy = 40 + (u.y / 100) * drawH;
+                    if (Math.hypot(mouseX - ux, mouseY - uy) < 15) {
+                        clickedUnit = u.id;
+                    }
+                });
+            }
+
+            if (clickedUnit) {
+                this.activeUnitId = clickedUnit;
+                this.render(this.threads, this.locations, this.ghosts, this.threatZones, this.vanguardUnits);
+                return;
+            }
+
+            // Deselect if clicking empty space (unless strictly clicking a thread)
+            if (!clickedUnit && this.activeNodeIndex === -1) {
+                this.activeUnitId = null;
+                this.render(this.threads, this.locations, this.ghosts, this.threatZones, this.vanguardUnits);
+            }
+
+            if (this.activeNodeIndex !== -1) {
+                const event = new CustomEvent('map-thread-click', {
+                    detail: { index: this.activeNodeIndex }
+                });
+                this.canvas.dispatchEvent(event);
             }
         });
 
-        this.canvas.addEventListener('click', () => {
-            if (this.activeNodeIndex !== -1) {
-                // Open thread details?
-                // For now just log, or trigger same event as Tapestry
-                // Trigger custom event for the app to listen to
-                const event = new CustomEvent('map-thread-click', {
-                    detail: { index: this.activeNodeIndex }
+        this.canvas.addEventListener('contextmenu', (e) => {
+            e.preventDefault();
+            if (!this.activeUnitId) return;
+
+            const rect = this.canvas.getBoundingClientRect();
+            const mouseX = e.clientX - rect.left;
+            const mouseY = e.clientY - rect.top;
+            const drawW = rect.width - 80;
+            const drawH = rect.height - 80;
+
+            // Convert back to Map Coords (0-100)
+            const mapX = ((mouseX - 40) / drawW) * 100;
+            const mapY = ((mouseY - 40) / drawH) * 100;
+
+            if (mapX >= 0 && mapX <= 100 && mapY >= 0 && mapY <= 100) {
+                const event = new CustomEvent('vanguard-command', {
+                    detail: {
+                        unitId: this.activeUnitId,
+                        target: { x: mapX, y: mapY }
+                    }
                 });
                 this.canvas.dispatchEvent(event);
             }

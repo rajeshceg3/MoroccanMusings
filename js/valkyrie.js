@@ -1,9 +1,10 @@
 export class ValkyrieEngine {
-    constructor(terminal, ui, ledger, horizon) {
+    constructor(terminal, ui, ledger, horizon, vanguard) {
         this.terminal = terminal;
         this.ui = ui;
         this.ledger = ledger;
         this.horizon = horizon;
+        this.vanguard = vanguard;
         this.status = 'ACTIVE';
         this.storageKey = 'marq_valkyrie_protocols';
         this.protocols = this._loadProtocols();
@@ -207,6 +208,30 @@ export class ValkyrieEngine {
             case 'CLEAR_CACHE':
                  this.ui.showNotification('CLEARING LOCAL CACHE...', 'warning');
                  // Only clear non-essential? Or do nothing for now as it's dangerous.
+                 break;
+            case 'DEPLOY_VANGUARD':
+                 // Args: Region [Type]
+                 if (this.vanguard) {
+                     const region = parts[1] || 'coast';
+                     const type = parts[2] || 'SCOUT';
+                     this.vanguard.deploy(type, region);
+                     this.terminal.log(`VALKYRIE: Deployed ${type} to ${region}.`, 'success');
+                 }
+                 break;
+            case 'INTERCEPT_ALL':
+                 if (this.vanguard) {
+                     this.vanguard.deploy('INTERCEPTOR', 'coast'); // Scramble fallback
+                     this.terminal.log('VALKYRIE: Interceptors Scrambled.', 'warning');
+                 }
+                 break;
+            case 'PURGE_SECTOR':
+                 if (this.vanguard) {
+                     const region = parts[1];
+                     if (region) {
+                         this.vanguard.deploy('INTERCEPTOR', region);
+                         this.terminal.log(`VALKYRIE: Purge ordered for ${region}.`, 'warning');
+                     }
+                 }
                  break;
             default:
                 this.terminal.log(`VALKYRIE: Unknown Action ${cmd}`, 'error');

@@ -110,11 +110,11 @@ document.addEventListener('DOMContentLoaded', async () => {
     const tapestryLedger = new TapestryLedger();
     const initStatus = await tapestryLedger.initialize();
 
-    const valkyrie = new ValkyrieEngine(terminal, ui, tapestryLedger, horizonEngine);
-    const valkyrieUI = new ValkyrieUI(valkyrie);
-
     // Initialize Vanguard (Tactical Units)
     const vanguard = new VanguardEngine(sentinel, aegis, tapestryLedger);
+
+    const valkyrie = new ValkyrieEngine(terminal, ui, tapestryLedger, horizonEngine, vanguard);
+    const valkyrieUI = new ValkyrieUI(valkyrie);
 
     // Parse Mode for Tactical Uplink
     const urlParams = new URLSearchParams(window.location.search);
@@ -263,6 +263,21 @@ document.addEventListener('DOMContentLoaded', async () => {
 
             if (!mapRenderer && elements.tapestry.mapCanvas) {
                 mapRenderer = new MapRenderer(elements.tapestry.mapCanvas);
+
+                // Wire up Map Events
+                elements.tapestry.mapCanvas.addEventListener('vanguard-command', (e) => {
+                    const { unitId, target } = e.detail;
+                    const unit = vanguard.getUnits().find(u => u.id === unitId);
+                    if (unit) {
+                        unit.command(target);
+                        resonanceEngine.playInteractionSound('click');
+                    }
+                });
+
+                elements.tapestry.mapCanvas.addEventListener('map-thread-click', (e) => {
+                    handleThreadInteraction(e.detail.index);
+                });
+
                 // Initialize Oracle once map renderer is available
                 if (!oracleEngine) {
                     oracleEngine = new OracleEngine(
