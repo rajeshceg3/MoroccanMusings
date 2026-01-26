@@ -2001,3 +2001,19 @@ body.mode-tapestry #tapestry-screen {
     80% { transform: translate(2px, -2px); }
     100% { transform: translate(0); }
 }
+
+/* --- Mobile Adaptation (Mission Charlie) --- */
+@media (max-width: 600px) {
+    .panopticon-metadata {
+        flex-direction: column;
+        gap: 0.5rem;
+        align-items: center;
+        font-size: 0.7rem;
+    }
+
+    .panopticon-overlay {
+        width: 95%;
+        padding: 0.5rem;
+        bottom: 1rem;
+    }
+}

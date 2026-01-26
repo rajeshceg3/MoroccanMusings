@@ -112,48 +112,107 @@ export class PanopticonEngine {
         const container = document.createElement('div');
         container.id = 'panopticon-interface';
         container.className = 'panopticon-overlay hidden';
-        container.innerHTML = `
-            <div class="panopticon-header">
-                <span class="panopticon-title">PANOPTICON // TACTICAL REVIEW</span>
-                <span id="panopticon-status" class="panopticon-status">LIVE FEED // ACTIVE</span>
-                <button id="panopticon-close" class="panopticon-close-btn" aria-label="Close">×</button>
-            </div>
-            <div class="panopticon-track">
-                <div class="panopticon-timeline-bg"></div>
-                <input type="range" id="panopticon-scrubber" min="0" max="0" value="0" step="1" disabled>
-                <div class="panopticon-markers" id="panopticon-markers"></div>
-            </div>
-            <div class="panopticon-controls">
-                <button id="panopticon-prev" class="panopticon-btn" disabled>
-                   <span class="icon">❮</span> STEP
-                </button>
-                <button id="panopticon-live" class="panopticon-btn active">
-                   LIVE
-                </button>
-                <button id="panopticon-next" class="panopticon-btn" disabled>
-                   STEP <span class="icon">❯</span>
-                </button>
-            </div>
-            <div class="panopticon-metadata" id="panopticon-metadata">
-                NO DATA
-            </div>
-        `;
 
-        // We append this to the tapestry screen specifically, or body?
-        // Body is safer for z-indexing over the canvas.
+        // --- Header ---
+        const header = document.createElement('div');
+        header.className = 'panopticon-header';
+
+        const title = document.createElement('span');
+        title.className = 'panopticon-title';
+        title.textContent = 'PANOPTICON // TACTICAL REVIEW';
+
+        const status = document.createElement('span');
+        status.id = 'panopticon-status';
+        status.className = 'panopticon-status';
+        status.textContent = 'LIVE FEED // ACTIVE';
+
+        const closeBtn = document.createElement('button');
+        closeBtn.id = 'panopticon-close';
+        closeBtn.className = 'panopticon-close-btn';
+        closeBtn.setAttribute('aria-label', 'Close');
+        closeBtn.textContent = '×';
+
+        header.append(title, status, closeBtn);
+
+        // --- Track ---
+        const track = document.createElement('div');
+        track.className = 'panopticon-track';
+
+        const timelineBg = document.createElement('div');
+        timelineBg.className = 'panopticon-timeline-bg';
+
+        const scrubber = document.createElement('input');
+        scrubber.type = 'range';
+        scrubber.id = 'panopticon-scrubber';
+        scrubber.min = '0';
+        scrubber.max = '0';
+        scrubber.value = '0';
+        scrubber.step = '1';
+        scrubber.disabled = true;
+
+        const markers = document.createElement('div');
+        markers.className = 'panopticon-markers';
+        markers.id = 'panopticon-markers';
+
+        track.append(timelineBg, scrubber, markers);
+
+        // --- Controls ---
+        const controls = document.createElement('div');
+        controls.className = 'panopticon-controls';
+
+        // Helper to create buttons with icons safely
+        const createBtn = (id, text, iconChar, iconPos = 'left', active = false) => {
+            const btn = document.createElement('button');
+            btn.id = id;
+            btn.className = 'panopticon-btn';
+            if (active) btn.classList.add('active');
+
+            if (iconChar) {
+                const icon = document.createElement('span');
+                icon.className = 'icon';
+                icon.textContent = iconChar;
+                if (iconPos === 'left') {
+                    btn.append(icon, document.createTextNode(' ' + text));
+                } else {
+                    btn.append(document.createTextNode(text + ' '), icon);
+                }
+            } else {
+                btn.textContent = text;
+            }
+            return btn;
+        };
+
+        const btnPrev = createBtn('panopticon-prev', 'STEP', '❮', 'left');
+        btnPrev.disabled = true;
+
+        const btnLive = createBtn('panopticon-live', 'LIVE', null, null, true);
+
+        const btnNext = createBtn('panopticon-next', 'STEP', '❯', 'right');
+        btnNext.disabled = true;
+
+        controls.append(btnPrev, btnLive, btnNext);
+
+        // --- Metadata ---
+        const metadata = document.createElement('div');
+        metadata.className = 'panopticon-metadata';
+        metadata.id = 'panopticon-metadata';
+        metadata.textContent = 'NO DATA';
+
+        // --- Assembly ---
+        container.append(header, track, controls, metadata);
         document.body.appendChild(container);
 
         // Bind Elements
         this.elements = {
-            container: container,
-            scrubber: container.querySelector('#panopticon-scrubber'),
-            status: container.querySelector('#panopticon-status'),
-            metadata: container.querySelector('#panopticon-metadata'),
-            btnLive: container.querySelector('#panopticon-live'),
-            btnPrev: container.querySelector('#panopticon-prev'),
-            btnNext: container.querySelector('#panopticon-next'),
-            btnClose: container.querySelector('#panopticon-close'),
-            markers: container.querySelector('#panopticon-markers')
+            container,
+            scrubber,
+            status,
+            metadata,
+            btnLive,
+            btnPrev,
+            btnNext,
+            btnClose: closeBtn,
+            markers
         };
 
         // Bind Events
@@ -199,9 +258,9 @@ export class PanopticonEngine {
         }
 
         // Add visual markers for DEFCON drops (Critical Events)
-        // We only rebuild if count changed significantly to save DOM ops?
-        // For now, rebuild is cheap enough for low N.
-        this.elements.markers.innerHTML = '';
+        // Use replaceChildren to clear safely
+        this.elements.markers.replaceChildren();
+
         this.snapshots.forEach((snap, i) => {
             if (snap.defcon < 3) {
                 const marker = document.createElement('div');
@@ -221,14 +280,25 @@ export class PanopticonEngine {
         this.elements.btnPrev.disabled = this.isReplaying && index === 0;
         this.elements.btnNext.disabled = !this.isReplaying;
 
-        // Metadata
+        // Metadata - Secure DOM Construction
+        this.elements.metadata.replaceChildren();
+
         if (this.isReplaying) {
             const snap = this.snapshots[index];
-            this.elements.metadata.innerHTML = `
-                <span class="meta-item">THREADS: ${snap.threadCount}</span>
-                <span class="meta-item defcon-${snap.defcon}">DEFCON: ${snap.defcon}</span>
-                <span class="meta-item">THREATS: ${snap.threatCount}</span>
-            `;
+
+            const createMetaItem = (label, value, defconClass) => {
+                const span = document.createElement('span');
+                span.className = 'meta-item';
+                if (defconClass) span.classList.add(defconClass);
+                span.textContent = `${label}: ${value}`;
+                return span;
+            };
+
+            this.elements.metadata.append(
+                createMetaItem('THREADS', snap.threadCount),
+                createMetaItem('DEFCON', snap.defcon, `defcon-${snap.defcon}`),
+                createMetaItem('THREATS', snap.threatCount)
+            );
         } else {
             this.elements.metadata.textContent = "SYSTEM LIVE. MONITORING STREAM.";
         }
@@ -248,6 +318,7 @@ export class PanopticonEngine {
         if (visible) {
             this.elements.container.classList.remove('hidden');
             this.capture(); // Ensure we have latest state on open
+            this._updateControls();
         } else {
             this.elements.container.classList.add('hidden');
             this.returnToLive(); // Always return to live when closing UI

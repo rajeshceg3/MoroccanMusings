@@ -1,98 +1,59 @@
 # TACTICAL ROADMAP: OPERATION "IRONCLAD"
 
-**DATE:** 2024-05-22
-**TO:** Command
-**FROM:** NAVY SEAL / LEAD ENGINEER (Jules)
-**SUBJECT:** COMPREHENSIVE TACTICAL ASSESSMENT & TRANSFORMATION PLAN
+**CLASSIFICATION:** TOP SECRET // EYES ONLY
+**TO:** COMMAND
+**FROM:** LT. CMDR. JULES (SPEC OPS / ENG)
+**DATE:** 2024-05-24
+**SUBJECT:** GAP ANALYSIS & TRANSFORMATION PROTOCOLS
 
----
+## 1. SITUATION REPORT (SITREP)
 
-## 1. EXECUTIVE SUMMARY
+While the `Marq` repository exhibits high-level architectural sophistication ("DEFCON 1" status claims), a deep-dive tactical assessment has revealed critical vulnerabilities that compromise the "Fortress" security policy and degrade operator efficiency under stress (UX).
 
-The current "MoroccanMusings" (Marq) repository represents a sophisticated Single Page Application with advanced features (Crypto, Audio Synthesis, Canvas Rendering). However, to achieve **Mission Critical** status, we must address significant vulnerabilities in Security, User Experience (UX), and Performance.
+The previous assessment (`PRODUCTION_READINESS_ASSESSMENT.md`) failed to identify a critical XSS vector in the Panopticon Engine and lacked mobile-responsive hardening for the tactical overlay.
 
-**Current Status:** DEFCON 3 (ELEVATED RISK)
-**Target Status:** DEFCON 5 (NORMAL / SECURE)
+## 2. CRITICAL VULNERABILITIES (GAP ANALYSIS)
 
-This roadmap outlines a phased approach to elevate the system to production standards, prioritizing security hardening and user friction reduction.
+### 2.1 SECURITY: The "Trojan Horse" (Critical)
+*   **Vector:** `js/panopticon.js` utilizes `innerHTML` to construct its overlay and update metadata.
+*   **Risk:** Although `defcon` levels are currently numeric, the `innerHTML` usage violates the strict "Fortress" policy defined in `AGENTS.md`. Future expansion (e.g., string-based status codes) could introduce Cross-Site Scripting (XSS).
+*   **Status:** **OPEN**
+*   **Action:** Immediate refactoring to `document.createElement`.
 
----
+### 2.2 UX: "Fog of War" (Moderate)
+*   **Vector:** `js/app.js` handles large scroll imports (JSON) without immediate visual feedback.
+*   **Risk:** Operators importing large datasets (>1MB) perceive the system as "frozen," leading to duplicate actions or abandonment.
+*   **Status:** **OPEN**
+*   **Action:** Inject `ui.showLoading()` / `ui.hideLoading()` protocols during file processing.
 
-## 2. THREAT ASSESSMENT & GAP ANALYSIS
+### 2.3 ADAPTABILITY: Mobile Fragility (Low/Moderate)
+*   **Vector:** The `.panopticon-metadata` flex container lacks wrapping logic.
+*   **Risk:** On mobile devices (viewport < 600px), tactical metrics (Threads, DEFCON, Threats) will overlap or truncate, rendering the HUD unreadable.
+*   **Status:** **OPEN**
+*   **Action:** Implement CSS media queries for responsive stacking.
 
-### A. SECURITY VULNERABILITIES (SEVERITY: CRITICAL)
-| Risk Vector | Description | Status |
-| :--- | :--- | :--- |
-| **State Exposure** | `window.tapestryLedger`, `window.state` exposed globally (`js/app.js`). Allows arbitrary state mutation and data exfiltration, violating "Fortress" protocol. | **OPEN** |
-| **XSS Vector** | `UISystem.ensureSimulationModal` uses `innerHTML` to render `report.advisory`. If advisory text is tainted, XSS is possible. | **OPEN** |
-| **Silent Failures** | Service Worker registration error is swallowed (`catch (e) {}`). Offline capabilities compromised without warning. | **OPEN** |
+## 3. EXECUTION PLAN (OPERATION IRONCLAD)
 
-### B. UX FRICTION POINTS (SEVERITY: HIGH)
-| Friction Point | Description | Impact |
-| :--- | :--- | :--- |
-| **Weave Interaction** | "Weave Thread" button requires 400ms long-press but lacks visual feedback *during* the press. Users perceive it as unresponsive. | **High** |
-| **Map Rendering** | `mousemove` event triggers full canvas redraw. On high-refresh screens or with many threads, this causes input lag/jank. | **Medium** |
-| **Empty State** | New users arrive at the Tapestry screen with zero context or guidance ("The Blank Slate" problem). | **High** |
+### PHASE 1: HARDENING (Mission Alpha)
+*   **Objective:** Eliminate `innerHTML` from `js/panopticon.js`.
+*   **Tactic:** Rewrite DOM construction using safe DOM APIs.
 
-### C. ARCHITECTURAL WEAKNESSES (SEVERITY: MEDIUM)
-| Weakness | Description | Impact |
-| :--- | :--- | :--- |
-| **Main Thread Blocking** | `SpectraEngine.scanSignal` performs heavy audio decoding/analysis on the main thread. | **Freeze** |
-| **Hardcoded Paths** | `CodexEngine` hardcodes `js/codex.worker.js`. Breaks if deployed to subpaths. | **Fragile** |
+### PHASE 2: FEEDBACK (Mission Bravo)
+*   **Objective:** Eliminate "Fog of War" during data operations.
+*   **Tactic:** Instrument `importScroll` in `js/app.js` with global loading overlays.
 
----
+### PHASE 3: ADAPTATION (Mission Charlie)
+*   **Objective:** Ensure readability on all field devices.
+*   **Tactic:** Apply responsive CSS patches to `css/styles.css`.
 
-## 3. STRATEGIC IMPLEMENTATION PLAN
+## 4. SUCCESS CRITERIA
 
-### PHASE 1: FORTIFICATION (SECURITY & STABILITY)
-*Objective: Seal security breaches and ensure base system integrity.*
+1.  `grep -r "innerHTML" js/panopticon.js` returns **0 results**.
+2.  Unit tests pass (15/15).
+3.  Linting passes with zero warnings.
+4.  Importing a scroll triggers the "DECODING SCROLL..." visual indicator.
 
-1.  **Operation: "Lockdown" (State Encapsulation)**
-    *   **Action:** Remove all `window.tapestryLedger = ...` and `window.state = ...` assignments in `js/app.js`.
-    *   **Replacement:** Use a dedicated `DebugSystem` class that only exposes these if a specific URL param (e.g., `?debug=true`) is present AND strictly in non-production environments.
+**COMMANDER'S INTENT:** Execute immediately.
 
-2.  **Operation: "Shield Wall" (XSS Prevention)**
-    *   **Action:** Refactor `UISystem.ensureSimulationModal` to use `textContent` or `document.createElement` for dynamic content.
-    *   **Verification:** Confirm HTML tags in advisory text are escaped.
-
-3.  **Operation: "Comms Check" (Service Worker)**
-    *   **Action:** Add proper error logging to SW registration. Add a UI indicator (Toast) if offline mode is unavailable.
-
-### PHASE 2: ENGAGEMENT (UX ELEVATION)
-*Objective: Minimize friction and maximize user delight.*
-
-1.  **Operation: "Tactical Feedback" (Weave Interaction)**
-    *   **Action:** Add a CSS animation (`stroke-dashoffset` or `transform: scale`) to a progress ring on the "Weave" button that triggers *immediately* on `pointerdown`.
-    *   **Benefit:** User knows the system is acknowledging their action.
-
-2.  **Operation: "Onboarding" (Empty States)**
-    *   **Action:** If `tapestryLedger` is empty, render "Ghost Threads" or a tutorial overlay in `TapestryScreen` guiding the user to the "Weave" button.
-
-3.  **Operation: "Smooth Operator" (Transition Polish)**
-    *   **Action:** Standardize all CSS transitions to `var(--ease-out-quint)`. Ensure `lockTransition` is actively managing `pointer-events` during all screen swaps.
-
-### PHASE 3: OPTIMIZATION (PERFORMANCE)
-*Objective: Ensure 60fps operation under heavy load.*
-
-1.  **Operation: "Hit Squad" (Map Optimization)**
-    *   **Action:** Optimize `MapRenderer` hit testing. Instead of checking every thread on `mousemove`, use a spatial lookup (grid) or only redraw the cursor/highlight layer, keeping the map static in a separate canvas/layer.
-
-2.  **Operation: "Offload" (Worker Integration)**
-    *   **Action:** Move `SpectraEngine` decoding logic to a Web Worker, similar to `CodexEngine`.
-
-### PHASE 4: PRODUCTION READINESS
-*Objective: Prepare for deployment.*
-
-1.  **CI/CD Pipeline:** Create `.github/workflows/deploy.yml` to run `tests/verify_app.py` on push.
-2.  **Asset Optimization:** Compress images in `assets/` (WebP).
-3.  **Audit:** Run Lighthouse audit and fix accessibility (contrast, ARIA) issues.
-
----
-
-## 4. IMMEDIATE ACTION ITEMS (NEXT 24 HOURS)
-
-1.  **[CRITICAL]** Patch `js/app.js` to remove global state exposure.
-2.  **[CRITICAL]** Patch `js/ui-system.js` to fix XSS vector.
-3.  **[HIGH]** Implement visual feedback for the Weave button long-press.
-
-*End of Report.*
+**SIGNED:**
+*LT. CMDR. JULES*
