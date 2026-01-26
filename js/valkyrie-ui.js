@@ -64,9 +64,7 @@ export class ValkyrieUI {
     }
 
     renderProtocols() {
-        this.listContainer.innerHTML = ''; // Clear (safe here as we rebuild children)
-        // Or use replaceChildren if strict about innerHTML.
-        // document.createElement structure:
+        this.listContainer.replaceChildren(); // Secure clear
 
         const protocols = this.engine.getProtocols();
         if (protocols.length === 0) {
@@ -140,7 +138,10 @@ export class ValkyrieUI {
         const triggerSelect = this.createSelect('Trigger', ['defcon', 'balance', 'threadCount', 'threats']);
         const operatorSelect = this.createSelect('Operator', ['<', '>', '=', 'CONTAINS']);
         const valueInput = this.createInput('Value', 'e.g., 3 or SURGE');
-        const actionSelect = this.createSelect('Action', ['ALERT_HIGH', 'ALERT_STABILITY', 'WARN_SURGE', 'SYS_LOCK', 'NOTIFY', 'LOG']);
+        const actionSelect = this.createSelect('Action', [
+            'ALERT_HIGH', 'ALERT_STABILITY', 'WARN_SURGE', 'SYS_LOCK', 'NOTIFY', 'LOG',
+            'DEPLOY_VANGUARD', 'INTERCEPT_ALL', 'PURGE_SECTOR'
+        ]);
 
         formGrid.appendChild(idInput.container);
         formGrid.appendChild(triggerSelect.container);

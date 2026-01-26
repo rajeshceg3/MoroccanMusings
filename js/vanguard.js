@@ -19,13 +19,40 @@ class VanguardUnit {
         this.battery = 100;
 
         // State Machine
-        this.status = 'IDLE'; // IDLE, MOVING, SCANNING, RETURNING
+        this.status = 'IDLE'; // IDLE, MOVING, SCANNING, RETURNING, INTERCEPTING, PURGING
         this.target = null; // {x, y}
+        this.assignedTarget = null; // Manual override
+        this.interceptTarget = null; // Threat object
         this.currentRegion = 'unknown';
 
         // Visuals
         this.heading = 0;
         this.scanPulse = 0;
+    }
+
+    command(coords) {
+        this.assignedTarget = coords;
+        this.target = coords;
+        this.status = 'MOVING';
+    }
+
+    intercept(threat) {
+        // Map threat region to coords
+        if (threat.region) {
+            const locs = Object.values(locations).filter(l => l.region === threat.region || (l.coordinates && threat.region === 'global'));
+            if (locs.length > 0) {
+                 const target = locs[Math.floor(Math.random() * locs.length)].coordinates;
+                 this.command(target);
+                 this.interceptTarget = threat;
+                 this.status = 'INTERCEPTING'; // Moving with intent to purge
+            }
+        }
+    }
+
+    purge() {
+        if (this.battery < 20) return; // Insufficient power
+        this.status = 'PURGING';
+        this.scanTimer = 100; // Purge takes longer
     }
 
     update(threads, threats) {
@@ -36,27 +63,32 @@ class VanguardUnit {
 
         // Logic based on Type and State
         if (this.status === 'IDLE') {
-            this._decideNextMove(threats);
-        } else if (this.status === 'MOVING') {
+            if (this.assignedTarget) {
+                 this.target = this.assignedTarget;
+                 this.status = 'MOVING';
+            } else {
+                this._decideNextMove(threats);
+            }
+        } else if (this.status === 'MOVING' || this.status === 'INTERCEPTING') {
             this._move();
-            this._checkScanOpportunies(threads);
+            if (this.status === 'MOVING') {
+                this._checkScanOpportunies(threads);
+            }
         } else if (this.status === 'SCANNING') {
             this._performScan();
+        } else if (this.status === 'PURGING') {
+            this._performPurge();
         }
 
         this.battery -= 0.01; // Slow drain
     }
 
     _decideNextMove(threats) {
+        if (this.assignedTarget) return; // Do not override manual commands
+
         // Interceptors prioritize threats
         if (this.type === 'INTERCEPTOR' && threats && threats.length > 0) {
-            // Pick highest threat
-            // Since threats don't have coords directly in the report (Sentinel just reports zones roughly),
-            // We map threat types/messages to regions or just pick a random high-activity zone.
-            // For now, let's pick a random point in a "Threat Zone" if available, else random.
-            // Sentinel doesn't give coords easily, but we can assume region centers.
-            // Let's just patrol random regions for now.
-             this._setRandomPatrol();
+            this._setRandomPatrol(); // Simplified for now, advanced intercept logic handled via intercept()
         } else {
             this._setRandomPatrol();
         }
@@ -90,7 +122,13 @@ class VanguardUnit {
             // Arrived
             this.x = this.target.x;
             this.y = this.target.y;
-            this.status = 'IDLE';
+            this.assignedTarget = null;
+
+            if (this.status === 'INTERCEPTING') {
+                this.purge();
+            } else {
+                this.status = 'IDLE';
+            }
             this.target = null;
             return;
         }
@@ -122,6 +160,16 @@ class VanguardUnit {
         if (this.scanTimer <= 0) {
             this.status = 'IDLE';
             this.engine.reportScan(this);
+        }
+    }
+
+    _performPurge() {
+        this.scanPulse += 0.3; // Faster pulse
+        this.scanTimer--;
+        this.battery -= 0.1; // High drain
+        if (this.scanTimer <= 0) {
+            this.status = 'IDLE';
+            this.engine.reportPurge(this);
         }
     }
 }
@@ -177,14 +225,31 @@ export class VanguardEngine {
         return this.units;
     }
 
+    getUnitAt(x, y, threshold = 5) {
+        // Find closest unit within threshold (map units)
+        let closest = null;
+        let minInfo = threshold;
+
+        this.units.forEach(u => {
+            const dx = u.x - x;
+            const dy = u.y - y;
+            const d = Math.sqrt(dx*dx + dy*dy);
+            if (d < minInfo) {
+                minInfo = d;
+                closest = u;
+            }
+        });
+        return closest;
+    }
+
     reportScan(unit) {
         // Unit finished a scan. Grant XP?
         if (this.aegis) {
-            // We can't easily access aegis methods unless exposed.
-            // Assuming Aegis has an 'addXP' or similar?
-            // Checking AegisEngine... it tracks XP internally.
-            // We might need to extend Aegis or just log it.
-            // For now, we'll just return true.
+             // Future Integration
         }
+    }
+
+    reportPurge(unit) {
+        console.log(`Unit ${unit.id} PURGED sector.`);
     }
 }
