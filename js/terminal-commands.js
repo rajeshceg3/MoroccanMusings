@@ -992,4 +992,35 @@ export function registerCommands(terminal, context) {
             }
         }
     );
+
+    terminal.registerCommand(
+        'stratcom',
+        'Strategic Command Dashboard',
+        (args) => {
+            if (!checkAccess()) return;
+            const subcmd = args[0] || 'active';
+            const stratcom = context.engines.stratcom;
+
+            if (!stratcom) {
+                terminal.log('Stratcom System not initialized.', 'error');
+                return;
+            }
+
+            if (subcmd === 'active') {
+                terminal.log('Accessing Strategic Command Interface...', 'success');
+                stratcom.toggle(true);
+                terminal.toggle(); // Close terminal
+            } else if (subcmd === 'status') {
+                 const defconReport = context.engines.sentinel.getReport();
+                 terminal.log('--- STRATCOM STATUS REPORT ---', 'system');
+                 terminal.log(`DEFCON: ${defconReport.defcon}`, 'warning');
+                 if (context.engines.vanguard) {
+                     const units = context.engines.vanguard.getUnits();
+                     terminal.log(`Active Units: ${units.length}`, 'info');
+                 }
+            } else {
+                 terminal.log('Usage: stratcom [active|status]', 'warning');
+            }
+        }
+    );
 }

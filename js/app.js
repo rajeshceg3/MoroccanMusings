@@ -19,6 +19,7 @@ import { ValkyrieUI } from './valkyrie-ui.js';
 import { VanguardEngine } from './vanguard.js';
 import { SynapseRenderer } from './synapse.js';
 import { GeminiEngine } from './gemini.js';
+import { StratcomSystem } from './stratcom.js';
 import { registerCommands } from './terminal-commands.js';
 
 document.addEventListener('DOMContentLoaded', async () => {
@@ -115,6 +116,8 @@ document.addEventListener('DOMContentLoaded', async () => {
 
     const valkyrie = new ValkyrieEngine(terminal, ui, tapestryLedger, horizonEngine, vanguard);
     const valkyrieUI = new ValkyrieUI(valkyrie);
+
+    const stratcom = new StratcomSystem(tapestryLedger, horizonEngine, sentinel, vanguard, terminal, ui);
 
     // Parse Mode for Tactical Uplink
     const urlParams = new URLSearchParams(window.location.search);
@@ -1312,6 +1315,7 @@ document.addEventListener('DOMContentLoaded', async () => {
             valkyrieUI,
             vanguard,
             gemini,
+            stratcom,
             get panopticon() {
                 return panopticon;
             }
