@@ -2017,3 +2017,195 @@ body.mode-tapestry #tapestry-screen {
         bottom: 1rem;
     }
 }
+
+/* --- STRATCOM INTERFACE --- */
+#stratcom-overlay {
+    background: rgba(10, 16, 20, 0.95);
+    z-index: 8000;
+    display: flex;
+    justify-content: center;
+    align-items: center;
+}
+
+.stratcom-container {
+    width: 90vw;
+    height: 90vh;
+    border: 2px solid var(--ochre-gold);
+    background: #000;
+    box-shadow: 0 0 50px rgba(198, 118, 5, 0.2);
+    display: flex;
+    flex-direction: column;
+    padding: 2px;
+}
+
+.stratcom-header {
+    background: rgba(198, 118, 5, 0.15);
+    padding: 1rem 2rem;
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    border-bottom: 1px solid var(--ochre-gold);
+}
+
+.stratcom-title {
+    font-family: 'Share Tech Mono', monospace;
+    font-size: 1.5rem;
+    color: var(--ochre-gold);
+    letter-spacing: 4px;
+    font-weight: bold;
+    text-shadow: 0 0 10px rgba(198, 118, 5, 0.5);
+}
+
+.stratcom-close {
+    background: transparent;
+    border: 1px solid var(--ochre-gold);
+    color: var(--ochre-gold);
+    font-family: 'Share Tech Mono', monospace;
+    width: 30px;
+    height: 30px;
+    cursor: pointer;
+    transition: all 0.2s;
+}
+
+.stratcom-close:hover {
+    background: var(--ochre-gold);
+    color: #000;
+}
+
+.stratcom-grid {
+    flex-grow: 1;
+    display: grid;
+    grid-template-columns: 1fr 1fr;
+    grid-template-rows: 1fr 1fr;
+    gap: 1rem;
+    padding: 1rem;
+    overflow: hidden;
+}
+
+.stratcom-widget {
+    border: 1px solid #334455;
+    background: rgba(255, 255, 255, 0.02);
+    display: flex;
+    flex-direction: column;
+    position: relative;
+    overflow: hidden;
+}
+
+.widget-header {
+    background: rgba(51, 68, 85, 0.3);
+    padding: 0.5rem 1rem;
+    font-family: 'Share Tech Mono', monospace;
+    font-size: 0.9rem;
+    color: #8899aa;
+    border-bottom: 1px solid #334455;
+    letter-spacing: 2px;
+}
+
+/* DEFCON Widget */
+#widget-defcon-val {
+    flex-grow: 1;
+    display: flex;
+    justify-content: center;
+    align-items: center;
+    font-size: 8rem;
+    font-family: 'Black Ops One', 'Arial Black', sans-serif;
+    font-weight: bold;
+    transition: color 0.5s;
+}
+
+.defcon-1 { color: #ff0055; text-shadow: 0 0 30px #ff0055; animation: pulse-crit 0.5s infinite; }
+.defcon-2 { color: #ff5500; text-shadow: 0 0 20px #ff5500; }
+.defcon-3 { color: #ffaa00; text-shadow: 0 0 10px #ffaa00; }
+.defcon-4 { color: #ffff00; }
+.defcon-5 { color: #55ffaa; text-shadow: 0 0 10px #55ffaa; }
+
+@keyframes pulse-crit {
+    0%, 100% { opacity: 1; transform: scale(1); }
+    50% { opacity: 0.8; transform: scale(1.05); }
+}
+
+/* Horizon Widget */
+.horizon-val {
+    flex-grow: 1;
+    display: flex;
+    justify-content: center;
+    align-items: center;
+    font-family: 'Share Tech Mono', monospace;
+    font-size: 1.5rem;
+    color: #ccc;
+}
+.horizon-val .highlight { color: var(--ochre-gold); font-size: 2.5rem; margin-right: 1rem; }
+
+/* Vanguard Widget */
+.vanguard-list {
+    flex-grow: 1;
+    overflow-y: auto;
+    padding: 0.5rem;
+    font-family: 'Share Tech Mono', monospace;
+}
+
+.unit-item {
+    border-bottom: 1px dashed #334455;
+    padding: 0.5rem;
+    font-size: 0.8rem;
+}
+.unit-item.empty { text-align: center; color: #555; padding-top: 2rem; font-style: italic; }
+
+.unit-row { display: flex; justify-content: space-between; margin-bottom: 0.2rem; }
+.unit-id { color: #fff; font-weight: bold; }
+.unit-type { color: #8899aa; }
+.unit-status { color: #ccc; }
+.unit-status.moving { color: #55aaff; }
+.unit-status.scanning { color: #aa55ff; }
+.unit-status.intercepting { color: #ffaa00; }
+.unit-status.purging { color: #ff0055; font-weight: bold; animation: blink 0.5s infinite; }
+
+/* Log Widget */
+.log-content {
+    flex-grow: 1;
+    padding: 0.5rem;
+    font-family: 'Courier New', monospace;
+    font-size: 0.8rem;
+    color: #aaa;
+    overflow: hidden;
+    display: flex;
+    flex-direction: column;
+    justify-content: flex-end;
+}
+.log-content > div { margin-bottom: 0.2rem; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+
+/* Ticker */
+.stratcom-ticker {
+    height: 40px;
+    background: #050505;
+    border-top: 1px solid #334455;
+    display: flex;
+    align-items: center;
+    padding: 0 1rem;
+    font-family: 'Share Tech Mono', monospace;
+    color: var(--ochre-gold);
+    font-size: 0.9rem;
+    white-space: nowrap;
+    overflow: hidden;
+}
+
+#widget-ticker-content {
+    animation: ticker-slide 20s linear infinite;
+    padding-left: 100%;
+    display: inline-block;
+}
+
+@keyframes ticker-slide {
+    0% { transform: translateX(0); }
+    100% { transform: translateX(-100%); }
+}
+
+@media (max-width: 800px) {
+    .stratcom-grid { grid-template-columns: 1fr; grid-template-rows: repeat(4, 1fr); }
+    .stratcom-title { font-size: 1rem; }
+}
+
+#stratcom-overlay.hidden {
+    display: none;
+    pointer-events: none;
+}

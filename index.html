@@ -294,6 +294,36 @@
             </div>
         </div>
 
+        <div id="stratcom-overlay" class="overlay hidden">
+            <div class="stratcom-container">
+                <div class="stratcom-header">
+                    <div class="stratcom-title">STRATEGIC COMMAND // UNIFIED DASHBOARD</div>
+                    <button id="stratcom-close-btn" class="stratcom-close">X</button>
+                </div>
+                <div class="stratcom-grid">
+                    <div id="widget-defcon" class="stratcom-widget">
+                        <div class="widget-header">THREAT LEVEL</div>
+                        <div id="widget-defcon-val" class="defcon-val">5</div>
+                    </div>
+                    <div id="widget-horizon" class="stratcom-widget">
+                        <div class="widget-header">HORIZON BALANCE</div>
+                        <div id="widget-horizon-val" class="horizon-val">--</div>
+                    </div>
+                    <div id="widget-vanguard" class="stratcom-widget">
+                        <div class="widget-header">TACTICAL ASSETS</div>
+                        <div id="widget-vanguard-list" class="vanguard-list"></div>
+                    </div>
+                    <div id="widget-log" class="stratcom-widget">
+                        <div class="widget-header">COMMS LOG</div>
+                        <div id="widget-log-content" class="log-content"></div>
+                    </div>
+                </div>
+                <div id="widget-ticker" class="stratcom-ticker">
+                    <div id="widget-ticker-content">initializing data stream...</div>
+                </div>
+            </div>
+        </div>
+
         <script type="module" src="js/crypto-guard.js"></script>
         <script type="module" src="js/spectra.js"></script>
         <script src="js/error-guard.js"></script>
