@@ -250,6 +250,6 @@ export class VanguardEngine {
     }
 
     reportPurge(unit) {
-        console.log(`Unit ${unit.id} PURGED sector.`);
+        // console.log(`Unit ${unit.id} PURGED sector.`);
     }
 }
