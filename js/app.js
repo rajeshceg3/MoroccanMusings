@@ -1269,6 +1269,30 @@ document.addEventListener('DOMContentLoaded', async () => {
         mandalaRenderer.render(threads, projections);
     }
 
+    // --- Helper Functions ---
+    const handleThreadInteraction = (index) => {
+        const threads = tapestryLedger.getThreads();
+        if (index >= 0 && index < threads.length) {
+            // Toggle selection
+            const selectedIndex = state.selectedThreads.indexOf(index);
+            if (selectedIndex >= 0) {
+                state.selectedThreads.splice(selectedIndex, 1);
+            } else {
+                if (state.selectedThreads.length < 2) {
+                    state.selectedThreads.push(index);
+                } else {
+                    // FIFO replacement if full
+                    state.selectedThreads.shift();
+                    state.selectedThreads.push(index);
+                }
+            }
+            if (mandalaRenderer) mandalaRenderer.setSelection(state.selectedThreads);
+            renderTapestry();
+            resonanceEngine.playInteractionSound('click');
+            updateAlchemyUI();
+        }
+    };
+
     // --- Initialization ---
     // Handle Browser Back Button
     window.addEventListener('popstate', (event) => {
@@ -1365,23 +1389,73 @@ document.addEventListener('DOMContentLoaded', async () => {
         const skipBtn = document.getElementById('guide-skip-btn');
         const helpBtn = document.getElementById('help-trigger');
 
+        // Create Backdrop dynamically
+        let backdrop = document.querySelector('.guide-backdrop');
+        if (!backdrop) {
+            backdrop = document.createElement('div');
+            backdrop.className = 'guide-backdrop';
+            document.body.appendChild(backdrop);
+        }
+
         let currentStep = 0;
+        let currentSpotlight = null;
+
+        const cleanupSpotlight = () => {
+            if (currentSpotlight) {
+                currentSpotlight.classList.remove('guide-spotlight');
+                currentSpotlight = null;
+            }
+            backdrop.classList.remove('visible');
+        };
 
         const updateGuide = () => {
             steps.forEach((s, i) => s.classList.toggle('active', i === currentStep));
             dots.forEach((d, i) => d.classList.toggle('active', i === currentStep));
             prevBtn.disabled = currentStep === 0;
             nextBtn.textContent = currentStep === steps.length - 1 ? 'FINISH' : 'NEXT';
+
+            // Spotlight Logic
+            if (currentSpotlight) {
+                currentSpotlight.classList.remove('guide-spotlight');
+                currentSpotlight = null;
+            }
+
+            const activeStepEl = steps[currentStep];
+            // Ensure we handle cases where the element might be missing data-target
+            const targetSelector = activeStepEl.dataset.target;
+
+            if (targetSelector) {
+                const target = document.querySelector(targetSelector);
+                if (target) {
+                    target.classList.add('guide-spotlight');
+                    currentSpotlight = target;
+                    backdrop.classList.add('visible');
+
+                    // Only scroll if strictly necessary to avoid jarring jumps
+                    // target.scrollIntoView({ behavior: 'smooth', block: 'center' });
+                } else {
+                    // If target not found (e.g. wrong screen), hide backdrop
+                    backdrop.classList.remove('visible');
+                }
+            } else {
+                backdrop.classList.remove('visible');
+            }
         };
 
         const showGuide = () => {
             currentStep = 0;
-            updateGuide();
             overlay.classList.remove('hidden');
+            // Ensure we are on the right screen for the start?
+            // The guide assumes we are on Astrolabe usually.
+            if (state.activeScreen !== 'astrolabe') {
+                showScreen('astrolabe');
+            }
+            requestAnimationFrame(updateGuide);
         };
 
         const closeGuide = () => {
             overlay.classList.add('hidden');
+            cleanupSpotlight();
             localStorage.setItem('marq_onboarded', 'true');
         };
 

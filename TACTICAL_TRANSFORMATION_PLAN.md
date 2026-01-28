@@ -36,10 +36,14 @@ However, the current operational state, while secure, lacks the intuitive "tacti
 
 ## 3. TACTICAL IMPLEMENTATION ROADMAP
 
-### PHASE 1: RECONNAISSANCE & UX HARDENING (Immediate Action)
+### PHASE 1: RECONNAISSANCE & UX HARDENING (IN PROGRESS)
+*   [x] **1.0 Tactical Assessment:**
+    *   Gap Analysis completed (`TACTICAL_ASSESSMENT.md`).
 *   [ ] **1.1 Interactive Guide Upgrade:**
     *   Modify `js/app.js` `initGhostGuide` to accept `targetSelector` for each step.
     *   Implement a "Spotlight" effect in `css/styles.css` (`.guide-spotlight`) to dim the background and highlight the target element.
+    *   Update `index.html` with `data-target` attributes.
+    *   **New:** Create `tests/verify_guide.py` to verify spotlight logic.
 *   [ ] **1.2 Iconography Intelligence:**
     *   Add `title` attributes to all critical UI buttons (Astrolabe markers, Riad actions, Tapestry tools).
     *   Implement a CSS-only tooltip system (`data-tooltip`) for cleaner, tactical aesthetics.

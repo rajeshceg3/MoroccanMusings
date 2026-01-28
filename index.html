@@ -32,7 +32,7 @@
         </div>
         <div id="astrolabe-screen" class="screen">
             <div class="app-title">MARQ</div>
-            <button id="help-trigger" class="help-btn" aria-label="Open Guide">?</button>
+            <button id="help-trigger" class="help-btn" aria-label="Open Guide" data-tooltip="Operational Guide" data-tooltip-pos="bottom">?</button>
             <div class="astrolabe-container">
                 <div id="ring-intention" class="astrolabe-ring">
                     <div id="intention-serenity" class="astrolabe-marker">
@@ -59,6 +59,7 @@
                 id="tapestry-icon"
                 role="button"
                 aria-label="Open Tapestry"
+                data-tooltip="View Tapestry"
                 tabindex="0"
             >
                 ❖
@@ -76,36 +77,38 @@
                 id="tapestry-back"
                 role="button"
                 aria-label="Go Back"
+                data-tooltip="Return to Astrolabe"
+                data-tooltip-pos="bottom"
                 tabindex="0"
             >
                 ←
             </div>
             <div class="alchemy-ui" id="alchemy-ui">
                 <div class="alchemy-slot" id="alchemy-slot-1">1</div>
-                <button class="alchemy-fuse-btn" id="alchemy-fuse-btn" disabled>
+                <button class="alchemy-fuse-btn" id="alchemy-fuse-btn" disabled data-tooltip="Fuse Threads">
                     FUSE
                 </button>
                 <div class="alchemy-slot" id="alchemy-slot-2">2</div>
             </div>
             <div class="tapestry-actions">
-                <button class="tapestry-btn" id="horizon-toggle">
+                <button class="tapestry-btn" id="horizon-toggle" data-tooltip="Strategic Analysis">
                     Horizon Mode
                 </button>
-                <button class="tapestry-btn" id="map-toggle">
+                <button class="tapestry-btn" id="map-toggle" data-tooltip="Geospatial Overwatch">
                     Map Overwatch
                 </button>
-                <button class="tapestry-btn" id="synapse-toggle">
+                <button class="tapestry-btn" id="synapse-toggle" data-tooltip="Neural Graph">
                     Synapse Net
                 </button>
-                <button class="tapestry-btn" id="aegis-toggle">
+                <button class="tapestry-btn" id="aegis-toggle" data-tooltip="Mission Status">
                     Aegis HUD
                 </button>
 
                 <div class="button-group">
-                    <button class="tapestry-btn" id="forge-shard">
+                    <button class="tapestry-btn" id="forge-shard" data-tooltip="Encrypt Data">
                         Forge Shard
                     </button>
-                    <button class="tapestry-btn" id="scan-shard">
+                    <button class="tapestry-btn" id="scan-shard" data-tooltip="Decrypt Data">
                         Scan Shard
                     </button>
                 </div>
@@ -124,7 +127,7 @@
                     hidden
                 />
 
-                <button class="tapestry-btn" id="export-scroll">
+                <button class="tapestry-btn" id="export-scroll" data-tooltip="Save Ledger">
                     Export Scroll
                 </button>
                 <input
@@ -134,10 +137,10 @@
                     class="hidden-input"
                     hidden
                 />
-                <button class="tapestry-btn" id="import-btn">
+                <button class="tapestry-btn" id="import-btn" data-tooltip="Load Ledger">
                     Import Scroll
                 </button>
-                <button class="tapestry-btn" id="clear-tapestry">
+                <button class="tapestry-btn" id="clear-tapestry" data-tooltip="Clear All Data">
                     Unravel
                 </button>
             </div>
@@ -169,6 +172,8 @@
                 id="back-button"
                 role="button"
                 aria-label="Go Back"
+                data-tooltip="Return"
+                data-tooltip-pos="bottom"
                 tabindex="0"
             >
                 ←
@@ -178,6 +183,7 @@
                 class="weave-button"
                 role="button"
                 aria-label="Weave Thread"
+                data-tooltip="Commit to Ledger"
                 tabindex="0"
             >
                 Weave a Thread
@@ -188,6 +194,7 @@
                 class="simulate-button"
                 role="button"
                 aria-label="Simulate Thread"
+                data-tooltip="Run Analysis"
                 tabindex="0"
             >
                 Simulate
@@ -260,21 +267,21 @@
                     <button id="guide-skip-btn" class="guide-skip">SKIP</button>
                 </div>
                 <div class="guide-content">
-                    <div class="guide-step active" data-step="1">
+                    <div class="guide-step active" data-step="1" data-target=".astrolabe-container">
                         <h3>THE ASTROLABE</h3>
                         <p>Align the rings to set your Intention and Time. This coordinates your jump to a specific memory locus.</p>
                         <div class="guide-visual">
                             <span class="guide-icon">◎</span>
                         </div>
                     </div>
-                    <div class="guide-step" data-step="2">
+                    <div class="guide-step" data-step="2" data-target=".astrolabe-center">
                         <h3>THE RIAD</h3>
                         <p>Immerse yourself in the sensory data. Use "Weave a Thread" to capture this moment into your ledger.</p>
                         <div class="guide-visual">
                             <span class="guide-icon">❖</span>
                         </div>
                     </div>
-                    <div class="guide-step" data-step="3">
+                    <div class="guide-step" data-step="3" data-target="#tapestry-icon">
                         <h3>THE TAPESTRY</h3>
                         <p>Visualize your woven threads. Use Alchemy to fuse them, or Map Mode for geospatial analysis.</p>
                         <div class="guide-visual">

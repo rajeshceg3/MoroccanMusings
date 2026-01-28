@@ -33,6 +33,15 @@ def test_ux():
             page.click("#splash-screen")
             page.wait_for_selector("#astrolabe-screen")
 
+            # Dismiss Ghost Guide if present
+            try:
+                skip_btn = page.wait_for_selector("#guide-skip-btn", timeout=3000)
+                if skip_btn.is_visible():
+                    skip_btn.click()
+                    page.wait_for_selector("#ghost-guide-overlay", state="hidden")
+            except:
+                pass
+
             # Go to Tapestry
             page.click("#tapestry-icon")
             page.wait_for_selector("#tapestry-screen.active")
