@@ -6,6 +6,7 @@ this.ctx = canvas.getContext('2d');
 this.dpr = window.devicePixelRatio || 1;
 this.threads = [];
 this.activeNodeIndex = -1;
+this.activeUnitId = null;
 this.prometheus = new PrometheusEngine();
 this.mapPath = [
 { x: 45, y: 5 }, // Tangier
@@ -33,11 +34,12 @@ this.ctx.scale(this.dpr, this.dpr);
 this.width = rect.width;
 this.height = rect.height;
 }
-render(threads, locations, ghosts = [], threatZones = []) {
+render(threads, locations, ghosts = [], threatZones = [], vanguardUnits = []) {
 this.threads = threads;
 this.locations = locations;
 this.ghosts = ghosts;
 this.threatZones = threatZones;
+this.vanguardUnits = vanguardUnits;
 this.prometheus.update(threads, locations, this.width, this.height);
 this.ctx.clearRect(0, 0, this.width, this.height);
 const padding = 40;
@@ -96,6 +98,47 @@ this.ctx.beginPath();
 this.ctx.arc(x, y, r * 1.5, 0, Math.PI * 2);
 this.ctx.stroke();
 this.ctx.setLineDash([]);
+});
+}
+if (this.vanguardUnits && this.vanguardUnits.length > 0) {
+this.vanguardUnits.forEach((unit) => {
+const x = (unit.x / 100) * mapWidth;
+const y = (unit.y / 100) * mapHeight;
+this.ctx.save();
+this.ctx.translate(x, y);
+this.ctx.rotate(unit.heading);
+this.ctx.fillStyle = unit.type === 'INTERCEPTOR'
+? 'rgba(255, 165, 0, 0.1)'
+: 'rgba(0, 255, 255, 0.1)';
+this.ctx.beginPath();
+this.ctx.moveTo(0, 0);
+this.ctx.arc(0, 0, 40, -Math.PI / 4, Math.PI / 4);
+this.ctx.fill();
+this.ctx.fillStyle = unit.type === 'INTERCEPTOR' ? '#ffaa00' : '#00ffff';
+this.ctx.beginPath();
+this.ctx.moveTo(6, 0);
+this.ctx.lineTo(-4, 4);
+this.ctx.lineTo(-4, -4);
+this.ctx.closePath();
+this.ctx.fill();
+if (unit.status === 'SCANNING') {
+this.ctx.strokeStyle = unit.type === 'INTERCEPTOR' ? '#ffaa00' : '#00ffff';
+this.ctx.globalAlpha = Math.max(0, 1 - (unit.scanPulse % 1));
+this.ctx.beginPath();
+this.ctx.arc(0, 0, unit.scanPulse * 10, 0, Math.PI * 2);
+this.ctx.stroke();
+}
+this.ctx.restore();
+this.ctx.fillStyle = '#ffffff';
+this.ctx.font = '9px Courier New';
+this.ctx.fillText(unit.id, x + 8, y);
+if (unit.id === this.activeUnitId) {
+this.ctx.strokeStyle = '#00ff00';
+this.ctx.lineWidth = 1;
+this.ctx.beginPath();
+this.ctx.arc(x, y, 15, 0, Math.PI * 2);
+this.ctx.stroke();
+}
 });
 }
 if (threads.length > 0 || ghosts.length > 0) {
@@ -189,14 +232,16 @@ this.ctx.restore();
 if (
 this.activeNodeIndex !== -1 ||
 (this.ghosts && this.ghosts.length > 0) ||
-(this.threatZones && this.threatZones.length > 0)
+(this.threatZones && this.threatZones.length > 0) ||
+(this.vanguardUnits && this.vanguardUnits.length > 0)
 ) {
 requestAnimationFrame(() =>
 this.render(
 this.threads,
 this.locations,
 this.ghosts,
-this.threatZones
+this.threatZones,
+this.vanguardUnits
 )
 );
 }
@@ -215,32 +260,83 @@ this.canvas.addEventListener('mousemove', (e) => {
 const rect = this.canvas.getBoundingClientRect();
 const mouseX = e.clientX - rect.left;
 const mouseY = e.clientY - rect.top;
-let found = -1;
+const drawW = rect.width - 80;
+const drawH = rect.height - 80;
+let foundThread = -1;
 this.threads.forEach((t, i) => {
 const coords = this._getThreadCoords(t);
 if (coords) {
-const drawW = rect.width - 80; // 40px padding left/right
-const drawH = rect.height - 80;
 const tx = 40 + (coords.x / 100) * drawW;
 const ty = 40 + (coords.y / 100) * drawH;
-const d = Math.sqrt(
-Math.pow(mouseX - tx, 2) + Math.pow(mouseY - ty, 2)
-);
-if (d < 15) {
-found = i;
+if (Math.hypot(mouseX - tx, mouseY - ty) < 15) {
+foundThread = i;
 }
 }
 });
-if (this.activeNodeIndex !== found) {
-this.activeNodeIndex = found;
-this.canvas.style.cursor = found !== -1 ? 'pointer' : 'default';
-this.render(this.threads, this.locations);
+let foundUnit = null;
+if (this.vanguardUnits) {
+this.vanguardUnits.forEach(u => {
+const ux = 40 + (u.x / 100) * drawW;
+const uy = 40 + (u.y / 100) * drawH;
+if (Math.hypot(mouseX - ux, mouseY - uy) < 15) {
+foundUnit = u.id;
 }
 });
-this.canvas.addEventListener('click', () => {
+}
+if (this.activeNodeIndex !== foundThread) {
+this.activeNodeIndex = foundThread;
+this.render(this.threads, this.locations, this.ghosts, this.threatZones, this.vanguardUnits);
+}
+this.canvas.style.cursor = (foundThread !== -1 || foundUnit !== null) ? 'pointer' : 'default';
+});
+this.canvas.addEventListener('click', (e) => {
+const rect = this.canvas.getBoundingClientRect();
+const mouseX = e.clientX - rect.left;
+const mouseY = e.clientY - rect.top;
+const drawW = rect.width - 80;
+const drawH = rect.height - 80;
+let clickedUnit = null;
+if (this.vanguardUnits) {
+this.vanguardUnits.forEach(u => {
+const ux = 40 + (u.x / 100) * drawW;
+const uy = 40 + (u.y / 100) * drawH;
+if (Math.hypot(mouseX - ux, mouseY - uy) < 15) {
+clickedUnit = u.id;
+}
+});
+}
+if (clickedUnit) {
+this.activeUnitId = clickedUnit;
+this.render(this.threads, this.locations, this.ghosts, this.threatZones, this.vanguardUnits);
+return;
+}
+if (!clickedUnit && this.activeNodeIndex === -1) {
+this.activeUnitId = null;
+this.render(this.threads, this.locations, this.ghosts, this.threatZones, this.vanguardUnits);
+}
 if (this.activeNodeIndex !== -1) {
 const event = new CustomEvent('map-thread-click', {
 detail: { index: this.activeNodeIndex }
+});
+this.canvas.dispatchEvent(event);
+}
+});
+this.canvas.addEventListener('contextmenu', (e) => {
+e.preventDefault();
+if (!this.activeUnitId) return;
+const rect = this.canvas.getBoundingClientRect();
+const mouseX = e.clientX - rect.left;
+const mouseY = e.clientY - rect.top;
+const drawW = rect.width - 80;
+const drawH = rect.height - 80;
+const mapX = ((mouseX - 40) / drawW) * 100;
+const mapY = ((mouseY - 40) / drawH) * 100;
+if (mapX >= 0 && mapX <= 100 && mapY >= 0 && mapY <= 100) {
+const event = new CustomEvent('vanguard-command', {
+detail: {
+unitId: this.activeUnitId,
+target: { x: mapX, y: mapY }
+}
 });
 this.canvas.dispatchEvent(event);
 }

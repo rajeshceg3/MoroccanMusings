@@ -87,7 +87,6 @@ const imageData = this.ctx.getImageData(0, 0, this.width, this.height);
 const data = imageData.data;
 const len = data.length;
 for (let i = 0; i < len; i += 4) {
-const alpha = data[i + 3]; // The accumulated alpha from 'lighter' drawing?
 const intensity = data[i]; // 0-255
 if (intensity > 0) {
 const pIdx = Math.min(255, intensity) * 4;

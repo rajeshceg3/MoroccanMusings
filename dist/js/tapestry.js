@@ -40,7 +40,7 @@ return this.status;
 let parsed;
 try {
 parsed = JSON.parse(raw);
-} catch (e) {
+} catch {
 console.error('Corrupt storage.');
 this.threads = [];
 return 'READY';
@@ -176,6 +176,49 @@ hash: hash
 this.threads.push(thread);
 await this._save();
 return thread;
+}
+async reload() {
+const raw = this._loadRaw();
+if (!raw) {
+this.threads = [];
+return;
+}
+let parsed;
+try {
+parsed = JSON.parse(raw);
+} catch {
+console.error('Corrupt storage during reload.');
+return;
+}
+if (parsed && parsed.tag === 'AEGIS_SECURE') {
+if (this.crypto.hasSession()) {
+try {
+const password = this.crypto.getSessionPassword();
+const decrypted = await this.crypto.decrypt(
+parsed,
+password
+);
+this.threads = decrypted;
+await this.verifyIntegrity();
+} catch (e) {
+console.error(
+'Reload failed: Key mismatch or corruption',
+e
+);
+this.status = 'LOCKED';
+this.threads = [];
+}
+} else {
+this.status = 'LOCKED';
+this.threads = [];
+}
+} else {
+if (Array.isArray(parsed)) {
+this.threads = parsed;
+await this.verifyIntegrity();
+this.status = 'READY';
+}
+}
 }
 getThreads() {
 if (this.status === 'LOCKED') return [];
