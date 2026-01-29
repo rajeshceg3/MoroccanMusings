@@ -23,6 +23,7 @@ import { StratcomSystem } from './stratcom.js';
 import { registerCommands } from './terminal-commands.js';
 import { MnemosyneEngine } from './mnemosyne.js';
 import { MnemosyneUI } from './mnemosyne-ui.js';
+import { CitadelEngine } from './citadel.js';
 
 document.addEventListener('DOMContentLoaded', async () => {
     // Service Worker Registration
@@ -62,7 +63,8 @@ document.addEventListener('DOMContentLoaded', async () => {
         selectedThreads: [], // Array of indices
         isHorizonActive: false,
         isMapActive: false,
-        isSynapseActive: false
+        isSynapseActive: false,
+        isCitadelActive: false
     };
 
     const resonanceEngine = new ResonanceEngine();
@@ -74,6 +76,7 @@ document.addEventListener('DOMContentLoaded', async () => {
     const sentinel = new SentinelEngine(horizonEngine);
     const chronos = new ChronosEngine(horizonEngine, SentinelEngine);
     const cortex = new CortexEngine();
+    const citadel = new CitadelEngine(locations);
     // Valkyrie/Vanguard init deferred until ledger is ready
 
     // Panopticon initialization is deferred until renderers are ready,
@@ -121,7 +124,7 @@ document.addEventListener('DOMContentLoaded', async () => {
     // Initialize Vanguard (Tactical Units)
     const vanguard = new VanguardEngine(sentinel, aegis, tapestryLedger);
 
-    const valkyrie = new ValkyrieEngine(terminal, ui, tapestryLedger, horizonEngine, vanguard);
+    const valkyrie = new ValkyrieEngine(terminal, ui, tapestryLedger, horizonEngine, vanguard, citadel);
     const valkyrieUI = new ValkyrieUI(valkyrie);
 
     const stratcom = new StratcomSystem(tapestryLedger, horizonEngine, sentinel, vanguard, terminal, ui);
@@ -231,6 +234,7 @@ document.addEventListener('DOMContentLoaded', async () => {
             mapToggle: document.getElementById('map-toggle'),
             synapseToggle: document.getElementById('synapse-toggle'),
             aegisToggle: document.getElementById('aegis-toggle'),
+            citadelToggle: document.getElementById('citadel-toggle'),
             horizonDashboard: document.getElementById('horizon-dashboard'),
             horizonDominance: document.getElementById('horizon-dominance'),
             horizonBalanceBar: document.getElementById('horizon-balance-bar'),
@@ -318,6 +322,12 @@ document.addEventListener('DOMContentLoaded', async () => {
 
                 elements.tapestry.mapCanvas.addEventListener('map-thread-click', (e) => {
                     handleThreadInteraction(e.detail.index);
+                });
+
+                elements.tapestry.mapCanvas.addEventListener('citadel-zone-created', (e) => {
+                    const zone = citadel.addZone(e.detail);
+                    ui.showNotification(`CITADEL: Secure Zone ${zone.id} Established.`, 'success');
+                    renderTapestry();
                 });
 
                 // Initialize Oracle once map renderer is available
@@ -857,6 +867,13 @@ document.addEventListener('DOMContentLoaded', async () => {
         // Trigger Valkyrie Response Matrix
         valkyrie.evaluate(threatReport, tapestryLedger.getThreads());
 
+        // Check Citadel Interference
+        const zoneViolation = citadel.check(newThread);
+        if (zoneViolation) {
+             ui.showNotification(`ALERT: THREAD INTERCEPTS RESTRICTED ZONE ${zoneViolation.id}`, 'error');
+             resonanceEngine.playInteractionSound('error');
+        }
+
         if (threatReport.status !== 'STANDBY') {
             ui.showNotification(
                 `SENTINEL ALERT: DEFCON ${threatReport.defcon}`,
@@ -1217,6 +1234,27 @@ document.addEventListener('DOMContentLoaded', async () => {
             }
             resonanceEngine.playInteractionSound('click');
         });
+
+        // Citadel Interaction
+        elements.tapestry.citadelToggle.addEventListener('click', () => {
+            if (!state.isMapActive) {
+                // Auto-switch to map if not active
+                elements.tapestry.mapToggle.click();
+            }
+            state.isCitadelActive = !state.isCitadelActive;
+            elements.tapestry.citadelToggle.classList.toggle('active', state.isCitadelActive);
+
+            if (mapRenderer) {
+                mapRenderer.setDrawMode(state.isCitadelActive);
+            }
+
+            if (state.isCitadelActive) {
+                ui.showNotification('CITADEL DEFENSE GRID: ACTIVE. DRAW ZONES.', 'info');
+            } else {
+                ui.showNotification('CITADEL DEFENSE GRID: STANDBY.', 'info');
+            }
+            resonanceEngine.playInteractionSound('click');
+        });
     }
 
     // --- Horizon Logic ---
@@ -1288,7 +1326,8 @@ document.addEventListener('DOMContentLoaded', async () => {
                     locations,
                     [],
                     threatReport.zones,
-                    vanguard.getUnits()
+                    vanguard.getUnits(),
+                    citadel.getZones()
                 );
             }
             // Force animation loop if map is active and units are present,
@@ -1393,6 +1432,7 @@ document.addEventListener('DOMContentLoaded', async () => {
             vanguard,
             gemini,
             stratcom,
+            citadel,
             get panopticon() {
                 return panopticon;
             }
@@ -1590,4 +1630,5 @@ document.addEventListener('DOMContentLoaded', async () => {
     window.panopticon = panopticon;
     window.valkyrie = valkyrie;
     window.vanguard = vanguard;
+    window.citadel = citadel;
 });

@@ -1,10 +1,11 @@
 export class ValkyrieEngine {
-    constructor(terminal, ui, ledger, horizon, vanguard) {
+    constructor(terminal, ui, ledger, horizon, vanguard, citadel) {
         this.terminal = terminal;
         this.ui = ui;
         this.ledger = ledger;
         this.horizon = horizon;
         this.vanguard = vanguard;
+        this.citadel = citadel;
         this.status = 'ACTIVE';
         this.storageKey = 'marq_valkyrie_protocols';
         this.protocols = this._loadProtocols();
@@ -118,11 +119,23 @@ export class ValkyrieEngine {
             balance = analysis.balanceScore;
         }
 
+        // Check for Citadel Zone violations (on last thread)
+        let zoneViolation = false;
+        if (this.citadel && threads.length > 0) {
+            const lastThread = threads[threads.length - 1];
+            // Check only if thread is recent (e.g. within last second)?
+            // We assume evaluate is called immediately after weave.
+            if (this.citadel.check(lastThread)) {
+                zoneViolation = true;
+            }
+        }
+
         const context = {
             defcon: sentinelReport.defcon,
             balance: balance,
             threats: sentinelReport.threats.map(t => t.type),
-            threadCount: threads.length
+            threadCount: threads.length,
+            zone_violation: zoneViolation
         };
 
         this.protocols.forEach(p => {
