@@ -77,6 +77,8 @@ this.log(`> ${raw}`, 'command');
 this.history.push(raw);
 this.historyIndex = this.history.length;
 this.input.value = '';
+const inputContainer = this.input.parentElement;
+inputContainer.classList.add('processing');
 const [cmd, ...args] = raw.split(' ');
 const command = this.commandRegistry[cmd.toLowerCase()];
 if (command) {
@@ -85,10 +87,15 @@ await command.callback(args);
 } catch (err) {
 this.log(`Error: ${err.message}`, 'error');
 console.error(err);
+inputContainer.classList.add('glitch');
+setTimeout(() => inputContainer.classList.remove('glitch'), 500);
 }
 } else {
 this.log(`Unknown command: ${cmd}`, 'error');
+inputContainer.classList.add('glitch');
+setTimeout(() => inputContainer.classList.remove('glitch'), 500);
 }
+inputContainer.classList.remove('processing');
 } else if (e.key === 'ArrowUp') {
 if (this.historyIndex > 0) {
 this.historyIndex--;

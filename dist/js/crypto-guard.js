@@ -60,7 +60,7 @@ ciphertext
 );
 const dec = new TextDecoder();
 return JSON.parse(dec.decode(decryptedBuffer));
-} catch (e) {
+} catch {
 throw new Error(
 'Decryption failed. Incorrect password or data corruption.'
 );
