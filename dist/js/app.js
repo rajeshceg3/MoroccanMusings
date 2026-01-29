@@ -13,12 +13,19 @@ import { AegisEngine } from './aegis.js';
 import { SentinelEngine } from './sentinel.js';
 import { ChronosEngine } from './chronos.js';
 import { PanopticonEngine } from './panopticon.js';
+import { CortexEngine } from './cortex.js';
+import { ValkyrieEngine } from './valkyrie.js';
+import { ValkyrieUI } from './valkyrie-ui.js';
+import { VanguardEngine } from './vanguard.js';
+import { SynapseRenderer } from './synapse.js';
+import { GeminiEngine } from './gemini.js';
+import { StratcomSystem } from './stratcom.js';
 import { registerCommands } from './terminal-commands.js';
 document.addEventListener('DOMContentLoaded', async () => {
 if ('serviceWorker' in navigator) {
 try {
 await navigator.serviceWorker.register('./sw.js');
-} catch (e) {
+} catch {
 }
 }
 const ui = new UISystem();
@@ -44,7 +51,8 @@ activeLocation: null,
 isWeaving: false,
 selectedThreads: [], // Array of indices
 isHorizonActive: false,
-isMapActive: false
+isMapActive: false,
+isSynapseActive: false
 };
 const resonanceEngine = new ResonanceEngine();
 const horizonEngine = new HorizonEngine();
@@ -54,6 +62,7 @@ const terminal = new TerminalSystem();
 const aegis = new AegisEngine(ui, horizonEngine);
 const sentinel = new SentinelEngine(horizonEngine);
 const chronos = new ChronosEngine(horizonEngine, SentinelEngine);
+const cortex = new CortexEngine();
 let panopticon = null;
 let idleTimer;
 const IDLE_TIMEOUT = 5 * 60 * 1000; // 5 Minutes
@@ -75,8 +84,30 @@ window.addEventListener(evt, resetIdleTimer, { passive: true })
 resetIdleTimer();
 const tapestryLedger = new TapestryLedger();
 const initStatus = await tapestryLedger.initialize();
+const vanguard = new VanguardEngine(sentinel, aegis, tapestryLedger);
+const valkyrie = new ValkyrieEngine(terminal, ui, tapestryLedger, horizonEngine, vanguard);
+const valkyrieUI = new ValkyrieUI(valkyrie);
+const stratcom = new StratcomSystem(tapestryLedger, horizonEngine, sentinel, vanguard, terminal, ui);
+const urlParams = new URLSearchParams(window.location.search);
+const mode = urlParams.get('mode');
+if (mode) {
+document.body.classList.add(`mode-${mode}`);
+}
+const gemini = new GeminiEngine(state, tapestryLedger, terminal, ui);
+gemini.connect();
+if (!mode) {
+ui.renderUplinkControls();
+}
+window.addEventListener('storage', async (e) => {
+if (e.key === tapestryLedger.storageKey) {
+await tapestryLedger.reload();
+renderTapestry();
+updateAlchemyUI();
+}
+});
 let mandalaRenderer = null;
 let mapRenderer = null;
+let synapseRenderer = null;
 let oracleEngine = null;
 const elements = {
 screens: {
@@ -149,6 +180,7 @@ slot2: document.getElementById('alchemy-slot-2'),
 fuseBtn: document.getElementById('alchemy-fuse-btn'),
 horizonToggle: document.getElementById('horizon-toggle'),
 mapToggle: document.getElementById('map-toggle'),
+synapseToggle: document.getElementById('synapse-toggle'),
 aegisToggle: document.getElementById('aegis-toggle'),
 horizonDashboard: document.getElementById('horizon-dashboard'),
 horizonDominance: document.getElementById('horizon-dominance'),
@@ -185,6 +217,17 @@ mandalaRenderer.resize();
 }
 if (!mapRenderer && elements.tapestry.mapCanvas) {
 mapRenderer = new MapRenderer(elements.tapestry.mapCanvas);
+elements.tapestry.mapCanvas.addEventListener('vanguard-command', (e) => {
+const { unitId, target } = e.detail;
+const unit = vanguard.getUnits().find(u => u.id === unitId);
+if (unit) {
+unit.command(target);
+resonanceEngine.playInteractionSound('click');
+}
+});
+elements.tapestry.mapCanvas.addEventListener('map-thread-click', (e) => {
+handleThreadInteraction(e.detail.index);
+});
 if (!oracleEngine) {
 oracleEngine = new OracleEngine(
 horizonEngine,
@@ -192,6 +235,9 @@ mapRenderer,
 locations
 );
 }
+}
+if (!synapseRenderer && elements.tapestry.canvas) {
+synapseRenderer = new SynapseRenderer(elements.tapestry.canvas);
 }
 mandalaRenderer.setSelection(state.selectedThreads);
 renderTapestry();
@@ -289,6 +335,7 @@ currentRotation = getAngle(e) - startAngle;
 ringElement.style.transform = `rotate(${currentRotation}deg)`;
 };
 const endDrag = () => {
+ringElement.classList.remove('dragging');
 ringElement.style.transition =
 'transform 0.8s var(--ease-out-quint)';
 document.body.style.cursor = 'default';
@@ -317,6 +364,7 @@ window.removeEventListener('touchmove', drag);
 window.removeEventListener('touchend', endDrag);
 };
 const startDrag = (e) => {
+ringElement.classList.add('dragging');
 ringElement.style.transition = 'none';
 startAngle = getAngle(e) - currentRotation;
 document.body.style.cursor = 'grabbing';
@@ -587,6 +635,7 @@ title: state.activeLocation.title
 if (panopticon) panopticon.capture();
 aegis.analyze(tapestryLedger.getThreads());
 const threatReport = sentinel.assess(tapestryLedger.getThreads());
+valkyrie.evaluate(threatReport, tapestryLedger.getThreads());
 if (threatReport.status !== 'STANDBY') {
 ui.showNotification(
 `SENTINEL ALERT: DEFCON ${threatReport.defcon}`,
@@ -673,14 +722,17 @@ elements.tapestry.importInput.addEventListener('change', async (e) => {
 const file = e.target.files[0];
 if (!file) return;
 try {
+ui.showLoading('DECODING SCROLL...');
 const text = await file.text();
 await tapestryLedger.importScroll(text);
 ui.showNotification('Scroll imported successfully.', 'success');
 renderTapestry();
 } catch (err) {
 ui.showNotification(`Import error: ${err.message}`, 'error');
-}
+} finally {
+ui.hideLoading();
 e.target.value = ''; // Reset
+}
 });
 elements.tapestry.forgeShardBtn.addEventListener('click', async () => {
 try {
@@ -784,6 +836,17 @@ elements.tapestry.canvas.addEventListener(
 handleThreadInteraction(e.detail.index);
 }
 );
+['mousedown', 'mousemove', 'mouseup'].forEach(evt => {
+elements.tapestry.canvas.addEventListener(evt, (e) => {
+if (state.isSynapseActive && synapseRenderer) {
+const type = evt === 'mousedown' ? 'down' : evt === 'mousemove' ? 'move' : 'up';
+synapseRenderer.handleInput(type, e.clientX, e.clientY);
+if (synapseRenderer.isSimulating) {
+startHorizonLoop(); // Ensure loop is running for physics
+}
+}
+});
+});
 elements.tapestry.fuseBtn.addEventListener('click', async () => {
 const threads = tapestryLedger.getThreads();
 if (state.selectedThreads.length !== 2) return;
@@ -818,22 +881,39 @@ resonanceEngine.playInteractionSound('click');
 });
 elements.tapestry.mapToggle.addEventListener('click', () => {
 state.isMapActive = !state.isMapActive;
-elements.tapestry.mapToggle.classList.toggle(
-'active',
-state.isMapActive
-);
+elements.tapestry.mapToggle.classList.toggle('active', state.isMapActive);
 if (state.isMapActive) {
+state.isSynapseActive = false;
+elements.tapestry.synapseToggle.classList.remove('active');
 elements.tapestry.canvas.style.display = 'none';
 elements.tapestry.mapCanvas.style.display = 'block';
-if (!mapRenderer)
-mapRenderer = new MapRenderer(elements.tapestry.mapCanvas);
+if (!mapRenderer) mapRenderer = new MapRenderer(elements.tapestry.mapCanvas);
 mapRenderer.resize();
 mapRenderer.render(tapestryLedger.getThreads(), locations);
 } else {
 elements.tapestry.canvas.style.display = 'block';
 elements.tapestry.mapCanvas.style.display = 'none';
-if (mandalaRenderer)
-mandalaRenderer.render(tapestryLedger.getThreads());
+renderTapestry();
+}
+resonanceEngine.playInteractionSound('click');
+});
+elements.tapestry.synapseToggle.addEventListener('click', () => {
+state.isSynapseActive = !state.isSynapseActive;
+elements.tapestry.synapseToggle.classList.toggle('active', state.isSynapseActive);
+if (state.isSynapseActive) {
+state.isMapActive = false;
+elements.tapestry.mapToggle.classList.remove('active');
+elements.tapestry.mapCanvas.style.display = 'none';
+elements.tapestry.canvas.style.display = 'block';
+const threads = tapestryLedger.getThreads();
+const graph = cortex.analyze(threads);
+if (!synapseRenderer) synapseRenderer = new SynapseRenderer(elements.tapestry.canvas);
+synapseRenderer.render(graph);
+startHorizonLoop(); // Start physics loop
+} else {
+renderTapestry(); // Back to Mandala
+stopHorizonLoop(); // Unless Horizon is active?
+if (state.isHorizonActive) startHorizonLoop();
 }
 resonanceEngine.playInteractionSound('click');
 });
@@ -890,28 +970,57 @@ function findLeastCommon(counts) {
 return Object.entries(counts).sort((a, b) => a[1] - b[1])[0][0];
 }
 function renderTapestry() {
+const threads = tapestryLedger.getThreads();
+vanguard.tick();
 if (state.isMapActive) {
 if (oracleEngine && oracleEngine.activeMode) {
-oracleEngine.render(tapestryLedger.getThreads());
+oracleEngine.render(threads);
 } else if (mapRenderer) {
 const threatReport = sentinel.getReport();
 mapRenderer.render(
-tapestryLedger.getThreads(),
+threads,
 locations,
 [],
-threatReport.zones
+threatReport.zones,
+vanguard.getUnits()
 );
+}
+if (vanguard.getUnits().length > 0) {
+requestAnimationFrame(renderTapestry);
 }
 return;
 }
+if (state.isSynapseActive && synapseRenderer) {
+synapseRenderer.render();
+return;
+}
 if (!mandalaRenderer) return;
-const threads = tapestryLedger.getThreads();
 let projections = [];
 if (state.isHorizonActive) {
 projections = horizonEngine.project(threads);
 }
 mandalaRenderer.render(threads, projections);
 }
+const handleThreadInteraction = (index) => {
+const threads = tapestryLedger.getThreads();
+if (index >= 0 && index < threads.length) {
+const selectedIndex = state.selectedThreads.indexOf(index);
+if (selectedIndex >= 0) {
+state.selectedThreads.splice(selectedIndex, 1);
+} else {
+if (state.selectedThreads.length < 2) {
+state.selectedThreads.push(index);
+} else {
+state.selectedThreads.shift();
+state.selectedThreads.push(index);
+}
+}
+if (mandalaRenderer) mandalaRenderer.setSelection(state.selectedThreads);
+renderTapestry();
+resonanceEngine.playInteractionSound('click');
+updateAlchemyUI();
+}
+};
 window.addEventListener('popstate', (event) => {
 if (event.state && event.state.screen) {
 showScreen(event.state.screen, false);
@@ -941,6 +1050,12 @@ aegis,
 codex,
 alchemy,
 chronos,
+cortex,
+valkyrie,
+valkyrieUI,
+vanguard,
+gemini,
+stratcom,
 get panopticon() {
 return panopticon;
 }
@@ -965,7 +1080,6 @@ updateAlchemy: updateAlchemyUI
 },
 ui
 );
-console.log("Panopticon initialized:", panopticon);
 } catch (e) {
 console.error("Panopticon Init Error:", e);
 }
@@ -981,21 +1095,55 @@ const nextBtn = document.getElementById('guide-next-btn');
 const prevBtn = document.getElementById('guide-prev-btn');
 const skipBtn = document.getElementById('guide-skip-btn');
 const helpBtn = document.getElementById('help-trigger');
+let highlightBox = document.querySelector('.guide-highlight-box');
+if (!highlightBox) {
+highlightBox = document.createElement('div');
+highlightBox.className = 'guide-highlight-box';
+if (overlay.firstChild) {
+overlay.insertBefore(highlightBox, overlay.firstChild);
+} else {
+overlay.appendChild(highlightBox);
+}
+}
 let currentStep = 0;
 const updateGuide = () => {
 steps.forEach((s, i) => s.classList.toggle('active', i === currentStep));
 dots.forEach((d, i) => d.classList.toggle('active', i === currentStep));
 prevBtn.disabled = currentStep === 0;
 nextBtn.textContent = currentStep === steps.length - 1 ? 'FINISH' : 'NEXT';
+const activeStepEl = steps[currentStep];
+const targetSelector = activeStepEl.dataset.target;
+if (targetSelector) {
+const target = document.querySelector(targetSelector);
+if (target && target.offsetParent !== null) {
+const rect = target.getBoundingClientRect();
+highlightBox.style.top = `${rect.top}px`;
+highlightBox.style.left = `${rect.left}px`;
+highlightBox.style.width = `${rect.width}px`;
+highlightBox.style.height = `${rect.height}px`;
+highlightBox.style.opacity = '1';
+} else {
+highlightBox.style.opacity = '0';
+}
+} else {
+highlightBox.style.opacity = '0';
+}
 };
 const showGuide = () => {
 currentStep = 0;
-updateGuide();
 overlay.classList.remove('hidden');
+if (state.activeScreen !== 'astrolabe') {
+showScreen('astrolabe');
+}
+requestAnimationFrame(() => {
+requestAnimationFrame(updateGuide);
+});
+window.addEventListener('resize', updateGuide);
 };
 const closeGuide = () => {
 overlay.classList.add('hidden');
 localStorage.setItem('marq_onboarded', 'true');
+window.removeEventListener('resize', updateGuide);
 };
 nextBtn.addEventListener('click', () => {
 if (currentStep < steps.length - 1) {
@@ -1048,22 +1196,24 @@ resonanceEngine.stopAmbience();
 });
 window.tapestryLedger = tapestryLedger;
 window.state = state;
-window.codex = codex; // Expose Codex for verification
+window.codex = codex;
 Object.defineProperty(window, 'mandalaRenderer', {
 get: () => mandalaRenderer
 });
 Object.defineProperty(window, 'mapRenderer', {
 get: () => mapRenderer
 });
-window.ui = ui; // Expose UI system
+window.ui = ui;
 window.showNotification = (msg, type) => ui.showNotification(msg, type);
-window.showScreen = showScreen; // Expose for testing
+window.showScreen = showScreen;
 Object.defineProperty(window, 'oracle', {
 get: () => oracleEngine
 });
-window.aegis = aegis; // Expose for verification/CLI interaction
+window.aegis = aegis;
 window.sentinel = sentinel;
-window.terminal = terminal; // Expose for verification
+window.terminal = terminal;
 window.spectra = spectra;
-window.panopticon = panopticon; // Direct exposure for easier testing
+window.panopticon = panopticon;
+window.valkyrie = valkyrie;
+window.vanguard = vanguard;
 });

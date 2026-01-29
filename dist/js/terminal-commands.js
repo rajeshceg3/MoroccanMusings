@@ -681,4 +681,237 @@ terminal.log('PANOPTICON INTERFACE ENGAGED.', 'success');
 terminal.toggle(); // Close terminal to show UI
 }
 );
+terminal.registerCommand(
+'vanguard',
+'Autonomous Tactical Unit Control',
+(args) => {
+if (!checkAccess()) return;
+const subcmd = args[0] || 'status';
+const vanguard = context.engines.vanguard;
+if (subcmd === 'status') {
+const units = vanguard.getUnits();
+terminal.log('--- PROJECT VANGUARD: TACTICAL DRONE WING ---', 'system');
+if (units.length === 0) {
+terminal.log('No units deployed.', 'warning');
+} else {
+units.forEach(u => {
+terminal.log(`[${u.id}] ${u.type} | Status: ${u.status} | Battery: ${Math.floor(u.battery)}%`, 'info');
+});
+}
+} else if (subcmd === 'deploy') {
+const type = args[1] || 'SCOUT';
+const region = args[2] || 'coast';
+if (!['SCOUT', 'INTERCEPTOR'].includes(type.toUpperCase())) {
+terminal.log('Invalid Unit Type. Options: SCOUT, INTERCEPTOR', 'error');
+return;
+}
+const unit = vanguard.deploy(type, region);
+terminal.log(`Unit ${unit.id} (${unit.type}) deployed to ${region}.`, 'success');
+if (!state.isMapActive) {
+elements.tapestry.mapToggle.click();
+terminal.toggle();
+}
+} else if (subcmd === 'recall') {
+const id = args[1];
+if (!id) {
+terminal.log('Usage: vanguard recall <ID>', 'warning');
+return;
+}
+if (vanguard.recall(id)) {
+terminal.log(`Unit ${id} recalled to base.`, 'success');
+} else {
+terminal.log(`Unit ${id} not found.`, 'error');
+}
+} else {
+terminal.log('Usage: vanguard [status|deploy|recall]', 'warning');
+}
+}
+);
+terminal.registerCommand(
+'cortex',
+'Neural Association Engine',
+(args) => {
+if (!checkAccess()) return;
+const cmd = args[0] || 'status';
+const threads = tapestryLedger.getThreads();
+const analysis = context.engines.cortex.analyze(threads);
+if (cmd === 'status') {
+terminal.log('--- CORTEX NEURAL GRID ---', 'system');
+terminal.log(`Nodes: ${analysis.nodes.length}`, 'info');
+terminal.log(`Edges: ${analysis.edges.length}`, 'info');
+terminal.log(`Tactical Clusters: ${analysis.clusters.length}`, 'info');
+} else if (cmd === 'analyze') {
+terminal.log('--- NEURAL ANALYSIS ---', 'system');
+if (analysis.edges.length === 0) {
+terminal.log('No semantic correlations detected.', 'warning');
+return;
+}
+const strongest = analysis.edges.sort((a,b) => b.weight - a.weight)[0];
+terminal.log('Top Correlation:', 'success');
+const src = analysis.nodes[strongest.sourceIndex].data;
+const tgt = analysis.nodes[strongest.targetIndex].data;
+terminal.log(`  ${src.title} <--> ${tgt.title}`, 'info');
+terminal.log(`  Weight: ${strongest.weight}`, 'info');
+terminal.log(`  Vectors: ${strongest.types.join(', ')}`, 'info');
+} else if (cmd === 'cluster') {
+if (analysis.clusters.length === 0) {
+terminal.log('No clusters identified.', 'warning');
+return;
+}
+terminal.log(`Identified ${analysis.clusters.length} clusters:`, 'system');
+analysis.clusters.forEach((c, i) => {
+terminal.log(`  Cluster ${i+1}: ${c.length} Nodes`, 'info');
+});
+} else {
+terminal.log('Usage: cortex [status|analyze|cluster]', 'warning');
+}
+}
+);
+terminal.registerCommand(
+'valkyrie',
+'Autonomous Response Matrix Interface',
+(args) => {
+if (!checkAccess()) return;
+const subcmd = args[0] || 'status';
+const valkyrie = context.engines.valkyrie;
+const valkyrieUI = context.engines.valkyrieUI;
+if (subcmd === 'status') {
+terminal.log('--- PROJECT VALKYRIE: RESPONSE MATRIX ---', 'system');
+terminal.log(`Status: ${valkyrie.status}`, valkyrie.status === 'ACTIVE' ? 'success' : 'warning');
+terminal.log('Active Protocols:', 'info');
+valkyrie.getProtocols().forEach(p => {
+terminal.log(`  [${p.active ? 'ON' : 'OFF'}] ${p.id}: ${p.name}`, p.active ? 'success' : 'warning');
+});
+} else if (subcmd === 'list') {
+terminal.log('--- PROTOCOL DEFINITIONS ---', 'system');
+valkyrie.getProtocols().forEach(p => {
+terminal.log(`${p.id}`, 'info');
+terminal.log(`  > IF [${p.condition}] THEN [${p.action}]`, 'info');
+});
+} else if (subcmd === 'edit') {
+if (valkyrieUI) {
+valkyrieUI.toggle(true);
+terminal.toggle(); // Close terminal to show UI
+terminal.log('OPENING PROTOCOL EDITOR...', 'success');
+} else {
+terminal.log('Valkyrie UI not initialized.', 'error');
+}
+} else if (subcmd === 'create') {
+if (args.length < 4) {
+terminal.log('Usage: valkyrie create <ID> <CONDITION> <ACTION>', 'warning');
+terminal.log('Example: valkyrie create RED_ALERT defcon<2 ALERT_HIGH', 'info');
+return;
+}
+const id = args[1].toUpperCase();
+const condition = args[2];
+const action = args[3];
+try {
+valkyrie.addProtocol({
+id, condition, action, active: true
+});
+terminal.log(`Protocol ${id} CREATED.`, 'success');
+} catch (e) {
+terminal.log(`Creation failed: ${e.message}`, 'error');
+}
+} else if (subcmd === 'delete') {
+const id = args[1];
+if (valkyrie.removeProtocol(id)) {
+terminal.log(`Protocol ${id} DELETED.`, 'success');
+} else {
+terminal.log(`Protocol ${id} not found.`, 'error');
+}
+} else if (subcmd === 'arm') {
+const id = args[1];
+if (valkyrie.toggleProtocol(id, true)) {
+terminal.log(`Protocol ${id} ARMED.`, 'success');
+} else {
+terminal.log(`Protocol ${id} not found.`, 'error');
+}
+} else if (subcmd === 'disarm') {
+const id = args[1];
+if (valkyrie.toggleProtocol(id, false)) {
+terminal.log(`Protocol ${id} DISARMED.`, 'warning');
+} else {
+terminal.log(`Protocol ${id} not found.`, 'error');
+}
+} else {
+terminal.log('Usage: valkyrie [status|list|edit|create|delete|arm|disarm]', 'warning');
+}
+}
+);
+terminal.registerCommand(
+'gemini',
+'Tactical Uplink Operations',
+(args) => {
+if (!checkAccess()) return;
+const subcmd = args[0] || 'status';
+const gemini = context.engines.gemini;
+if (!gemini) {
+terminal.log('Gemini Uplink not initialized.', 'error');
+return;
+}
+if (subcmd === 'status') {
+const peers = gemini.getPeerCount();
+terminal.log(
+'--- PROJECT GEMINI: UPLINK STATUS ---',
+'system'
+);
+terminal.log(
+`Status: ${peers > 0 ? 'ACTIVE' : 'STANDBY'}`,
+peers > 0 ? 'success' : 'warning'
+);
+terminal.log(`Connected Nodes: ${peers}`, 'info');
+terminal.log(`Local ID: ${gemini.id}`, 'info');
+} else if (subcmd === 'sync') {
+terminal.log('Forcing state synchronization...', 'info');
+gemini.broadcast('STATE_UPDATE', state); // Broadcast current state
+terminal.log('Sync packet broadcasted.', 'success');
+} else if (subcmd === 'detach') {
+context.ui.showNotification(
+'Detaching Tactical Modules...',
+'success'
+);
+window.open(
+'?mode=map&uplink=true',
+'MarqMap',
+'width=1000,height=800'
+);
+window.open(
+'?mode=terminal&uplink=true',
+'MarqTerm',
+'width=600,height=400'
+);
+} else {
+terminal.log('Usage: gemini [status|sync|detach]', 'warning');
+}
+}
+);
+terminal.registerCommand(
+'stratcom',
+'Strategic Command Dashboard',
+(args) => {
+if (!checkAccess()) return;
+const subcmd = args[0] || 'active';
+const stratcom = context.engines.stratcom;
+if (!stratcom) {
+terminal.log('Stratcom System not initialized.', 'error');
+return;
+}
+if (subcmd === 'active') {
+terminal.log('Accessing Strategic Command Interface...', 'success');
+stratcom.toggle(true);
+terminal.toggle(); // Close terminal
+} else if (subcmd === 'status') {
+const defconReport = context.engines.sentinel.getReport();
+terminal.log('--- STRATCOM STATUS REPORT ---', 'system');
+terminal.log(`DEFCON: ${defconReport.defcon}`, 'warning');
+if (context.engines.vanguard) {
+const units = context.engines.vanguard.getUnits();
+terminal.log(`Active Units: ${units.length}`, 'info');
+}
+} else {
+terminal.log('Usage: stratcom [active|status]', 'warning');
+}
+}
+);
 }

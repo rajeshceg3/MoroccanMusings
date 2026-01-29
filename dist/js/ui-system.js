@@ -2,6 +2,15 @@ export class UISystem {
 constructor() {
 this.container = this.ensureContainer();
 this.loadingOverlay = this.ensureLoadingOverlay();
+this.setupNetworkMonitoring();
+}
+setupNetworkMonitoring() {
+window.addEventListener('offline', () => {
+this.showNotification('CONNECTION SEVERED. OFFLINE MODE.', 'offline');
+});
+window.addEventListener('online', () => {
+this.showNotification('LINK RESTORED. SYSTEMS ONLINE.', 'success');
+});
 }
 ensureContainer() {
 let container = document.getElementById('notification-container');
@@ -328,5 +337,59 @@ if (x === 0) ctx.moveTo(x, y);
 else ctx.lineTo(x, y);
 }
 ctx.stroke();
+}
+renderUplinkControls() {
+const controls = document.createElement('div');
+controls.className = 'uplink-controls';
+const mapBtn = document.createElement('button');
+mapBtn.className = 'uplink-btn';
+mapBtn.textContent = 'DETACH MAP';
+mapBtn.onclick = () =>
+window.open(
+'?mode=map&uplink=true',
+'MarqMap',
+'width=1000,height=800'
+);
+const termBtn = document.createElement('button');
+termBtn.className = 'uplink-btn';
+termBtn.textContent = 'DETACH TERMINAL';
+termBtn.onclick = () =>
+window.open(
+'?mode=terminal&uplink=true',
+'MarqTerm',
+'width=600,height=400'
+);
+controls.appendChild(mapBtn);
+controls.appendChild(termBtn);
+document.body.appendChild(controls);
+const status = document.createElement('div');
+status.className = 'uplink-status';
+status.innerHTML = `
+<div class="uplink-signal">
+<div class="uplink-bar b1"></div>
+<div class="uplink-bar b2"></div>
+<div class="uplink-bar b3"></div>
+</div>
+<span id="uplink-text">LINK INACTIVE</span>`;
+document.body.appendChild(status);
+this.uplinkBars = status.querySelectorAll('.uplink-bar');
+this.uplinkText = status.querySelector('#uplink-text');
+this.uplinkStatusEl = status;
+}
+updateGeminiStatus(peerCount) {
+if (!this.uplinkStatusEl) return;
+if (peerCount > 0) {
+this.uplinkStatusEl.classList.add('visible');
+this.uplinkBars.forEach((bar, i) => {
+bar.classList.add('active');
+});
+this.uplinkText.textContent = `LINK ACTIVE: ${peerCount} NODE${peerCount > 1 ? 'S' : ''}`;
+this.uplinkText.style.color = '#55ffaa';
+} else {
+this.uplinkStatusEl.classList.remove('visible');
+this.uplinkBars.forEach(bar => bar.classList.remove('active'));
+this.uplinkText.textContent = 'LINK INACTIVE';
+this.uplinkText.style.color = 'var(--sand)';
+}
 }
 }

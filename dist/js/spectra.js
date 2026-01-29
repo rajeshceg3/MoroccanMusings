@@ -95,7 +95,7 @@ if (result) {
 onData(result);
 stop();
 }
-} catch (err) {
+} catch {
 } finally {
 isProcessing = false;
 }
@@ -295,7 +295,7 @@ const textDecoder = new TextDecoder();
 try {
 const jsonString = textDecoder.decode(payloadBytes);
 return JSON.parse(jsonString);
-} catch (e) {
+} catch {
 return null;
 }
 }

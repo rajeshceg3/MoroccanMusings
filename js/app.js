@@ -1389,24 +1389,20 @@ document.addEventListener('DOMContentLoaded', async () => {
         const skipBtn = document.getElementById('guide-skip-btn');
         const helpBtn = document.getElementById('help-trigger');
 
-        // Create Backdrop dynamically
-        let backdrop = document.querySelector('.guide-backdrop');
-        if (!backdrop) {
-            backdrop = document.createElement('div');
-            backdrop.className = 'guide-backdrop';
-            document.body.appendChild(backdrop);
+        // Create Highlight Box dynamically
+        let highlightBox = document.querySelector('.guide-highlight-box');
+        if (!highlightBox) {
+            highlightBox = document.createElement('div');
+            highlightBox.className = 'guide-highlight-box';
+            // Insert as first child to be behind guide-container
+            if (overlay.firstChild) {
+                overlay.insertBefore(highlightBox, overlay.firstChild);
+            } else {
+                overlay.appendChild(highlightBox);
+            }
         }
 
         let currentStep = 0;
-        let currentSpotlight = null;
-
-        const cleanupSpotlight = () => {
-            if (currentSpotlight) {
-                currentSpotlight.classList.remove('guide-spotlight');
-                currentSpotlight = null;
-            }
-            backdrop.classList.remove('visible');
-        };
 
         const updateGuide = () => {
             steps.forEach((s, i) => s.classList.toggle('active', i === currentStep));
@@ -1414,31 +1410,24 @@ document.addEventListener('DOMContentLoaded', async () => {
             prevBtn.disabled = currentStep === 0;
             nextBtn.textContent = currentStep === steps.length - 1 ? 'FINISH' : 'NEXT';
 
-            // Spotlight Logic
-            if (currentSpotlight) {
-                currentSpotlight.classList.remove('guide-spotlight');
-                currentSpotlight = null;
-            }
-
             const activeStepEl = steps[currentStep];
-            // Ensure we handle cases where the element might be missing data-target
             const targetSelector = activeStepEl.dataset.target;
 
             if (targetSelector) {
                 const target = document.querySelector(targetSelector);
-                if (target) {
-                    target.classList.add('guide-spotlight');
-                    currentSpotlight = target;
-                    backdrop.classList.add('visible');
-
-                    // Only scroll if strictly necessary to avoid jarring jumps
-                    // target.scrollIntoView({ behavior: 'smooth', block: 'center' });
+                // Check if target exists and is somewhat visible
+                if (target && target.offsetParent !== null) {
+                    const rect = target.getBoundingClientRect();
+                    highlightBox.style.top = `${rect.top}px`;
+                    highlightBox.style.left = `${rect.left}px`;
+                    highlightBox.style.width = `${rect.width}px`;
+                    highlightBox.style.height = `${rect.height}px`;
+                    highlightBox.style.opacity = '1';
                 } else {
-                    // If target not found (e.g. wrong screen), hide backdrop
-                    backdrop.classList.remove('visible');
+                    highlightBox.style.opacity = '0';
                 }
             } else {
-                backdrop.classList.remove('visible');
+                highlightBox.style.opacity = '0';
             }
         };
 
@@ -1446,17 +1435,20 @@ document.addEventListener('DOMContentLoaded', async () => {
             currentStep = 0;
             overlay.classList.remove('hidden');
             // Ensure we are on the right screen for the start?
-            // The guide assumes we are on Astrolabe usually.
             if (state.activeScreen !== 'astrolabe') {
                 showScreen('astrolabe');
             }
-            requestAnimationFrame(updateGuide);
+            // Double RAF to ensure layout is settled
+            requestAnimationFrame(() => {
+                requestAnimationFrame(updateGuide);
+            });
+            window.addEventListener('resize', updateGuide);
         };
 
         const closeGuide = () => {
             overlay.classList.add('hidden');
-            cleanupSpotlight();
             localStorage.setItem('marq_onboarded', 'true');
+            window.removeEventListener('resize', updateGuide);
         };
 
         nextBtn.addEventListener('click', () => {

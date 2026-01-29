@@ -1474,7 +1474,7 @@ body {
     display: flex;
     justify-content: center;
     align-items: center;
-    background: rgba(0, 5, 10, 0.85);
+    background: transparent; /* Spotlight handles background */
     z-index: 6000;
 }
 
@@ -1484,6 +1484,15 @@ body {
     display: none;
 }
 
+.guide-highlight-box {
+    position: absolute;
+    z-index: -1;
+    border-radius: 4px;
+    box-shadow: 0 0 0 9999px rgba(0, 5, 10, 0.85), 0 0 0 2px var(--ochre-gold);
+    pointer-events: none;
+    transition: all 0.5s cubic-bezier(0.22, 1, 0.36, 1);
+}
+
 .guide-container {
     width: 90%;
     max-width: 500px;
@@ -1491,6 +1500,8 @@ body {
     border: 1px solid var(--ochre-gold);
     box-shadow: 0 0 40px rgba(198, 118, 5, 0.2);
     padding: 0;
+    position: relative;
+    z-index: 10;
 }
 
 .guide-header {

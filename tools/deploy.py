@@ -3,7 +3,6 @@ import re
 import shutil
 import hashlib
 import json
-import time
 
 # Configuration
 DIST_DIR = 'dist'
@@ -40,8 +39,29 @@ def minify_js(content):
         minified_lines.append(line)
     return '\n'.join(minified_lines)
 
-def generate_build_id():
-    return str(int(time.time()))
+def generate_content_hash():
+    print("Calculating deterministic build hash...")
+    hasher = hashlib.sha256()
+
+    # Walk JS and CSS directories in deterministic order
+    for directory in [JS_DIR, CSS_DIR]:
+        if os.path.exists(directory):
+            for root, dirs, files in os.walk(directory):
+                for file in sorted(files): # Sort for determinism
+                    if file.endswith('.js') or file.endswith('.css'):
+                        filepath = os.path.join(root, file)
+                        with open(filepath, 'rb') as f:
+                            buf = f.read()
+                            hasher.update(buf)
+
+    # Also include index.html in hash calculation as it's the entry point
+    if os.path.exists('index.html'):
+        with open('index.html', 'rb') as f:
+             hasher.update(f.read())
+
+    build_hash = hasher.hexdigest()[:8]
+    print(f"Build Hash: {build_hash}")
+    return build_hash
 
 def generate_robots_txt():
     content = """User-agent: *
@@ -57,41 +77,38 @@ Sitemap: /sitemap.xml
 def build():
     print("Initializing deployment sequence...")
     clean_dist()
-    build_id = generate_build_id()
-    print(f"Build ID: {build_id}")
 
-    # Process CSS (Copy + Minify + No Rename for now to simplify, relying on Query Param)
-    # Actually, the original script renamed CSS. That's fine, we can keep that or switch to query param.
-    # The requirement is "cache busting". Query param is easiest for everything.
+    # Calculate hash based on source files
+    build_id = generate_content_hash()
 
     print("Processing CSS...")
-    for filename in os.listdir(CSS_DIR):
-        if filename.endswith('.css'):
-            with open(os.path.join(CSS_DIR, filename), 'r') as f:
-                content = f.read()
+    if os.path.exists(CSS_DIR):
+        for filename in os.listdir(CSS_DIR):
+            if filename.endswith('.css'):
+                with open(os.path.join(CSS_DIR, filename), 'r') as f:
+                    content = f.read()
 
-            minified = minify_css(content)
-            # Write to dist without renaming
-            with open(os.path.join(DIST_DIR, 'css', filename), 'w') as f:
-                f.write(minified)
+                minified = minify_css(content)
+                # Write to dist without renaming
+                with open(os.path.join(DIST_DIR, 'css', filename), 'w') as f:
+                    f.write(minified)
 
     # Process JS
     print("Processing JS...")
-    for filename in os.listdir(JS_DIR):
-        if filename.endswith('.js'):
-            with open(os.path.join(JS_DIR, filename), 'r') as f:
-                content = f.read()
+    if os.path.exists(JS_DIR):
+        for filename in os.listdir(JS_DIR):
+            if filename.endswith('.js'):
+                with open(os.path.join(JS_DIR, filename), 'r') as f:
+                    content = f.read()
 
-            minified = minify_js(content)
-            with open(os.path.join(DIST_DIR, 'js', filename), 'w') as f:
-                f.write(minified)
+                minified = minify_js(content)
+                with open(os.path.join(DIST_DIR, 'js', filename), 'w') as f:
+                    f.write(minified)
 
     # Copy SW.js
     if os.path.exists('sw.js'):
         with open('sw.js', 'r') as f:
             content = f.read()
-            # Inject build ID into cache name if possible?
-            # It's hard without parsing sw.js. For now just copy.
         with open(os.path.join(DIST_DIR, 'sw.js'), 'w') as f:
             f.write(content)
 

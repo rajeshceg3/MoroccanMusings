@@ -110,7 +110,7 @@ const textDecoder = new TextDecoder();
 const jsonString = textDecoder.decode(payloadBytes);
 try {
 return JSON.parse(jsonString);
-} catch (e) {
+} catch {
 throw new Error('Corrupted Shard: Invalid JSON payload.');
 }
 }
