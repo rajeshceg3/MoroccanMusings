@@ -66,8 +66,8 @@ export class TapestryLedger {
         // It is plaintext
         if (Array.isArray(parsed)) {
             this.threads = parsed;
-            // Check for legacy data
-            const needsMigration = this.threads.some((t) => !t.hash);
+            // Check for legacy data (missing hash or missing content field)
+            const needsMigration = this.threads.some((t) => !t.hash || typeof t.content === 'undefined');
             if (needsMigration) {
                 // Migrating legacy tapestry data to ledger format...
                 await this._migrateData();
@@ -137,6 +137,7 @@ export class TapestryLedger {
                 time: thread.time || 'midday',
                 region: thread.region || 'unknown',
                 title: thread.title || 'Legacy Thread',
+                content: thread.content || '',
                 timestamp: timestamp,
                 previousHash: previousHash
             };
@@ -172,6 +173,7 @@ export class TapestryLedger {
                 time: thread.time,
                 region: thread.region,
                 title: thread.title,
+                content: thread.content || '',
                 timestamp: thread.timestamp,
                 previousHash: previousHash
             });
@@ -205,6 +207,7 @@ export class TapestryLedger {
             time: data.time,
             region: data.region,
             title: data.title,
+            content: data.content || '',
             timestamp: timestamp,
             previousHash: previousHash
         };
@@ -334,12 +337,15 @@ export class TapestryLedger {
         if (thread.id.length > 32) return false;
         if (thread.title.length > 100) return false;
         if (thread.region.length > 50) return false;
+        if (thread.content && typeof thread.content !== 'string') return false;
 
         // Regex Validation (Alpha-numeric + specific safe chars)
         // Prevent script injection via title/region if they are rendered anywhere sensitive
-        const safeTextRegex = /^[a-zA-Z0-9\s\-_.,!?'"()]+$/;
+        // Expanded to include semicolons (;) for narrative text
+        const safeTextRegex = /^[a-zA-Z0-9\s\-_.,!?'"();]+$/;
         if (!safeTextRegex.test(thread.title)) return false;
         if (!safeTextRegex.test(thread.region)) return false;
+        if (thread.content && !safeTextRegex.test(thread.content)) return false;
 
         // Enum checks
         const validIntentions = [
