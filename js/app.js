@@ -569,8 +569,10 @@ document.addEventListener('DOMContentLoaded', async () => {
         elements.riad.imageElement.src = locationData.image;
 
         elements.riad.title.textContent = locationData.title;
+        elements.riad.title.classList.add('glitch');
+        setTimeout(() => elements.riad.title.classList.remove('glitch'), 600);
         elements.riad.subtitle.textContent = locationData.subtitle;
-        elements.riad.narrative.textContent = locationData.narrative;
+        ui.typewriterEffect(elements.riad.narrative, locationData.narrative);
         elements.riad.sensory.sight.dataset.color =
             locationData.sensory.sight.color;
         elements.riad.sensory.sightDesc.textContent =
