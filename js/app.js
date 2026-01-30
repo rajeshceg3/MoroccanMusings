@@ -24,6 +24,7 @@ import { registerCommands } from './terminal-commands.js';
 import { MnemosyneEngine } from './mnemosyne.js';
 import { MnemosyneUI } from './mnemosyne-ui.js';
 import { CitadelEngine } from './citadel.js';
+import { PrometheusEngine } from './prometheus.js';
 
 document.addEventListener('DOMContentLoaded', async () => {
     // Service Worker Registration
@@ -123,6 +124,20 @@ document.addEventListener('DOMContentLoaded', async () => {
 
     // Initialize Vanguard (Tactical Units)
     const vanguard = new VanguardEngine(sentinel, aegis, tapestryLedger);
+
+    // Initialize Prometheus (Strategic Synthesis)
+    const prometheus = new PrometheusEngine(tapestryLedger, vanguard, mnemosyne, ui);
+
+    // Wire Prometheus Events
+    window.addEventListener('vanguard-synthesis-complete', (e) => {
+        prometheus.synthesize(e.detail.unit);
+    });
+
+    window.addEventListener('prometheus-draft', (e) => {
+        const draft = e.detail;
+        ui.showNotification(`PROMETHEUS: New Intelligence Synthesized - ${draft.title}`, 'success');
+        resonanceEngine.playInteractionSound('spark');
+    });
 
     const valkyrie = new ValkyrieEngine(terminal, ui, tapestryLedger, horizonEngine, vanguard, citadel);
     const valkyrieUI = new ValkyrieUI(valkyrie);
@@ -329,6 +344,10 @@ document.addEventListener('DOMContentLoaded', async () => {
                     ui.showNotification(`CITADEL: Secure Zone ${zone.id} Established.`, 'success');
                     renderTapestry();
                 });
+
+            elements.tapestry.mapCanvas.addEventListener('draft-selected', (e) => {
+                showDraft(e.detail);
+            });
 
                 // Initialize Oracle once map renderer is available
                 if (!oracleEngine) {
@@ -1255,6 +1274,20 @@ document.addEventListener('DOMContentLoaded', async () => {
             }
             resonanceEngine.playInteractionSound('click');
         });
+
+        // Prometheus Interaction
+        const prometheusToggle = document.getElementById('prometheus-toggle');
+        if (prometheusToggle) {
+            prometheusToggle.addEventListener('click', () => {
+                const isOnline = prometheusToggle.classList.toggle('active');
+                if (isOnline) {
+                    prometheus.start();
+                } else {
+                    prometheus.stop();
+                }
+                resonanceEngine.playInteractionSound('click');
+            });
+        }
     }
 
     // --- Horizon Logic ---
@@ -1324,17 +1357,14 @@ document.addEventListener('DOMContentLoaded', async () => {
                 mapRenderer.render(
                     threads,
                     locations,
-                    [],
+                    prometheus.getDrafts(), // Pass drafts (formerly ghosts param)
                     threatReport.zones,
                     vanguard.getUnits(),
                     citadel.getZones()
                 );
             }
-            // Force animation loop if map is active and units are present,
-            // even if horizon loop isn't running.
-            if (vanguard.getUnits().length > 0) {
-                 requestAnimationFrame(renderTapestry);
-            }
+            // Force animation loop if map is active
+            requestAnimationFrame(renderTapestry);
             return;
         }
 
@@ -1433,6 +1463,7 @@ document.addEventListener('DOMContentLoaded', async () => {
             gemini,
             stratcom,
             citadel,
+            prometheus,
             get panopticon() {
                 return panopticon;
             }
@@ -1631,4 +1662,95 @@ document.addEventListener('DOMContentLoaded', async () => {
     window.valkyrie = valkyrie;
     window.vanguard = vanguard;
     window.citadel = citadel;
+    window.prometheus = prometheus;
+
+    // --- Prometheus Draft Logic ---
+    function showDraft(draft) {
+        const realLoc = locations[draft.locationKey];
+        if (!realLoc) return;
+
+        // Populate Riad with Draft Data
+        // We use the existing showRiad logic but override content
+        showRiad({
+            ...realLoc,
+            title: draft.title,
+            narrative: draft.content,
+            foundation: "PROMETHEUS INTERCEPT: APPROVE TO INTEGRATE.",
+            subtitle: "SYNTHESIZED INTELLIGENCE"
+        });
+
+        // Override Buttons
+        const weaveBtn = elements.riad.weaveButton;
+        const simBtn = elements.riad.simulateButton;
+
+        // Clone to clear listeners
+        const newWeaveBtn = weaveBtn.cloneNode(true);
+        const newSimBtn = simBtn.cloneNode(true);
+        weaveBtn.parentNode.replaceChild(newWeaveBtn, weaveBtn);
+        simBtn.parentNode.replaceChild(newSimBtn, simBtn);
+
+        // Update References
+        elements.riad.weaveButton = newWeaveBtn;
+        elements.riad.simulateButton = newSimBtn;
+
+        // Style
+        newWeaveBtn.innerHTML = 'INTEGRATE SIGNAL';
+        newWeaveBtn.style.background = 'var(--vibrancy-amber)';
+        newWeaveBtn.style.color = '#000';
+
+        newSimBtn.innerHTML = 'DISCARD';
+        newSimBtn.style.background = 'var(--awe-red)';
+
+        // Listeners
+        newWeaveBtn.addEventListener('click', async () => {
+             // Integrate
+             ui.showLoading('INTEGRATING SIGNAL...');
+             await tapestryLedger.addThread({
+                 intention: draft.intention,
+                 time: draft.time,
+                 region: draft.region,
+                 title: draft.title,
+                 content: draft.content
+             });
+             prometheus.removeDraft(draft.id);
+             ui.hideLoading();
+             ui.showNotification('SIGNAL INTEGRATED.', 'success');
+             restoreRiadButtons();
+             showScreen('tapestry');
+        });
+
+        newSimBtn.addEventListener('click', () => {
+             prometheus.removeDraft(draft.id);
+             ui.showNotification('SIGNAL PURGED.', 'info');
+             restoreRiadButtons();
+             showScreen('tapestry');
+        });
+    }
+
+    function restoreRiadButtons() {
+        // Restore original Riad buttons
+        const weaveBtn = elements.riad.weaveButton;
+        const simBtn = elements.riad.simulateButton;
+
+        const newWeaveBtn = weaveBtn.cloneNode(true);
+        const newSimBtn = simBtn.cloneNode(true);
+
+        weaveBtn.parentNode.replaceChild(newWeaveBtn, weaveBtn);
+        simBtn.parentNode.replaceChild(newSimBtn, simBtn);
+
+        elements.riad.weaveButton = newWeaveBtn;
+        elements.riad.simulateButton = newSimBtn;
+
+        // Reset Styles
+        newWeaveBtn.innerHTML = 'Weave a Thread<div class="weave-progress"></div>';
+        newWeaveBtn.style.background = '';
+        newWeaveBtn.style.color = '';
+        newSimBtn.innerHTML = 'Simulate';
+        newSimBtn.style.background = '';
+
+        // Re-bind original listeners (This is tricky since they were closures)
+        // Best approach: call setupRiadInteractions() again?
+        // Yes, setupRiadInteractions() attaches listeners to current elements.
+        setupRiadInteractions();
+    }
 });
