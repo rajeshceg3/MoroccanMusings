@@ -21,6 +21,8 @@ import { SynapseRenderer } from './synapse.js';
 import { GeminiEngine } from './gemini.js';
 import { StratcomSystem } from './stratcom.js';
 import { registerCommands } from './terminal-commands.js';
+import { MnemosyneEngine } from './mnemosyne.js';
+import { MnemosyneUI } from './mnemosyne-ui.js';
 document.addEventListener('DOMContentLoaded', async () => {
 if ('serviceWorker' in navigator) {
 try {
@@ -84,6 +86,8 @@ window.addEventListener(evt, resetIdleTimer, { passive: true })
 resetIdleTimer();
 const tapestryLedger = new TapestryLedger();
 const initStatus = await tapestryLedger.initialize();
+const mnemosyne = new MnemosyneEngine();
+mnemosyne.ingest(tapestryLedger.getThreads());
 const vanguard = new VanguardEngine(sentinel, aegis, tapestryLedger);
 const valkyrie = new ValkyrieEngine(terminal, ui, tapestryLedger, horizonEngine, vanguard);
 const valkyrieUI = new ValkyrieUI(valkyrie);
@@ -109,6 +113,7 @@ let mandalaRenderer = null;
 let mapRenderer = null;
 let synapseRenderer = null;
 let oracleEngine = null;
+let mnemosyneUI = null;
 const elements = {
 screens: {
 splash: document.getElementById('splash-screen'),
@@ -190,6 +195,24 @@ aegisHud: document.getElementById('aegis-hud')
 },
 colorWash: document.querySelector('.color-wash')
 };
+const mnemosyneContainer = document.createElement('div');
+mnemosyneContainer.id = 'mnemosyne-ui';
+mnemosyneContainer.style.cssText = `
+position: absolute;
+bottom: 120px;
+left: 50%;
+transform: translateX(-50%);
+width: 320px;
+background: rgba(10, 10, 10, 0.95);
+border: 1px solid var(--sage-green);
+border-radius: 4px;
+padding: 0;
+display: none;
+z-index: 100;
+backdrop-filter: blur(5px);
+box-shadow: 0 4px 20px rgba(0,0,0,0.5);
+`;
+elements.tapestry.alchemyUI.parentNode.insertBefore(mnemosyneContainer, elements.tapestry.alchemyUI);
 const alchemy = new SynthesisEngine();
 function showScreen(screenName, addToHistory = true) {
 if (addToHistory && state.activeScreen !== screenName) {
@@ -210,6 +233,14 @@ elements.tapestry.backButton.focus();
 }
 if (screenName === 'tapestry') {
 elements.screens.tapestry.classList.add('tapestry-active');
+if (!mnemosyneUI) {
+mnemosyneUI = new MnemosyneUI(
+mnemosyneContainer,
+mnemosyne,
+tapestryLedger,
+(index) => handleThreadInteraction(index)
+);
+}
 if (!mandalaRenderer) {
 mandalaRenderer = new MandalaRenderer(elements.tapestry.canvas);
 } else {
@@ -272,6 +303,12 @@ elements.tapestry.alchemyUI.classList.toggle(
 'visible',
 threads.length >= 2
 );
+if (state.selectedThreads.length === 1 && mnemosyneUI) {
+const threadId = tapestryLedger.getThreads()[state.selectedThreads[0]].id;
+mnemosyneUI.render(threadId);
+} else if (mnemosyneUI) {
+mnemosyneUI.hide();
+}
 }
 function initSplash() {
 requestAnimationFrame(() => {
@@ -459,8 +496,10 @@ document.querySelector('.riad-content').style.marginTop = '0'; // Adjust layout
 elements.riad.imageElement.loading = 'lazy'; // Native lazy loading
 elements.riad.imageElement.src = locationData.image;
 elements.riad.title.textContent = locationData.title;
+elements.riad.title.classList.add('glitch');
+setTimeout(() => elements.riad.title.classList.remove('glitch'), 600);
 elements.riad.subtitle.textContent = locationData.subtitle;
-elements.riad.narrative.textContent = locationData.narrative;
+ui.typewriterEffect(elements.riad.narrative, locationData.narrative);
 elements.riad.sensory.sight.dataset.color =
 locationData.sensory.sight.color;
 elements.riad.sensory.sightDesc.textContent =
@@ -626,12 +665,14 @@ return;
 }
 state.isWeaving = true;
 resonanceEngine.playInteractionSound('weave');
-await tapestryLedger.addThread({
+const newThread = await tapestryLedger.addThread({
 intention: state.intention,
 time: state.time,
 region: state.region,
-title: state.activeLocation.title
+title: state.activeLocation.title,
+content: state.activeLocation.narrative
 });
+mnemosyne.addThread(newThread);
 if (panopticon) panopticon.capture();
 aegis.analyze(tapestryLedger.getThreads());
 const threatReport = sentinel.assess(tapestryLedger.getThreads());

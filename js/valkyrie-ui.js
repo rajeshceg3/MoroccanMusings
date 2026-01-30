@@ -26,6 +26,8 @@ export class ValkyrieUI {
         const closeBtn = document.createElement('button');
         closeBtn.className = 'valkyrie-close-btn';
         closeBtn.textContent = '×';
+        closeBtn.setAttribute('data-tooltip', 'Close Protocol Editor');
+        closeBtn.setAttribute('data-tooltip-pos', 'bottom');
         closeBtn.onclick = () => this.toggle(false);
 
         header.appendChild(title);
@@ -100,6 +102,7 @@ export class ValkyrieUI {
             const toggleBtn = document.createElement('button');
             toggleBtn.className = 'v-btn';
             toggleBtn.textContent = p.active ? 'DISABLE' : 'ENABLE';
+            toggleBtn.setAttribute('data-tooltip', 'Enable/Disable Protocol');
             toggleBtn.onclick = () => {
                 this.engine.toggleProtocol(p.id, !p.active);
                 this.renderProtocols();
@@ -108,6 +111,7 @@ export class ValkyrieUI {
             const delBtn = document.createElement('button');
             delBtn.className = 'v-btn v-del';
             delBtn.textContent = 'DELETE';
+            delBtn.setAttribute('data-tooltip', 'Delete Protocol');
             delBtn.onclick = () => {
                 if (confirm(`Delete protocol ${p.id}?`)) {
                     this.engine.removeProtocol(p.id);
@@ -152,6 +156,7 @@ export class ValkyrieUI {
         const createBtn = document.createElement('button');
         createBtn.textContent = 'INITIALIZE PROTOCOL';
         createBtn.className = 'valkyrie-create-btn';
+        createBtn.setAttribute('data-tooltip', 'Save New Protocol');
 
         createBtn.onclick = () => {
             const id = idInput.input.value.toUpperCase().replace(/\s/g, '_');
