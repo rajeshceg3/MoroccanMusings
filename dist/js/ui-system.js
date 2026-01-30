@@ -338,6 +338,35 @@ else ctx.lineTo(x, y);
 }
 ctx.stroke();
 }
+typewriterEffect(element, text, speed = 10) {
+if (element._cancelTypewriter) {
+element._cancelTypewriter();
+}
+element.textContent = '';
+let i = 0;
+let timeoutId;
+let rafId;
+let isCancelled = false;
+element._cancelTypewriter = () => {
+isCancelled = true;
+clearTimeout(timeoutId);
+cancelAnimationFrame(rafId);
+element._cancelTypewriter = null;
+};
+const tick = () => {
+if (isCancelled) return;
+if (i < text.length) {
+element.textContent += text.charAt(i);
+i++;
+timeoutId = setTimeout(() => {
+rafId = requestAnimationFrame(tick);
+}, speed);
+} else {
+element._cancelTypewriter = null;
+}
+};
+tick();
+}
 renderUplinkControls() {
 const controls = document.createElement('div');
 controls.className = 'uplink-controls';

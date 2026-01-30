@@ -51,7 +51,7 @@ return 'LOCKED';
 }
 if (Array.isArray(parsed)) {
 this.threads = parsed;
-const needsMigration = this.threads.some((t) => !t.hash);
+const needsMigration = this.threads.some((t) => !t.hash || typeof t.content === 'undefined');
 if (needsMigration) {
 await this._migrateData();
 }
@@ -108,6 +108,7 @@ intention: intention,
 time: thread.time || 'midday',
 region: thread.region || 'unknown',
 title: thread.title || 'Legacy Thread',
+content: thread.content || '',
 timestamp: timestamp,
 previousHash: previousHash
 };
@@ -135,6 +136,7 @@ intention: thread.intention,
 time: thread.time,
 region: thread.region,
 title: thread.title,
+content: thread.content || '',
 timestamp: thread.timestamp,
 previousHash: previousHash
 });
@@ -164,6 +166,7 @@ intention: data.intention,
 time: data.time,
 region: data.region,
 title: data.title,
+content: data.content || '',
 timestamp: timestamp,
 previousHash: previousHash
 };
@@ -266,9 +269,11 @@ if (typeof thread.timestamp !== 'number') return false;
 if (thread.id.length > 32) return false;
 if (thread.title.length > 100) return false;
 if (thread.region.length > 50) return false;
-const safeTextRegex = /^[a-zA-Z0-9\s\-_.,!?'"()]+$/;
+if (thread.content && typeof thread.content !== 'string') return false;
+const safeTextRegex = /^[a-zA-Z0-9\s\-_.,!?'"();]+$/;
 if (!safeTextRegex.test(thread.title)) return false;
 if (!safeTextRegex.test(thread.region)) return false;
+if (thread.content && !safeTextRegex.test(thread.content)) return false;
 const validIntentions = [
 'serenity',
 'vibrancy',

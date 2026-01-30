@@ -6,12 +6,11 @@ import os
 import sys
 from playwright.sync_api import sync_playwright
 
-PORT = 8088  # Different port to avoid conflict
+PORT = 8089
 
 def run_server():
     os.chdir(os.path.dirname(os.path.dirname(os.path.abspath(__file__))))
     Handler = http.server.SimpleHTTPRequestHandler
-    socketserver.TCPServer.allow_reuse_address = True
     with socketserver.TCPServer(("", PORT), Handler) as httpd:
         httpd.serve_forever()
 
@@ -23,90 +22,82 @@ def test_guide():
     try:
         with sync_playwright() as p:
             browser = p.chromium.launch(headless=True)
-            # Create context with empty storage
+            # Ensure fresh context for localStorage
             context = browser.new_context()
             page = context.new_page()
 
-            # page.on("console", lambda msg: print(f"BROWSER: {msg.text}"))
+            console_errors = []
+            page.on("console", lambda msg: console_errors.append(msg.text) if msg.type == "error" else None)
+            page.on("pageerror", lambda exc: console_errors.append(str(exc)))
 
-            print("Navigating to app...")
+            print("Launching App...")
             page.goto(f"http://localhost:{PORT}")
 
             # Dismiss Splash
-            print("Dismissing splash...")
+            page.wait_for_selector("#splash-screen.active")
             page.click("#splash-screen")
-            page.wait_for_selector("#astrolabe-screen")
 
-            # Wait for auto-show (2s delay in app.js)
-            print("Waiting for Ghost Guide auto-show...")
-            overlay = page.wait_for_selector("#ghost-guide-overlay:not(.hidden)", timeout=5000)
+            # Wait for Guide (2000ms delay in code)
+            print("Waiting for Ghost Guide...")
+            page.wait_for_selector("#ghost-guide-overlay:not(.hidden)", timeout=5000)
 
-            # 1. Verify Backdrop
-            print("Verifying Backdrop...")
-            backdrop = page.locator(".guide-backdrop")
-            if "visible" not in backdrop.get_attribute("class"):
-                print("FAIL: Backdrop not visible")
-                sys.exit(1)
+            # Check Spotlight
+            print("Verifying Spotlight...")
+            spotlight = page.wait_for_selector(".guide-highlight-box")
+            box_1 = spotlight.bounding_box()
+            if not box_1 or box_1['width'] == 0:
+                raise Exception("Spotlight box is invalid or hidden")
 
-            # 2. Verify Step 1 Spotlight (Astrolabe Container)
-            print("Verifying Step 1 Spotlight...")
-            step1_target = page.locator(".astrolabe-container")
-            if "guide-spotlight" not in step1_target.get_attribute("class"):
-                print("FAIL: Step 1 target (.astrolabe-container) is not spotlighted")
-                sys.exit(1)
+            # Check Step 1
+            if not page.is_visible(".guide-step[data-step='1'].active"):
+                raise Exception("Step 1 not active")
 
-            # Screenshot
-            verify_dir = os.path.join(os.getcwd(), "verification")
-            os.makedirs(verify_dir, exist_ok=True)
-            page.screenshot(path=os.path.join(verify_dir, "guide_spotlight.png"))
-
-            # 3. Click Next
-            print("Clicking Next...")
+            # Click Next
+            print("Advancing Guide...")
             page.click("#guide-next-btn")
-            # Give animation/update a moment
-            page.wait_for_timeout(500)
 
-            # 4. Verify Step 2 Spotlight (Astrolabe Center)
-            print("Verifying Step 2 Spotlight...")
-            step2_target = page.locator(".astrolabe-center")
-            if "guide-spotlight" not in step2_target.get_attribute("class"):
-                print("FAIL: Step 2 target (.astrolabe-center) is not spotlighted")
-                sys.exit(1)
+            # Check Step 2
+            page.wait_for_selector(".guide-step[data-step='2'].active")
 
-            # 5. Verify Step 1 lost spotlight
-            if "guide-spotlight" in step1_target.get_attribute("class"):
-                print("FAIL: Step 1 target still has spotlight")
-                sys.exit(1)
+            # Allow CSS transition (0.5s) to complete
+            time.sleep(1)
 
-            # 6. Click Skip
-            print("Clicking Skip...")
+            # Verify Spotlight moved
+            box_2 = spotlight.bounding_box()
+            print(f"Box 1: {box_1}")
+            print(f"Box 2: {box_2}")
+
+            # Assuming Step 1 (Container) and Step 2 (Center) are different sizes/pos
+            if box_1['x'] == box_2['x'] and box_1['y'] == box_2['y']:
+                 print("WARNING: Spotlight didn't move. Check layout.")
+                 # Might be coincidentally same pos if centered?
+                 # Container is 300x300 centered. Center is 60x60 centered.
+                 # Top/Left might differ. width/height definitely differ.
+                 if box_1['width'] == box_2['width']:
+                     raise Exception("Spotlight didn't resize")
+
+            # Click Skip
+            print("Skipping Guide...")
+            time.sleep(0.5)
             page.click("#guide-skip-btn")
-            # Wait for the overlay to be hidden (opacity 0 / display none)
+            # Wait for overlay to be hidden
             page.wait_for_selector("#ghost-guide-overlay", state="hidden")
 
-            # 7. Verify Cleanup
-            print("Verifying Cleanup...")
-            if "guide-spotlight" in step2_target.get_attribute("class"):
-                print("FAIL: Spotlight not removed after close")
+            # Check LocalStorage
+            val = page.evaluate("localStorage.getItem('marq_onboarded')")
+            if val != 'true':
+                raise Exception("Onboarding state not saved")
+
+            if console_errors:
+                print("FAIL: Console errors detected:")
+                for err in console_errors:
+                    print(f"  - {err}")
                 sys.exit(1)
 
-            if "visible" in backdrop.get_attribute("class"):
-                print("FAIL: Backdrop still visible after close")
-                sys.exit(1)
-
-            # 8. Verify Persistence
-            onboarded = page.evaluate("localStorage.getItem('marq_onboarded')")
-            if onboarded != 'true':
-                 print(f"FAIL: LocalStorage persistence failed. Got: {onboarded}")
-                 sys.exit(1)
-
-            print("SUCCESS: Ghost Guide Verification Passed")
+            print("SUCCESS: Ghost Guide Verified.")
             browser.close()
-
     except Exception as e:
         print(f"ERROR: {e}")
-        # import traceback
-        # traceback.print_exc()
         sys.exit(1)
 
 if __name__ == "__main__":

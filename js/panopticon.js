@@ -130,6 +130,8 @@ export class PanopticonEngine {
         closeBtn.id = 'panopticon-close';
         closeBtn.className = 'panopticon-close-btn';
         closeBtn.setAttribute('aria-label', 'Close');
+        closeBtn.setAttribute('data-tooltip', 'Close Panopticon');
+        closeBtn.setAttribute('data-tooltip-pos', 'bottom');
         closeBtn.textContent = '×';
 
         header.append(title, status, closeBtn);
@@ -184,11 +186,14 @@ export class PanopticonEngine {
 
         const btnPrev = createBtn('panopticon-prev', 'STEP', '❮', 'left');
         btnPrev.disabled = true;
+        btnPrev.setAttribute('data-tooltip', 'Previous Snapshot');
 
         const btnLive = createBtn('panopticon-live', 'LIVE', null, null, true);
+        btnLive.setAttribute('data-tooltip', 'Return to Live Feed');
 
         const btnNext = createBtn('panopticon-next', 'STEP', '❯', 'right');
         btnNext.disabled = true;
+        btnNext.setAttribute('data-tooltip', 'Next Snapshot');
 
         controls.append(btnPrev, btnLive, btnNext);
 
