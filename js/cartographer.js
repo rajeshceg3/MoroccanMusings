@@ -9,6 +9,12 @@ export class MapRenderer {
         this.activeNodeIndex = -1;
         this.activeUnitId = null;
 
+        // Citadel Drawing State
+        this.drawMode = false;
+        this.isDrawing = false;
+        this.drawStart = null;
+        this.currentDrawRadius = 0;
+
         // Initialize Prometheus Heatmap Engine
         this.prometheus = new PrometheusEngine();
 
@@ -44,12 +50,22 @@ export class MapRenderer {
         this.height = rect.height;
     }
 
-    render(threads, locations, ghosts = [], threatZones = [], vanguardUnits = []) {
+    setDrawMode(active) {
+        this.drawMode = active;
+        this.canvas.style.cursor = active ? 'crosshair' : 'default';
+        if (!active) {
+            this.isDrawing = false;
+            this.drawStart = null;
+        }
+    }
+
+    render(threads, locations, ghosts = [], threatZones = [], vanguardUnits = [], citadelZones = []) {
         this.threads = threads;
         this.locations = locations;
         this.ghosts = ghosts;
         this.threatZones = threatZones;
         this.vanguardUnits = vanguardUnits;
+        this.citadelZones = citadelZones;
 
         // Update Prometheus Heatmap
         this.prometheus.update(threads, locations, this.width, this.height);
@@ -105,6 +121,50 @@ export class MapRenderer {
             this.ctx.moveTo(0, y);
             this.ctx.lineTo(mapWidth, y);
             this.ctx.stroke();
+        }
+
+        // Plot Citadel Defense Zones
+        if (this.citadelZones && this.citadelZones.length > 0) {
+            this.citadelZones.forEach((zone) => {
+                const x = (zone.x / 100) * mapWidth;
+                const y = (zone.y / 100) * mapHeight;
+                // Zone r is in map units (0-100). Convert to pixels.
+                // Assuming map is roughly square for radius calculation, use width ratio
+                const r = (zone.r / 100) * mapWidth;
+
+                this.ctx.fillStyle = 'rgba(0, 255, 255, 0.1)';
+                this.ctx.beginPath();
+                this.ctx.arc(x, y, r, 0, Math.PI * 2);
+                this.ctx.fill();
+
+                this.ctx.strokeStyle = '#00ffff';
+                this.ctx.lineWidth = 1;
+                this.ctx.setLineDash([5, 5]);
+                this.ctx.beginPath();
+                this.ctx.arc(x, y, r, 0, Math.PI * 2);
+                this.ctx.stroke();
+                this.ctx.setLineDash([]);
+
+                // Label
+                this.ctx.fillStyle = '#00ffff';
+                this.ctx.font = '10px Courier New';
+                this.ctx.fillText(zone.id, x, y - r - 5);
+            });
+        }
+
+        // Plot Active Drawing (Ghost Zone)
+        if (this.isDrawing && this.drawStart) {
+             const x = (this.drawStart.x / 100) * mapWidth;
+             const y = (this.drawStart.y / 100) * mapHeight;
+             const r = (this.currentDrawRadius / 100) * mapWidth;
+
+             this.ctx.strokeStyle = '#ffffff';
+             this.ctx.lineWidth = 1;
+             this.ctx.setLineDash([2, 2]);
+             this.ctx.beginPath();
+             this.ctx.arc(x, y, r, 0, Math.PI * 2);
+             this.ctx.stroke();
+             this.ctx.setLineDash([]);
         }
 
         // Plot Threat Zones (Sentinel)
@@ -306,7 +366,8 @@ export class MapRenderer {
             this.activeNodeIndex !== -1 ||
             (this.ghosts && this.ghosts.length > 0) ||
             (this.threatZones && this.threatZones.length > 0) ||
-            (this.vanguardUnits && this.vanguardUnits.length > 0)
+            (this.vanguardUnits && this.vanguardUnits.length > 0) ||
+            this.isDrawing
         ) {
             requestAnimationFrame(() =>
                 this.render(
@@ -314,7 +375,8 @@ export class MapRenderer {
                     this.locations,
                     this.ghosts,
                     this.threatZones,
-                    this.vanguardUnits
+                    this.vanguardUnits,
+                    this.citadelZones
                 )
             );
         }
@@ -339,6 +401,43 @@ export class MapRenderer {
     }
 
     _bindEvents() {
+        // --- CITADEL DRAWING EVENTS ---
+        this.canvas.addEventListener('mousedown', (e) => {
+            if (!this.drawMode) return;
+            const rect = this.canvas.getBoundingClientRect();
+            const mouseX = e.clientX - rect.left;
+            const mouseY = e.clientY - rect.top;
+            const drawW = rect.width - 80;
+            const drawH = rect.height - 80;
+
+            const mapX = ((mouseX - 40) / drawW) * 100;
+            const mapY = ((mouseY - 40) / drawH) * 100;
+
+            if (mapX >= 0 && mapX <= 100 && mapY >= 0 && mapY <= 100) {
+                this.isDrawing = true;
+                this.drawStart = { x: mapX, y: mapY };
+                this.currentDrawRadius = 0;
+            }
+        });
+
+        this.canvas.addEventListener('mouseup', (e) => {
+            if (this.isDrawing && this.drawStart) {
+                this.isDrawing = false;
+                // Dispatch creation event
+                const event = new CustomEvent('citadel-zone-created', {
+                    detail: {
+                        x: this.drawStart.x,
+                        y: this.drawStart.y,
+                        r: this.currentDrawRadius
+                    }
+                });
+                this.canvas.dispatchEvent(event);
+                this.drawStart = null;
+                this.currentDrawRadius = 0;
+            }
+        });
+        // ------------------------------
+
         this.canvas.addEventListener('mousemove', (e) => {
             const rect = this.canvas.getBoundingClientRect();
             const mouseX = e.clientX - rect.left;
@@ -346,6 +445,18 @@ export class MapRenderer {
 
             const drawW = rect.width - 80;
             const drawH = rect.height - 80;
+
+            if (this.isDrawing && this.drawStart) {
+                // Update radius
+                const mapX = ((mouseX - 40) / drawW) * 100;
+                const mapY = ((mouseY - 40) / drawH) * 100;
+                const dx = mapX - this.drawStart.x;
+                const dy = mapY - this.drawStart.y;
+                this.currentDrawRadius = Math.sqrt(dx*dx + dy*dy);
+                // Trigger render loop for animation
+                this.render(this.threads, this.locations, this.ghosts, this.threatZones, this.vanguardUnits, this.citadelZones);
+                return;
+            }
 
             // Check Thread Collisions
             let foundThread = -1;
@@ -374,13 +485,17 @@ export class MapRenderer {
 
             if (this.activeNodeIndex !== foundThread) {
                 this.activeNodeIndex = foundThread;
-                this.render(this.threads, this.locations, this.ghosts, this.threatZones, this.vanguardUnits);
+                this.render(this.threads, this.locations, this.ghosts, this.threatZones, this.vanguardUnits, this.citadelZones);
             }
 
-            this.canvas.style.cursor = (foundThread !== -1 || foundUnit !== null) ? 'pointer' : 'default';
+            if (!this.drawMode) {
+                this.canvas.style.cursor = (foundThread !== -1 || foundUnit !== null) ? 'pointer' : 'default';
+            }
         });
 
         this.canvas.addEventListener('click', (e) => {
+            if (this.drawMode) return; // Prevent clicking while drawing mode is active
+
             const rect = this.canvas.getBoundingClientRect();
             const mouseX = e.clientX - rect.left;
             const mouseY = e.clientY - rect.top;
@@ -401,14 +516,14 @@ export class MapRenderer {
 
             if (clickedUnit) {
                 this.activeUnitId = clickedUnit;
-                this.render(this.threads, this.locations, this.ghosts, this.threatZones, this.vanguardUnits);
+                this.render(this.threads, this.locations, this.ghosts, this.threatZones, this.vanguardUnits, this.citadelZones);
                 return;
             }
 
             // Deselect if clicking empty space (unless strictly clicking a thread)
             if (!clickedUnit && this.activeNodeIndex === -1) {
                 this.activeUnitId = null;
-                this.render(this.threads, this.locations, this.ghosts, this.threatZones, this.vanguardUnits);
+                this.render(this.threads, this.locations, this.ghosts, this.threatZones, this.vanguardUnits, this.citadelZones);
             }
 
             if (this.activeNodeIndex !== -1) {

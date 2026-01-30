@@ -1023,4 +1023,45 @@ export function registerCommands(terminal, context) {
             }
         }
     );
+
+    terminal.registerCommand(
+        'citadel',
+        'Defense Perimeter Management',
+        (args) => {
+            if (!checkAccess()) return;
+            const subcmd = args[0] || 'status';
+            const citadel = context.engines.citadel;
+
+            if (!citadel) {
+                terminal.log('Citadel Engine not initialized.', 'error');
+                return;
+            }
+
+            if (subcmd === 'status') {
+                const zones = citadel.getZones();
+                terminal.log('--- CITADEL DEFENSE GRID ---', 'system');
+                terminal.log(`Status: ${state.isCitadelActive ? 'DRAWING_ACTIVE' : 'READY'}`, 'info');
+                terminal.log(`Active Zones: ${zones.length}`, 'info');
+            } else if (subcmd === 'list') {
+                const zones = citadel.getZones();
+                if (zones.length === 0) {
+                    terminal.log('No active defense zones.', 'warning');
+                } else {
+                    terminal.log('Active Perimeter Zones:', 'system');
+                    zones.forEach(z => {
+                        terminal.log(`  [${z.id}] ${z.label} (R:${Math.floor(z.r)}) @ ${Math.floor(z.x)},${Math.floor(z.y)}`, 'info');
+                    });
+                }
+            } else if (subcmd === 'clear') {
+                citadel.clear();
+                actions.renderTapestry();
+                terminal.log('ALL DEFENSE ZONES PURGED.', 'warning');
+            } else if (subcmd === 'toggle') {
+                elements.tapestry.citadelToggle.click();
+                terminal.log(`Citadel Mode: ${state.isCitadelActive ? 'ENGAGED' : 'DISENGAGED'}`, 'success');
+            } else {
+                terminal.log('Usage: citadel [status|list|clear|toggle]', 'warning');
+            }
+        }
+    );
 }
