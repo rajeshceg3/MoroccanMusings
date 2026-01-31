@@ -80,6 +80,22 @@ export class MnemosyneEngine {
         return results.sort((a, b) => b.score - a.score).slice(0, limit);
     }
 
+    /**
+     * Calculates the cosine similarity between two specific threads.
+     * @param {string} idA
+     * @param {string} idB
+     * @returns {number} Similarity score (0.0 to 1.0)
+     */
+    getCosineSimilarity(idA, idB) {
+        const vecA = this.vectors[idA];
+        const vecB = this.vectors[idB];
+
+        if (!vecA || !vecB) return 0;
+
+        const magA = this._magnitude(vecA);
+        return this._cosineSimilarity(vecA, vecB, magA);
+    }
+
     _tokenize(text) {
         return text
             .toLowerCase()

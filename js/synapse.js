@@ -15,10 +15,18 @@ export class SynapseRenderer {
         this.width = 0;
         this.height = 0;
 
+        // View State (CSS Pixels)
+        this.view = {
+            x: 0,
+            y: 0,
+            scale: 1.0
+        };
+
         // Interaction State
         this.draggedNode = null;
         this.hoveredNode = null;
         this.isSimulating = false;
+        this.isPanning = false;
 
         this._resize();
     }
@@ -33,7 +41,35 @@ export class SynapseRenderer {
         this.height = rect.height;
         this.canvas.width = this.width * this.dpr;
         this.canvas.height = this.height * this.dpr;
-        this.ctx.scale(this.dpr, this.dpr);
+        // We handle transform manually in render
+    }
+
+    handleZoom(delta, clientX, clientY) {
+        const zoomSpeed = 0.1;
+        const factor = delta < 0 ? (1 + zoomSpeed) : (1 - zoomSpeed);
+
+        const rect = this.canvas.getBoundingClientRect();
+        const mouseX = clientX - rect.left;
+        const mouseY = clientY - rect.top;
+
+        // Convert mouse to world space
+        const worldX = (mouseX - this.view.x) / this.view.scale;
+        const worldY = (mouseY - this.view.y) / this.view.scale;
+
+        // Apply zoom
+        let newScale = this.view.scale * factor;
+        if (newScale < 0.1) newScale = 0.1;
+        if (newScale > 5.0) newScale = 5.0;
+
+        // Adjust pos to keep world point under mouse
+        this.view.x = mouseX - worldX * newScale;
+        this.view.y = mouseY - worldY * newScale;
+        this.view.scale = newScale;
+    }
+
+    handlePan(dx, dy) {
+        this.view.x += dx;
+        this.view.y += dy;
     }
 
     /**
@@ -41,26 +77,32 @@ export class SynapseRenderer {
      * @param {Object} graph - { nodes, edges } from CortexEngine
      */
     render(graph) {
-        if (!graph) return;
+        if (graph) {
+            this._syncGraph(graph);
+        }
 
-        // Initialize positions if new graph
-        // (Simple check: if node counts match, we assume it's the same graph frame-to-frame mostly)
-        // But if IDs change, we reset.
-        // For this MVP, we re-ingest if passed, but preserve positions if IDs match.
-        this._syncGraph(graph);
+        // Clear entire canvas (using identity transform)
+        this.ctx.setTransform(1, 0, 0, 1, 0, 0);
+        this.ctx.clearRect(0, 0, this.canvas.width, this.canvas.height);
 
-        this.ctx.clearRect(0, 0, this.width, this.height);
+        // Apply View Transform
+        // We scale everything by DPR * view.scale
+        // Translate by view.x * DPR
+        this.ctx.setTransform(
+            this.dpr * this.view.scale, 0,
+            0, this.dpr * this.view.scale,
+            this.view.x * this.dpr, this.view.y * this.dpr
+        );
 
-        // Background grid
+        // Background grid (Infinite)
         this._drawGrid();
 
-        // Run one step of simulation
         if (this.isSimulating) {
             this._simulatePhysics();
         }
 
         // Draw Edges
-        this.ctx.lineWidth = 1;
+        this.ctx.lineWidth = 1 / this.view.scale; // Keep constant visual width
         this.edges.forEach(edge => {
             const source = this.nodes[edge.sourceIndex];
             const target = this.nodes[edge.targetIndex];
@@ -68,12 +110,23 @@ export class SynapseRenderer {
 
             const opacity = Math.min(1, edge.weight * 0.4);
 
-            // Color based on type
-            if (edge.types.includes('region')) this.ctx.strokeStyle = `rgba(100, 200, 255, ${opacity})`;
-            else if (edge.types.includes('time')) this.ctx.strokeStyle = `rgba(255, 200, 100, ${opacity})`;
-            else this.ctx.strokeStyle = `rgba(200, 200, 200, ${opacity})`;
-
             this.ctx.beginPath();
+            if (edge.types.includes('semantic')) {
+                // Amber Pulse
+                const pulse = 0.5 + Math.sin(Date.now() / 200) * 0.5;
+                this.ctx.strokeStyle = `rgba(198, 118, 5, ${opacity * 0.8 + pulse * 0.2})`;
+                this.ctx.lineWidth = (2 / this.view.scale);
+            } else if (edge.types.includes('region')) {
+                this.ctx.strokeStyle = `rgba(100, 200, 255, ${opacity})`;
+                this.ctx.lineWidth = (1 / this.view.scale);
+            } else if (edge.types.includes('time')) {
+                this.ctx.strokeStyle = `rgba(255, 200, 100, ${opacity})`;
+                this.ctx.lineWidth = (1 / this.view.scale);
+            } else {
+                this.ctx.strokeStyle = `rgba(200, 200, 200, ${opacity})`;
+                this.ctx.lineWidth = (0.5 / this.view.scale);
+            }
+
             this.ctx.moveTo(source.x, source.y);
             this.ctx.lineTo(target.x, target.y);
             this.ctx.stroke();
@@ -94,30 +147,42 @@ export class SynapseRenderer {
             };
             const color = colors[node.data.intention] || '#888';
 
-            // Draw Node
-            this.ctx.beginPath();
-            this.ctx.arc(node.x, node.y, isHover ? 8 : 5, 0, Math.PI * 2);
             this.ctx.fillStyle = color;
+            this.ctx.beginPath();
+
+            if (node.isBridge) {
+                // Diamond shape for bridges
+                const s = isHover ? 10 : 7;
+                this.ctx.moveTo(node.x, node.y - s);
+                this.ctx.lineTo(node.x + s, node.y);
+                this.ctx.lineTo(node.x, node.y + s);
+                this.ctx.lineTo(node.x - s, node.y);
+                this.ctx.closePath();
+            } else {
+                // Circle for standard nodes
+                this.ctx.arc(node.x, node.y, isHover ? 8 : 5, 0, Math.PI * 2);
+            }
             this.ctx.fill();
+
+            // Bridge Highlight Ring
+            if (node.isBridge) {
+                this.ctx.strokeStyle = '#fff';
+                this.ctx.lineWidth = 1 / this.view.scale;
+                this.ctx.stroke();
+            }
 
             // Glow/Border
             if (isHover || isDrag) {
                 this.ctx.strokeStyle = '#fff';
-                this.ctx.lineWidth = 2;
+                this.ctx.lineWidth = 2 / this.view.scale;
                 this.ctx.stroke();
-
-                // Tooltip
-                this._drawTooltip(node);
             }
         });
 
-        // Loop if simulating
-        if (this.isSimulating && this._energy() > 0.5) {
-            // Keep loop active via requestAnimationFrame in parent or internal?
-            // Since this is called by App's render loop (Horizon loop usually),
-            // we rely on the parent calling render() repeatedly.
-            // If parent isn't looping, we force it?
-            // For now, we assume App calls render() on RAF.
+        // Tooltip (Draw in Screen Space)
+        if (this.hoveredNode) {
+            this.ctx.setTransform(this.dpr, 0, 0, this.dpr, 0, 0); // Reset transform
+            this._drawTooltip(this.hoveredNode);
         }
     }
 
@@ -134,9 +199,9 @@ export class SynapseRenderer {
                 n.vx = existing.vx;
                 n.vy = existing.vy;
             } else {
-                // Spawn in center
-                n.x = this.width/2 + (Math.random() - 0.5) * 50;
-                n.y = this.height/2 + (Math.random() - 0.5) * 50;
+                // Spawn in center of world view or random
+                n.x = (this.width/2 - this.view.x)/this.view.scale + (Math.random() - 0.5) * 50;
+                n.y = (this.height/2 - this.view.y)/this.view.scale + (Math.random() - 0.5) * 50;
             }
             return n;
         });
@@ -148,10 +213,12 @@ export class SynapseRenderer {
         const k = 0.05; // Attraction
         const repulsion = 2000;
         const damping = 0.85;
-        const centerForce = 0.002;
-
-        const cx = this.width / 2;
+        // Gravity to center of current view? Or global 0,0?
+        // Let's use gravity to the centroid of the cluster to keep it together.
+        // For now, gravity to (width/2, height/2) in world space (unscaled) matches initial spawn.
+        const cx = this.width / 2; // Roughly center
         const cy = this.height / 2;
+        const centerForce = 0.002;
 
         // Reset forces
         this.nodes.forEach(node => {
@@ -159,7 +226,7 @@ export class SynapseRenderer {
             node.fy = 0;
         });
 
-        // Repulsion (All pairs - O(N^2) but N is small < 1000)
+        // Repulsion
         for (let i = 0; i < this.nodes.length; i++) {
             for (let j = i + 1; j < this.nodes.length; j++) {
                 const a = this.nodes[i];
@@ -168,6 +235,8 @@ export class SynapseRenderer {
                 const dy = a.y - b.y;
                 let distSq = dx * dx + dy * dy;
                 if (distSq < 0.1) distSq = 0.1;
+                // Optimization: Ignore far away
+                if (distSq > 100000) continue;
 
                 const f = repulsion / distSq;
                 const fx = (dx / Math.sqrt(distSq)) * f;
@@ -180,7 +249,7 @@ export class SynapseRenderer {
             }
         }
 
-        // Attraction (Edges)
+        // Attraction
         this.edges.forEach(edge => {
             const s = this.nodes[edge.sourceIndex];
             const t = this.nodes[edge.targetIndex];
@@ -199,69 +268,74 @@ export class SynapseRenderer {
             t.fy -= fy;
         });
 
-        // Center Gravity & Integration
+        // Integration
         this.nodes.forEach(node => {
-            // Dragged node doesn't move by physics
             if (node === this.draggedNode) return;
 
             // Gravity to center
             node.fx += (cx - node.x) * centerForce;
             node.fy += (cy - node.y) * centerForce;
 
-            // Update Velocity
             node.vx = (node.vx + node.fx) * damping;
             node.vy = (node.vy + node.fy) * damping;
 
-            // Update Position
             node.x += node.vx;
             node.y += node.vy;
-
-            // Boundary
-            if (node.x < 10) node.x = 10;
-            if (node.x > this.width - 10) node.x = this.width - 10;
-            if (node.y < 10) node.y = 10;
-            if (node.y > this.height - 10) node.y = this.height - 10;
         });
     }
 
-    _energy() {
-        let e = 0;
-        this.nodes.forEach(n => e += Math.abs(n.vx) + Math.abs(n.vy));
-        return e;
-    }
-
     _drawGrid() {
+        // We need to draw grid lines in world space
+        // Visible world bounds
+        const startX = -this.view.x / this.view.scale;
+        const startY = -this.view.y / this.view.scale;
+        const endX = (this.width - this.view.x) / this.view.scale;
+        const endY = (this.height - this.view.y) / this.view.scale;
+
+        const gridSize = 100;
+
         this.ctx.strokeStyle = '#222';
-        this.ctx.lineWidth = 1;
+        this.ctx.lineWidth = 1 / this.view.scale;
         this.ctx.beginPath();
-        for (let x = 0; x < this.width; x += 50) {
-            this.ctx.moveTo(x, 0);
-            this.ctx.lineTo(x, this.height);
+
+        // Snap to grid
+        const firstLineX = Math.floor(startX / gridSize) * gridSize;
+        const firstLineY = Math.floor(startY / gridSize) * gridSize;
+
+        for (let x = firstLineX; x < endX; x += gridSize) {
+            this.ctx.moveTo(x, startY);
+            this.ctx.lineTo(x, endY);
         }
-        for (let y = 0; y < this.height; y += 50) {
-            this.ctx.moveTo(0, y);
-            this.ctx.lineTo(this.width, y);
+        for (let y = firstLineY; y < endY; y += gridSize) {
+            this.ctx.moveTo(startX, y);
+            this.ctx.lineTo(endX, y);
         }
         this.ctx.stroke();
     }
 
     _drawTooltip(node) {
+        // Project node to screen space
+        const screenX = node.x * this.view.scale + this.view.x;
+        const screenY = node.y * this.view.scale + this.view.y;
+
         const text = node.data.title;
         const sub = `${node.data.region} // ${node.data.time}`;
-        const x = node.x;
-        const y = node.y - 15;
+        const meta = node.isBridge ? ' [BRIDGE]' : '';
+
+        const x = screenX;
+        const y = screenY - 15;
 
         this.ctx.font = '12px Inter';
-        const w = Math.max(this.ctx.measureText(text).width, this.ctx.measureText(sub).width) + 10;
+        const w = Math.max(this.ctx.measureText(text + meta).width, this.ctx.measureText(sub).width) + 10;
 
         this.ctx.fillStyle = 'rgba(0,0,0,0.8)';
         this.ctx.fillRect(x - w/2, y - 35, w, 30);
-        this.ctx.strokeStyle = '#55aaff';
+        this.ctx.strokeStyle = node.isBridge ? '#c67605' : '#55aaff';
         this.ctx.strokeRect(x - w/2, y - 35, w, 30);
 
         this.ctx.fillStyle = '#fff';
         this.ctx.textAlign = 'center';
-        this.ctx.fillText(text, x, y - 20);
+        this.ctx.fillText(text + meta, x, y - 20);
         this.ctx.fillStyle = '#aaa';
         this.ctx.font = '10px Inter';
         this.ctx.fillText(sub, x, y - 8);
@@ -269,38 +343,50 @@ export class SynapseRenderer {
 
     // --- Interaction ---
 
-    handleInput(type, x, y) {
-        // Adjust for canvas scaling
+    handleInput(type, clientX, clientY) {
         const rect = this.canvas.getBoundingClientRect();
-        const cx = x - rect.left;
-        const cy = y - rect.top;
+        const mouseX = clientX - rect.left;
+        const mouseY = clientY - rect.top;
+
+        // Convert to World
+        const worldX = (mouseX - this.view.x) / this.view.scale;
+        const worldY = (mouseY - this.view.y) / this.view.scale;
 
         if (type === 'move') {
             if (this.draggedNode) {
-                this.draggedNode.x = cx;
-                this.draggedNode.y = cy;
-                this.isSimulating = true; // Wake up
+                this.draggedNode.x = worldX;
+                this.draggedNode.y = worldY;
+                this.isSimulating = true;
+            } else if (this.isPanning) {
+                // Panning handled via delta in App, but if we wanted absolute tracking...
+                // Handled in handlePan via movementX/Y
             } else {
-                this.hoveredNode = this._findNode(cx, cy);
+                this.hoveredNode = this._findNode(worldX, worldY);
             }
         } else if (type === 'down') {
-            this.draggedNode = this._findNode(cx, cy);
-            if (this.draggedNode) {
+            const node = this._findNode(worldX, worldY);
+            if (node) {
+                this.draggedNode = node;
                 this.draggedNode.vx = 0;
                 this.draggedNode.vy = 0;
+            } else {
+                this.isPanning = true;
             }
         } else if (type === 'up') {
             this.draggedNode = null;
+            this.isPanning = false;
         }
     }
 
     _findNode(x, y) {
-        // Simple radius check
+        // Hit test radius in world space
+        // Constant radius 10
+        const rSq = 100; // 10^2
         for (let i = this.nodes.length - 1; i >= 0; i--) {
             const n = this.nodes[i];
             const dx = x - n.x;
             const dy = y - n.y;
-            if (dx*dx + dy*dy < 100) { // Radius 10
+            if (dx*dx + dy*dy < rSq) {
                 return n;
             }
         }
