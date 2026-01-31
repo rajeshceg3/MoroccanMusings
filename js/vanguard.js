@@ -19,15 +19,23 @@ class VanguardUnit {
         this.battery = 100;
 
         // State Machine
-        this.status = 'IDLE'; // IDLE, MOVING, SCANNING, RETURNING, INTERCEPTING, PURGING
+        this.status = 'IDLE'; // IDLE, MOVING, SCANNING, RETURNING, INTERCEPTING, PURGING, SYNTHESIZING
         this.target = null; // {x, y}
         this.assignedTarget = null; // Manual override
         this.interceptTarget = null; // Threat object
+        this.mission = null; // { type, data }
         this.currentRegion = 'unknown';
 
         // Visuals
         this.heading = 0;
         this.scanPulse = 0;
+    }
+
+    assignMission(type, data) {
+        this.mission = { type, data };
+        if (data.x !== undefined && data.y !== undefined) {
+            this.command({ x: data.x, y: data.y });
+        }
     }
 
     command(coords) {
@@ -63,11 +71,23 @@ class VanguardUnit {
 
         // Logic based on Type and State
         if (this.status === 'IDLE') {
-            if (this.assignedTarget) {
-                 this.target = this.assignedTarget;
-                 this.status = 'MOVING';
-            } else {
-                this._decideNextMove(threats);
+            // Check for Mission Arrival
+            if (this.mission && this.mission.type === 'SYNTHESIS') {
+                 const dx = this.x - this.mission.data.x;
+                 const dy = this.y - this.mission.data.y;
+                 if (Math.sqrt(dx*dx + dy*dy) < 2) {
+                     this.status = 'SYNTHESIZING';
+                     this.scanTimer = 150; // Synthesis duration
+                 }
+            }
+
+            if (this.status !== 'SYNTHESIZING') {
+                if (this.assignedTarget) {
+                     this.target = this.assignedTarget;
+                     this.status = 'MOVING';
+                } else {
+                    this._decideNextMove(threats);
+                }
             }
         } else if (this.status === 'MOVING' || this.status === 'INTERCEPTING') {
             this._move();
@@ -78,6 +98,8 @@ class VanguardUnit {
             this._performScan();
         } else if (this.status === 'PURGING') {
             this._performPurge();
+        } else if (this.status === 'SYNTHESIZING') {
+            this._performSynthesis();
         }
 
         this.battery -= 0.01; // Slow drain
@@ -172,6 +194,16 @@ class VanguardUnit {
             this.engine.reportPurge(this);
         }
     }
+
+    _performSynthesis() {
+        this.scanPulse += 0.05; // Gentle pulse
+        this.scanTimer--;
+        if (this.scanTimer <= 0) {
+            this.status = 'IDLE';
+            this.engine.reportSynthesis(this);
+            this.mission = null;
+        }
+    }
 }
 
 export class VanguardEngine {
@@ -251,5 +283,10 @@ export class VanguardEngine {
 
     reportPurge(unit) {
         // console.log(`Unit ${unit.id} PURGED sector.`);
+    }
+
+    reportSynthesis(unit) {
+        const event = new CustomEvent('vanguard-synthesis-complete', { detail: { unit } });
+        window.dispatchEvent(event);
     }
 }

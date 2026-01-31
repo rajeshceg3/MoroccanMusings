@@ -1,4 +1,4 @@
-import { PrometheusEngine } from './prometheus.js';
+import { HeatmapEngine } from './heatmap.js';
 
 export class MapRenderer {
     constructor(canvas) {
@@ -15,8 +15,8 @@ export class MapRenderer {
         this.drawStart = null;
         this.currentDrawRadius = 0;
 
-        // Initialize Prometheus Heatmap Engine
-        this.prometheus = new PrometheusEngine();
+        // Initialize Heatmap Engine
+        this.heatmap = new HeatmapEngine();
 
         // Simplified Morocco Vector Path (0-100 coordinate space)
         // Tangier (50, 5), Oujda (85, 20), Figuig (90, 60), Zagora (60, 80), Dakhla (10, 95) - simplified
@@ -59,16 +59,16 @@ export class MapRenderer {
         }
     }
 
-    render(threads, locations, ghosts = [], threatZones = [], vanguardUnits = [], citadelZones = []) {
+    render(threads, locations, drafts = [], threatZones = [], vanguardUnits = [], citadelZones = []) {
         this.threads = threads;
         this.locations = locations;
-        this.ghosts = ghosts;
+        this.drafts = drafts; // Renamed from ghosts to generic drafts for Prometheus, but maintaining legacy ghost structure if needed
         this.threatZones = threatZones;
         this.vanguardUnits = vanguardUnits;
         this.citadelZones = citadelZones;
 
-        // Update Prometheus Heatmap
-        this.prometheus.update(threads, locations, this.width, this.height);
+        // Update Heatmap
+        this.heatmap.update(threads, locations, this.width, this.height);
 
         this.ctx.clearRect(0, 0, this.width, this.height);
 
@@ -77,10 +77,10 @@ export class MapRenderer {
         const mapWidth = this.width - padding * 2;
         const mapHeight = this.height - padding * 2;
 
-        // Draw Prometheus Heatmap Layer (Background Intelligence)
+        // Draw Heatmap Layer (Background Intelligence)
         this.ctx.save();
         this.ctx.globalAlpha = 0.8; // Subtle blend
-        this.ctx.drawImage(this.prometheus.canvas, 0, 0);
+        this.ctx.drawImage(this.heatmap.canvas, 0, 0);
         this.ctx.restore();
 
         // Draw Map Background (Vector Overlay)
@@ -252,7 +252,7 @@ export class MapRenderer {
         }
 
         // Plot Threads and Ghosts
-        if (threads.length > 0 || ghosts.length > 0) {
+        if (threads.length > 0 || drafts.length > 0) {
             // Draw Connections for Real Threads
             this.ctx.strokeStyle = '#c67605'; // Gold
             this.ctx.lineWidth = 2;
@@ -312,44 +312,65 @@ export class MapRenderer {
                 }
             });
 
-            // Draw Ghosts
-            this.ghosts.forEach((g) => {
+            // Draw Drafts (Prometheus Intelligence)
+            this.drafts.forEach((g) => {
                 if (g.coordinates) {
                     const x = (g.coordinates.x / 100) * mapWidth;
                     const y = (g.coordinates.y / 100) * mapHeight;
 
-                    // Ghost Connection (if last thread exists)
-                    if (threads.length > 0) {
-                        const lastCoords = this._getThreadCoords(
-                            threads[threads.length - 1]
-                        );
-                        if (lastCoords) {
-                            const lx = (lastCoords.x / 100) * mapWidth;
-                            const ly = (lastCoords.y / 100) * mapHeight;
-                            this.ctx.strokeStyle =
-                                g.type === 'momentum' ? '#55aaff' : '#ffaa55';
-                            this.ctx.setLineDash([2, 4]);
-                            this.ctx.lineWidth = 1;
-                            this.ctx.beginPath();
-                            this.ctx.moveTo(lx, ly);
-                            this.ctx.lineTo(x, y);
-                            this.ctx.stroke();
+                    // Only draw connection if it's a "momentum" ghost (legacy)
+                    // Prometheus drafts are standalone signals usually.
+                    if (g.isDraft) {
+                        // Prometheus Draft Visuals
+                        const pulse = 8 + Math.sin(Date.now() / 200) * 4;
+                        this.ctx.strokeStyle = '#00ffff'; // Cyan
+                        this.ctx.lineWidth = 2;
+                        this.ctx.beginPath();
+                        this.ctx.arc(x, y, pulse, 0, Math.PI * 2);
+                        this.ctx.stroke();
+
+                        this.ctx.fillStyle = 'rgba(0, 255, 255, 0.2)';
+                        this.ctx.beginPath();
+                        this.ctx.arc(x, y, pulse, 0, Math.PI * 2);
+                        this.ctx.fill();
+
+                        this.ctx.fillStyle = '#ffffff';
+                        this.ctx.font = '10px Courier New';
+                        this.ctx.fillText(`PROMETHEUS SIGNAL`, x + 12, y);
+                    } else {
+                        // Legacy Ghosts (Horizon projections)
+                        if (threads.length > 0) {
+                            const lastCoords = this._getThreadCoords(
+                                threads[threads.length - 1]
+                            );
+                            if (lastCoords) {
+                                const lx = (lastCoords.x / 100) * mapWidth;
+                                const ly = (lastCoords.y / 100) * mapHeight;
+                                this.ctx.strokeStyle =
+                                    g.type === 'momentum' ? '#55aaff' : '#ffaa55';
+                                this.ctx.setLineDash([2, 4]);
+                                this.ctx.lineWidth = 1;
+                                this.ctx.beginPath();
+                                this.ctx.moveTo(lx, ly);
+                                this.ctx.lineTo(x, y);
+                                this.ctx.stroke();
+                            }
                         }
+
+                        // Ghost Node
+                        const ghostPulse = 6 + Math.sin(Date.now() / 150) * 2;
+                        this.ctx.fillStyle =
+                            g.type === 'momentum'
+                                ? 'rgba(85, 170, 255, 0.6)'
+                                : 'rgba(255, 170, 85, 0.6)';
+                        this.ctx.beginPath();
+                        this.ctx.arc(x, y, ghostPulse, 0, Math.PI * 2);
+                        this.ctx.fill();
+
+                        this.ctx.fillStyle = '#ffffff';
+                        this.ctx.font = '10px Courier New';
+                        this.ctx.fillText(`? ${g.intention}`, x + 10, y);
                     }
-
-                    // Ghost Node
-                    const ghostPulse = 6 + Math.sin(Date.now() / 150) * 2;
-                    this.ctx.fillStyle =
-                        g.type === 'momentum'
-                            ? 'rgba(85, 170, 255, 0.6)'
-                            : 'rgba(255, 170, 85, 0.6)';
-                    this.ctx.beginPath();
-                    this.ctx.arc(x, y, ghostPulse, 0, Math.PI * 2);
-                    this.ctx.fill();
-
-                    this.ctx.fillStyle = '#ffffff';
-                    this.ctx.font = '10px Courier New';
-                    this.ctx.fillText(`? ${g.intention}`, x + 10, y);
                 }
             });
         } else {
@@ -361,10 +382,10 @@ export class MapRenderer {
 
         this.ctx.restore();
 
-        // If animated elements exist (active node, ghosts, or threats), continue loop
+        // If animated elements exist (active node, drafts, or threats), continue loop
         if (
             this.activeNodeIndex !== -1 ||
-            (this.ghosts && this.ghosts.length > 0) ||
+            (this.drafts && this.drafts.length > 0) ||
             (this.threatZones && this.threatZones.length > 0) ||
             (this.vanguardUnits && this.vanguardUnits.length > 0) ||
             this.isDrawing
@@ -373,7 +394,7 @@ export class MapRenderer {
                 this.render(
                     this.threads,
                     this.locations,
-                    this.ghosts,
+                    this.drafts,
                     this.threatZones,
                     this.vanguardUnits,
                     this.citadelZones
@@ -483,13 +504,27 @@ export class MapRenderer {
                 });
             }
 
+            // Check Draft Collisions
+            let foundDraft = null;
+            if (this.drafts) {
+                this.drafts.forEach(d => {
+                     if (d.coordinates) {
+                         const dx = 40 + (d.coordinates.x / 100) * drawW;
+                         const dy = 40 + (d.coordinates.y / 100) * drawH;
+                         if (Math.hypot(mouseX - dx, mouseY - dy) < 15) {
+                             foundDraft = d;
+                         }
+                     }
+                });
+            }
+
             if (this.activeNodeIndex !== foundThread) {
                 this.activeNodeIndex = foundThread;
-                this.render(this.threads, this.locations, this.ghosts, this.threatZones, this.vanguardUnits, this.citadelZones);
+                this.render(this.threads, this.locations, this.drafts, this.threatZones, this.vanguardUnits, this.citadelZones);
             }
 
             if (!this.drawMode) {
-                this.canvas.style.cursor = (foundThread !== -1 || foundUnit !== null) ? 'pointer' : 'default';
+                this.canvas.style.cursor = (foundThread !== -1 || foundUnit !== null || foundDraft !== null) ? 'pointer' : 'default';
             }
         });
 
@@ -516,14 +551,34 @@ export class MapRenderer {
 
             if (clickedUnit) {
                 this.activeUnitId = clickedUnit;
-                this.render(this.threads, this.locations, this.ghosts, this.threatZones, this.vanguardUnits, this.citadelZones);
+                this.render(this.threads, this.locations, this.drafts, this.threatZones, this.vanguardUnits, this.citadelZones);
                 return;
+            }
+
+            // Check Draft Click
+            let clickedDraft = null;
+            if (this.drafts) {
+                this.drafts.forEach(d => {
+                     if (d.coordinates) {
+                         const dx = 40 + (d.coordinates.x / 100) * drawW;
+                         const dy = 40 + (d.coordinates.y / 100) * drawH;
+                         if (Math.hypot(mouseX - dx, mouseY - dy) < 15) {
+                             clickedDraft = d;
+                         }
+                     }
+                });
+            }
+
+            if (clickedDraft) {
+                 const event = new CustomEvent('draft-selected', { detail: clickedDraft });
+                 this.canvas.dispatchEvent(event);
+                 return;
             }
 
             // Deselect if clicking empty space (unless strictly clicking a thread)
             if (!clickedUnit && this.activeNodeIndex === -1) {
                 this.activeUnitId = null;
-                this.render(this.threads, this.locations, this.ghosts, this.threatZones, this.vanguardUnits, this.citadelZones);
+                this.render(this.threads, this.locations, this.drafts, this.threatZones, this.vanguardUnits, this.citadelZones);
             }
 
             if (this.activeNodeIndex !== -1) {
