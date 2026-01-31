@@ -28,15 +28,24 @@ def minify_css(content):
     return content
 
 def minify_js(content):
-    # Safe JS Minification: Remove comments and whitespace mostly
+    # 1. Remove Console Logs (Aggressive)
+    # Matches console.log(...) followed optionally by ;
+    # Uses non-greedy match. Limitation: nested parenthesis might break, but good enough for debug logs.
+    content = re.sub(r'console\.log\s*\(.*?\);?', '', content)
+
+    # 2. Remove Comments
+    content = re.sub(r'//.*', '', content)
+    content = re.sub(r'/\*.*?\*/', '', content, flags=re.DOTALL)
+
+    # 3. Collapse whitespace
     lines = content.split('\n')
     minified_lines = []
     for line in lines:
         line = line.strip()
         if not line: continue
-        if line.startswith('//'): continue
-        if line.startswith('/*') and line.endswith('*/'): continue
         minified_lines.append(line)
+
+    # Join with newline to maintain safety against automatic semicolon insertion issues
     return '\n'.join(minified_lines)
 
 def generate_content_hash():
@@ -139,7 +148,7 @@ def build():
 
     generate_robots_txt()
 
-    print("Deployment artifact ready in /dist")
+    print(f"Deployment artifact ready in /dist (ID: {build_id})")
     print("Mission Accomplished.")
 
 if __name__ == '__main__':
