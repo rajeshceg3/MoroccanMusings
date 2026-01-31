@@ -1542,9 +1542,11 @@ document.addEventListener('DOMContentLoaded', async () => {
             overlay.classList.add('hidden');
             localStorage.setItem('marq_onboarded', 'true');
             window.removeEventListener('resize', updateGuide);
+            resonanceEngine.playInteractionSound('click');
         };
 
         nextBtn.addEventListener('click', () => {
+            resonanceEngine.playInteractionSound('click');
             if (currentStep < steps.length - 1) {
                 currentStep++;
                 updateGuide();
@@ -1554,15 +1556,22 @@ document.addEventListener('DOMContentLoaded', async () => {
         });
 
         prevBtn.addEventListener('click', () => {
+            resonanceEngine.playInteractionSound('click');
             if (currentStep > 0) {
                 currentStep--;
                 updateGuide();
             }
         });
 
-        skipBtn.addEventListener('click', closeGuide);
+        skipBtn.addEventListener('click', () => {
+            closeGuide();
+            resonanceEngine.playInteractionSound('click');
+        });
 
-        helpBtn.addEventListener('click', showGuide);
+        helpBtn.addEventListener('click', () => {
+            showGuide();
+            resonanceEngine.playInteractionSound('click');
+        });
 
         // Auto-show on first run
         if (!localStorage.getItem('marq_onboarded')) {
