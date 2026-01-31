@@ -12,9 +12,10 @@ export class CortexEngine {
     /**
      * Analyzes the ledger and builds a relational graph.
      * @param {Array} threads - The list of threads from TapestryLedger
+     * @param {Object} mnemosyne - Optional Mnemosyne instance for semantic analysis
      * @returns {Object} { nodes, edges, clusters }
      */
-    analyze(threads) {
+    analyze(threads, mnemosyne = null) {
         if (!threads || threads.length === 0) {
             return { nodes: [], edges: [], clusters: [] };
         }
@@ -23,6 +24,8 @@ export class CortexEngine {
             id: t.id || t.hash.substring(0, 12),
             index: i,
             data: t,
+            clusterId: -1,
+            isBridge: false,
             // Physics state
             x: Math.random() * 100, // Initial random position
             y: Math.random() * 100,
@@ -59,10 +62,14 @@ export class CortexEngine {
                     types.push('time');
                 }
 
-                // 4. Semantic Linking (Title/Narrative tags - simplified)
-                // Note: We don't have narrative in basic thread list unless loaded,
-                // but we check titles for common words if needed.
-                // Keeping it lightweight for now.
+                // 4. Semantic Linking (Mnemosyne)
+                if (mnemosyne) {
+                    const sim = mnemosyne.getCosineSimilarity(a.id, b.id);
+                    if (sim > 0.25) { // Threshold
+                         weight += sim * 3.0; // High importance
+                         types.push('semantic');
+                    }
+                }
 
                 if (weight > 0) {
                     edges.push({
@@ -78,6 +85,8 @@ export class CortexEngine {
         }
 
         const clusters = this._findClusters(nodes, edges);
+        this._assignClusters(nodes, clusters);
+        this._findBridges(nodes, edges);
 
         return { nodes, edges, clusters };
     }
@@ -113,12 +122,52 @@ export class CortexEngine {
                     });
                 }
 
-                if (cluster.length > 1) {
+                if (cluster.length > 0) { // Include singletons as clusters of 1
                     clusters.push(cluster);
                 }
             }
         });
 
         return clusters.sort((a, b) => b.length - a.length);
+    }
+
+    _assignClusters(nodes, clusters) {
+        const clusterMap = new Map();
+        clusters.forEach((cluster, idx) => {
+            cluster.forEach(id => clusterMap.set(id, idx));
+        });
+        nodes.forEach(node => {
+            if (clusterMap.has(node.id)) {
+                node.clusterId = clusterMap.get(node.id);
+            }
+        });
+    }
+
+    _findBridges(nodes, edges) {
+        // A Bridge node connects at least two different Intentions
+        // Build adjacency with metadata
+        const adj = new Map();
+        nodes.forEach(n => adj.set(n.id, { intention: n.data.intention, neighbors: [] }));
+
+        edges.forEach(e => {
+             // edges stores IDs
+             adj.get(e.source).neighbors.push(adj.get(e.target).intention);
+             adj.get(e.target).neighbors.push(adj.get(e.source).intention);
+        });
+
+        nodes.forEach(node => {
+            const entry = adj.get(node.id);
+            const myIntention = entry.intention;
+            const neighborIntentions = new Set(entry.neighbors);
+
+            // If neighbors include an intention different from mine
+            // And I have at least 2 neighbors?
+            if (entry.neighbors.length > 1) {
+                neighborIntentions.delete(myIntention);
+                if (neighborIntentions.size > 0) {
+                    node.isBridge = true;
+                }
+            }
+        });
     }
 }

@@ -1125,24 +1125,34 @@ document.addEventListener('DOMContentLoaded', async () => {
             }
         );
 
-        // Synapse Interaction (Mouse)
+        // Synapse Interaction (Mouse & Zoom)
         ['mousedown', 'mousemove', 'mouseup'].forEach(evt => {
             elements.tapestry.canvas.addEventListener(evt, (e) => {
                 if (state.isSynapseActive && synapseRenderer) {
-                    // Just pass raw coordinates, renderer handles scale
-                    // But wait, renderer needs client relative to canvas.
-                    // The renderer expects "client" relative to top-left?
-                    // SynapseRenderer handleInput uses getBoundingClientRect internally.
-                    // So we pass clientX/Y.
                     const type = evt === 'mousedown' ? 'down' : evt === 'mousemove' ? 'move' : 'up';
                     synapseRenderer.handleInput(type, e.clientX, e.clientY);
 
-                    if (synapseRenderer.isSimulating) {
-                         startHorizonLoop(); // Ensure loop is running for physics
+                    if (type === 'move' && synapseRenderer.isPanning) {
+                        synapseRenderer.handlePan(e.movementX, e.movementY);
+                    }
+
+                    if (synapseRenderer.isSimulating || synapseRenderer.isPanning) {
+                         startHorizonLoop();
+                    } else if (type === 'up') {
+                        // Ensure final render
+                        requestAnimationFrame(renderTapestry);
                     }
                 }
             });
         });
+
+        elements.tapestry.canvas.addEventListener('wheel', (e) => {
+            if (state.isSynapseActive && synapseRenderer) {
+                e.preventDefault();
+                synapseRenderer.handleZoom(e.deltaY, e.clientX, e.clientY);
+                requestAnimationFrame(renderTapestry);
+            }
+        }, { passive: false });
 
         elements.tapestry.fuseBtn.addEventListener('click', async () => {
             const threads = tapestryLedger.getThreads();
@@ -1229,7 +1239,8 @@ document.addEventListener('DOMContentLoaded', async () => {
 
                 // Initialize Graph
                 const threads = tapestryLedger.getThreads();
-                const graph = cortex.analyze(threads);
+                // Pass Mnemosyne for semantic analysis
+                const graph = cortex.analyze(threads, mnemosyne);
                 if (!synapseRenderer) synapseRenderer = new SynapseRenderer(elements.tapestry.canvas);
                 synapseRenderer.render(graph);
 
