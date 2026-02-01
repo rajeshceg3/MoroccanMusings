@@ -1665,30 +1665,33 @@ document.addEventListener('DOMContentLoaded', async () => {
     // These exposures are strictly for automated testing (tests/verify_app.py)
     // and runtime debugging. In a compiled production environment, these
     // should be stripped or gated behind a flag.
-    window.tapestryLedger = tapestryLedger;
-    window.state = state;
-    window.codex = codex;
-    Object.defineProperty(window, 'mandalaRenderer', {
-        get: () => mandalaRenderer
-    });
-    Object.defineProperty(window, 'mapRenderer', {
-        get: () => mapRenderer
-    });
-    window.ui = ui;
-    window.showNotification = (msg, type) => ui.showNotification(msg, type);
-    window.showScreen = showScreen;
-    Object.defineProperty(window, 'oracle', {
-        get: () => oracleEngine
-    });
-    window.aegis = aegis;
-    window.sentinel = sentinel;
-    window.terminal = terminal;
-    window.spectra = spectra;
-    window.panopticon = panopticon;
-    window.valkyrie = valkyrie;
-    window.vanguard = vanguard;
-    window.citadel = citadel;
-    window.prometheus = prometheus;
+    if (window.location.hostname === 'localhost' || window.location.hostname === '127.0.0.1' || window.location.protocol === 'file:') {
+        window.tapestryLedger = tapestryLedger;
+        window.state = state;
+        window.codex = codex;
+        Object.defineProperty(window, 'mandalaRenderer', {
+            get: () => mandalaRenderer
+        });
+        Object.defineProperty(window, 'mapRenderer', {
+            get: () => mapRenderer
+        });
+        window.ui = ui;
+        window.showNotification = (msg, type) => ui.showNotification(msg, type);
+        window.showScreen = showScreen;
+        Object.defineProperty(window, 'oracle', {
+            get: () => oracleEngine
+        });
+        window.aegis = aegis;
+        window.sentinel = sentinel;
+        window.terminal = terminal;
+        window.spectra = spectra;
+        window.panopticon = panopticon;
+        window.valkyrie = valkyrie;
+        window.vanguard = vanguard;
+        window.citadel = citadel;
+        window.prometheus = prometheus;
+        console.log("%c DEBUG MODE ACTIVE // GLOBAL EXPOSURE ENABLED ", "background: #c67605; color: #000; padding: 4px; font-weight: bold;");
+    }
 
     // --- Prometheus Draft Logic ---
     function showDraft(draft) {
