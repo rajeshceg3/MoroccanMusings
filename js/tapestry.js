@@ -279,6 +279,20 @@ export class TapestryLedger {
         return [...this.threads];
     }
 
+    getSnapshot() {
+        // Return a deep copy to prevent mutation of history
+        return JSON.parse(JSON.stringify(this.getThreads()));
+    }
+
+    async loadSnapshot(threads) {
+        if (this.status === 'LOCKED') throw new Error('Ledger Locked');
+        // Validate schema roughly or trust internal snapshot?
+        // Trusting internal snapshot for speed, but deep cloning to ensure separation
+        this.threads = JSON.parse(JSON.stringify(threads));
+        await this._save();
+        await this.verifyIntegrity(); // Re-verify just in case
+    }
+
     async importScroll(jsonString) {
         if (this.status === 'LOCKED')
             throw new Error('Unlock ledger to import');

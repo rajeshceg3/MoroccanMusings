@@ -1354,6 +1354,9 @@ document.addEventListener('DOMContentLoaded', async () => {
     }
 
     function renderTapestry() {
+        // Halt render loop if Panopticon is controlling reality
+        if (panopticon && panopticon.isReplaying) return;
+
         const threads = tapestryLedger.getThreads();
 
         // Update Tactical Units
@@ -1502,7 +1505,10 @@ document.addEventListener('DOMContentLoaded', async () => {
                 get map() { return mapRenderer; },
                 updateAlchemy: updateAlchemyUI
             },
-            ui
+            ui,
+            vanguard,
+            citadel,
+            prometheus
         );
         // DEBUG: console.log("Panopticon initialized:", panopticon);
     } catch (e) {

@@ -164,6 +164,14 @@ export class PrometheusEngine {
         return this.drafts;
     }
 
+    getSnapshot() {
+        return JSON.parse(JSON.stringify(this.drafts));
+    }
+
+    loadSnapshot(data) {
+        this.drafts = JSON.parse(JSON.stringify(data));
+    }
+
     removeDraft(id) {
         const idx = this.drafts.findIndex(d => d.id === id);
         if (idx !== -1) {
