@@ -61,6 +61,15 @@ export class CitadelEngine {
         return this.zones;
     }
 
+    getSnapshot() {
+        return JSON.parse(JSON.stringify(this.zones));
+    }
+
+    loadSnapshot(data) {
+        this.zones = JSON.parse(JSON.stringify(data));
+        this.save();
+    }
+
     /**
      * Checks if a thread violates any zone.
      * @param {Object} thread - The thread object.

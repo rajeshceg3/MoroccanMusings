@@ -31,6 +31,10 @@ class VanguardUnit {
         this.scanPulse = 0;
     }
 
+    hydrate(state) {
+        Object.assign(this, state);
+    }
+
     assignMission(type, data) {
         this.mission = { type, data };
         if (data.x !== undefined && data.y !== undefined) {
@@ -288,5 +292,34 @@ export class VanguardEngine {
     reportSynthesis(unit) {
         const event = new CustomEvent('vanguard-synthesis-complete', { detail: { unit } });
         window.dispatchEvent(event);
+    }
+
+    getSnapshot() {
+        return this.units.map(u => {
+            const snapshot = {};
+            // Shallow copy properties, excluding circular references (engine)
+            for (const key in u) {
+                if (key !== 'engine' && typeof u[key] !== 'function') {
+                    snapshot[key] = u[key];
+                }
+            }
+            return snapshot;
+        });
+    }
+
+    loadSnapshot(data) {
+        this.units = [];
+        data.forEach(uData => {
+            const unit = new VanguardUnit(uData.id, uData.type, {x: uData.x, y: uData.y}, this);
+            unit.hydrate(uData);
+            this.units.push(unit);
+        });
+
+        const maxId = data.reduce((max, u) => {
+             const parts = u.id.split('-');
+             const num = parts.length > 1 ? parseInt(parts[1]) : 0;
+             return num > max ? num : max;
+        }, 0);
+        this.idCounter = maxId + 1;
     }
 }
