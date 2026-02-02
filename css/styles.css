@@ -270,6 +270,9 @@ body {
     transition:
         color 0.3s,
         transform 0.3s;
+    background: none;
+    border: none;
+    padding: 0;
 }
 
 #tapestry-icon:hover {
@@ -436,6 +439,7 @@ body {
     z-index: 20;
     backdrop-filter: blur(5px);
     transition: transform 0.2s;
+    border: none;
 }
 
 #back-button:hover {
@@ -459,6 +463,7 @@ body {
         transform 0.5s var(--ease-out-quint),
         width 0.2s;
     overflow: hidden;
+    border: none;
 }
 
 .weave-button.visible {
@@ -583,6 +588,9 @@ body {
     font-size: 1.5rem;
     cursor: pointer;
     z-index: 20;
+    background: none;
+    border: none;
+    padding: 0;
 }
 
 .back-button:hover {
@@ -2294,8 +2302,13 @@ body.mode-tapestry #tapestry-screen {
 /* Glitch Effect */
 .glitch {
     position: relative;
-    animation: glitch-anim 0.2s cubic-bezier(0.25, 0.46, 0.45, 0.94) both infinite;
     color: var(--tactical-red); /* Optional: flash red */
+}
+
+@media (prefers-reduced-motion: no-preference) {
+    .glitch {
+        animation: glitch-anim 0.2s cubic-bezier(0.25, 0.46, 0.45, 0.94) both infinite;
+    }
 }
 
 @keyframes glitch-anim {
