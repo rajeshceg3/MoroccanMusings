@@ -55,15 +55,13 @@
                     <span class="center-text">Align the rings</span>
                 </div>
             </div>
-            <div
+            <button
                 id="tapestry-icon"
-                role="button"
                 aria-label="Open Tapestry"
                 data-tooltip="View Tapestry"
-                tabindex="0"
             >
                 ❖
-            </div>
+            </button>
         </div>
         <div id="tapestry-screen" class="screen">
             <canvas id="tapestry-canvas"></canvas>
@@ -72,17 +70,15 @@
                 <div class="tapestry-title">The Tapestry of Time</div>
                 <div class="tapestry-subtitle">Your Woven Journey</div>
             </div>
-            <div
+            <button
                 class="back-button"
                 id="tapestry-back"
-                role="button"
                 aria-label="Go Back"
                 data-tooltip="Return to Astrolabe"
                 data-tooltip-pos="bottom"
-                tabindex="0"
             >
                 ←
-            </div>
+            </button>
             <div class="alchemy-ui" id="alchemy-ui">
                 <div class="alchemy-slot" id="alchemy-slot-1">1</div>
                 <button class="alchemy-fuse-btn" id="alchemy-fuse-btn" disabled data-tooltip="Fuse Threads">
@@ -174,37 +170,31 @@
             <div id="riad-image-container">
                 <img id="riad-image-element" src="" alt="" />
             </div>
-            <div
+            <button
                 id="back-button"
-                role="button"
                 aria-label="Go Back"
                 data-tooltip="Return"
                 data-tooltip-pos="bottom"
-                tabindex="0"
             >
                 ←
-            </div>
-            <div
+            </button>
+            <button
                 id="weave-button"
                 class="weave-button"
-                role="button"
                 aria-label="Weave Thread"
                 data-tooltip="Commit to Ledger"
-                tabindex="0"
             >
                 Weave a Thread
                 <div class="weave-progress"></div>
-            </div>
-            <div
+            </button>
+            <button
                 id="simulate-button"
                 class="simulate-button"
-                role="button"
                 aria-label="Simulate Thread"
                 data-tooltip="Run Analysis"
-                tabindex="0"
             >
                 Simulate
-            </div>
+            </button>
             <div class="riad-content">
                 <h1 id="riad-title"></h1>
                 <h2 id="riad-subtitle"></h2>
@@ -337,9 +327,6 @@
             </div>
         </div>
 
-        <script type="module" src="js/crypto-guard.js"></script>
-        <script type="module" src="js/spectra.js"></script>
-        <script src="js/error-guard.js"></script>
-        <script type="module" src="js/app.js"></script>
+        <script type="module" src="/js/app.js"></script>
     </body>
 </html>
