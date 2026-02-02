@@ -29,6 +29,8 @@ import { PrometheusEngine } from './prometheus.js';
 import { GhostGuide } from './ghost-guide.js';
 import { RiadUI } from './riad-ui.js';
 import { AstrolabeUI } from './astrolabe-ui.js';
+import { StratagemEngine } from './stratagem.js';
+import { StratagemUI } from './stratagem-ui.js';
 
 document.addEventListener('DOMContentLoaded', async () => {
     // Service Worker Registration
@@ -145,6 +147,37 @@ document.addEventListener('DOMContentLoaded', async () => {
 
     const valkyrie = new ValkyrieEngine(terminal, ui, tapestryLedger, horizonEngine, vanguard, citadel);
     const valkyrieUI = new ValkyrieUI(valkyrie);
+
+    const stratagem = new StratagemEngine({
+        TapestryLedger,
+        VanguardEngine,
+        CitadelEngine,
+        SentinelEngine,
+        HorizonEngine
+    }, locations);
+
+    const stratagemUI = new StratagemUI(stratagem, null, ui);
+
+    window.addEventListener('stratagem-reset', async () => {
+        const liveState = {
+            ledger: tapestryLedger,
+            vanguard: vanguard,
+            citadel: citadel
+        };
+        await stratagem.init(liveState);
+        stratagemUI.update();
+        ui.showNotification('SIMULATION RESET. STATE RESYNCED.', 'info');
+    });
+
+    window.addEventListener('stratagem-commit', async () => {
+        ui.showLoading('EXECUTING STRATEGY...');
+        await stratagem.commit(tapestryLedger, vanguard, citadel);
+        stratagemUI.hide();
+        ui.hideLoading();
+        ui.showNotification('STRATEGY EXECUTED. REALITY UPDATED.', 'success');
+        resonanceEngine.playInteractionSound('weave');
+        renderTapestry();
+    });
 
     const stratcom = new StratcomSystem(tapestryLedger, horizonEngine, sentinel, vanguard, terminal, ui);
 
@@ -995,6 +1028,24 @@ document.addEventListener('DOMContentLoaded', async () => {
         // Halt render loop if Panopticon is controlling reality
         if (panopticon && panopticon.isReplaying) return;
 
+        // Stratagem Check
+        if (stratagem.isActive) {
+            const simState = stratagem.getRenderState();
+
+            if (mapRenderer) {
+                mapRenderer.render(
+                    simState.threads,
+                    locations,
+                    [], // drafts
+                    simState.threatZones || [],
+                    simState.units,
+                    simState.zones // citadel zones
+                );
+            }
+            // Add visual overlay indicator handled by CSS/UI
+            return;
+        }
+
         const threads = tapestryLedger.getThreads();
 
         // Update Tactical Units
@@ -1116,6 +1167,8 @@ document.addEventListener('DOMContentLoaded', async () => {
             stratcom,
             citadel,
             prometheus,
+            stratagem,
+            stratagemUI,
             get panopticon() {
                 return panopticon;
             }
@@ -1220,6 +1273,7 @@ document.addEventListener('DOMContentLoaded', async () => {
         window.vanguard = vanguard;
         window.citadel = citadel;
         window.prometheus = prometheus;
+        window.stratagem = stratagem;
         console.log("%c DEBUG MODE ACTIVE // GLOBAL EXPOSURE ENABLED ", "background: #c67605; color: #000; padding: 4px; font-weight: bold;");
     }
 

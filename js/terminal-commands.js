@@ -1064,4 +1064,58 @@ export function registerCommands(terminal, context) {
             }
         }
     );
+
+    terminal.registerCommand(
+        'wargame',
+        'Strategic Simulation Engine (Project STRATAGEM)',
+        async (args) => {
+            if (!checkAccess()) return;
+            const subcmd = args[0] || 'start';
+            const stratagem = context.engines.stratagem;
+            const stratagemUI = context.engines.stratagemUI;
+
+            if (!stratagem) {
+                terminal.log('Stratagem Engine not initialized.', 'error');
+                return;
+            }
+
+            if (subcmd === 'start') {
+                terminal.log('INITIALIZING WARGAMES SANDBOX...', 'success');
+                // Trigger reset event via window logic
+                window.dispatchEvent(new CustomEvent('stratagem-reset'));
+                stratagemUI.show();
+                terminal.toggle();
+            } else if (subcmd === 'stop' || subcmd === 'abort') {
+                stratagemUI.abort();
+                terminal.log('WARGAMES ABORTED.', 'warning');
+            } else if (subcmd === 'commit') {
+                window.dispatchEvent(new CustomEvent('stratagem-commit'));
+                terminal.log('STRATEGY COMMITTING...', 'success');
+            } else if (subcmd === 'status') {
+                 if (!stratagem.isActive) {
+                     terminal.log('Simulation not active.', 'info');
+                     return;
+                 }
+                 const history = stratagem.history;
+                 const last = history[history.length-1];
+                 terminal.log('--- STRATAGEM STATUS ---', 'system');
+                 terminal.log(`Tick: ${stratagem.tickCount}`, 'info');
+                 if (last) {
+                    terminal.log(`Sim DEFCON: ${last.defcon}`, 'warning');
+                    terminal.log(`Sim Balance: ${last.balance}%`, 'info');
+                 }
+            } else if (subcmd === 'run') {
+                 if (!stratagem.isActive) {
+                     terminal.log('Start simulation first.', 'error');
+                     return;
+                 }
+                 const count = parseInt(args[1]) || 1;
+                 stratagem.run(count);
+                 stratagemUI.update();
+                 terminal.log(`Simulation advanced by ${count} ticks.`, 'success');
+            } else {
+                terminal.log('Usage: wargame [start|stop|commit|status|run <n>]', 'warning');
+            }
+        }
+    );
 }
