@@ -8,9 +8,18 @@ from playwright.sync_api import sync_playwright
 
 PORT = 8088  # Different port to avoid conflicts
 
+class ProjectRequestHandler(http.server.SimpleHTTPRequestHandler):
+    def translate_path(self, path):
+        # Allow serving public assets from root for testing
+        if path == '/sw.js' or path == '/manifest.json':
+            root = os.getcwd()
+            return os.path.join(root, 'public', path.lstrip('/'))
+        return super().translate_path(path)
+
 def run_server():
     os.chdir(os.path.dirname(os.path.dirname(os.path.abspath(__file__))))
-    Handler = http.server.SimpleHTTPRequestHandler
+    # Use custom handler to map public assets
+    Handler = ProjectRequestHandler
     with socketserver.TCPServer(("", PORT), Handler) as httpd:
         httpd.serve_forever()
 

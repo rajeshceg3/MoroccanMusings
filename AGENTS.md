@@ -38,6 +38,7 @@ Before declaring "Mission Accomplished" (Submit), you must execute:
 1.  **Static Analysis:** `npm run lint`
 2.  **Unit Verification:** `node tests/unit_test.mjs` (New Protocol)
 3.  **Integration Drills:** `python3 tests/verify_app.py`
+4.  **Build Verification:** `npm run build` (Must produce clean artifacts in `dist/`)
 
 ### 4. USER EXPERIENCE (THE "HEARTS AND MINDS" DOCTRINE)
 

@@ -3,7 +3,7 @@
 
 export class CodexEngine {
     constructor() {
-        this.worker = new Worker('js/codex.worker.js');
+        this.worker = new Worker(new URL('./codex.worker.js', import.meta.url), { type: 'module' });
         this.pendingRequests = new Map();
         this.requestIdCounter = 0;
 

@@ -5,6 +5,7 @@ export class GhostGuide {
         this.showScreen = showScreenCallback;
 
         this.overlay = document.getElementById('ghost-guide-overlay');
+        this.guideContainer = this.overlay.querySelector('.guide-container');
         this.steps = this.overlay.querySelectorAll('.guide-step');
         this.dots = this.overlay.querySelectorAll('.dot');
         this.nextBtn = document.getElementById('guide-next-btn');
@@ -14,13 +15,22 @@ export class GhostGuide {
 
         this.highlightBox = null;
         this.currentStep = 0;
+        this.previousFocus = null;
 
         this.updateGuide = this.updateGuide.bind(this);
+        this._handleKeydown = this._handleKeydown.bind(this);
     }
 
     init() {
         this._createHighlightBox();
         this._bindEvents();
+
+        // A11y Setup
+        if (this.guideContainer) {
+            this.guideContainer.setAttribute('role', 'dialog');
+            this.guideContainer.setAttribute('aria-modal', 'true');
+            this.guideContainer.setAttribute('aria-label', 'Operational Guide');
+        }
 
         // Auto-show on first run
         if (!localStorage.getItem('marq_onboarded')) {
@@ -103,6 +113,9 @@ export class GhostGuide {
     }
 
     show() {
+        // Save focus
+        this.previousFocus = document.activeElement;
+
         this.currentStep = 0;
         this.overlay.classList.remove('hidden');
         // Ensure we are on the right screen for the start?
@@ -112,13 +125,47 @@ export class GhostGuide {
         // Double RAF to ensure layout is settled
         requestAnimationFrame(() => {
             requestAnimationFrame(this.updateGuide);
+            // Move focus into the guide
+            this.nextBtn.focus();
         });
         window.addEventListener('resize', this.updateGuide);
+        window.addEventListener('keydown', this._handleKeydown);
     }
 
     close() {
         this.overlay.classList.add('hidden');
         localStorage.setItem('marq_onboarded', 'true');
         window.removeEventListener('resize', this.updateGuide);
+        window.removeEventListener('keydown', this._handleKeydown);
+
+        // Restore Focus
+        if (this.previousFocus && typeof this.previousFocus.focus === 'function') {
+            this.previousFocus.focus();
+        }
+    }
+
+    _handleKeydown(e) {
+        if (e.key === 'Tab') {
+            const focusableElements = this.guideContainer.querySelectorAll(
+                'button, [href], input, select, textarea, [tabindex]:not([tabindex="-1"])'
+            );
+            const firstElement = focusableElements[0];
+            const lastElement = focusableElements[focusableElements.length - 1];
+
+            if (e.shiftKey) {
+                if (document.activeElement === firstElement) {
+                    lastElement.focus();
+                    e.preventDefault();
+                }
+            } else {
+                if (document.activeElement === lastElement) {
+                    firstElement.focus();
+                    e.preventDefault();
+                }
+            }
+        }
+        if (e.key === 'Escape') {
+            this.close();
+        }
     }
 }
