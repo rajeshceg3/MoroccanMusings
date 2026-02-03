@@ -530,6 +530,20 @@ document.addEventListener('DOMContentLoaded', async () => {
     async function weaveThread() {
         if (state.isWeaving) return;
 
+        // Stratagem Scenario Override
+        if (stratagem.isActive) {
+             const threadData = {
+                intention: state.intention,
+                time: state.time,
+                region: state.region,
+                title: state.activeLocation.title,
+                content: state.activeLocation.narrative
+            };
+            await stratagem.addSimulatedThread(threadData);
+            ui.showNotification('SIMULATION UPDATE: Thread woven.', 'info');
+            return;
+        }
+
         // Prevent weaving if in Replay Mode
         if (panopticon && panopticon.isReplaying) {
             ui.showNotification('SYSTEM HALTED: REPLAY MODE ACTIVE', 'error');

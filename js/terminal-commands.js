@@ -5,6 +5,7 @@
  */
 
 import { locations } from './data.js';
+import { scenarios } from './scenarios.js';
 
 /**
  * Registers all available commands with the terminal system.
@@ -1115,6 +1116,49 @@ export function registerCommands(terminal, context) {
                  terminal.log(`Simulation advanced by ${count} ticks.`, 'success');
             } else {
                 terminal.log('Usage: wargame [start|stop|commit|status|run <n>]', 'warning');
+            }
+        }
+    );
+
+    terminal.registerCommand(
+        'daedalus',
+        'Project DAEDALUS: Advanced Tactical Scenarios',
+        async (args) => {
+            if (!checkAccess()) return;
+            const subcmd = args[0] || 'list';
+            const stratagem = context.engines.stratagem;
+            const stratagemUI = context.engines.stratagemUI;
+
+            if (subcmd === 'list') {
+                terminal.log('--- AVAILABLE SCENARIOS ---', 'system');
+                Object.values(scenarios).forEach(s => {
+                    terminal.log(`[${s.id}] ${s.title} (${s.difficulty})`, 'info');
+                    terminal.log(`   > ${s.description}`, 'info');
+                });
+            } else if (subcmd === 'start') {
+                const id = args[1];
+                if (!id || !scenarios[id]) {
+                    terminal.log('Invalid Scenario ID. Use "daedalus list".', 'error');
+                    return;
+                }
+
+                terminal.log(`INITIALIZING SCENARIO: ${scenarios[id].title}...`, 'success');
+                await stratagem.loadScenario(scenarios[id]);
+                stratagemUI.show();
+                stratagemUI.togglePlay(); // Auto-start playback loop for timer
+                terminal.toggle(); // Close terminal
+
+                context.ui.showNotification(`MISSION START: ${scenarios[id].title}`, 'info');
+
+            } else if (subcmd === 'status') {
+                if (!stratagem.activeScenario) {
+                    terminal.log('No active scenario.', 'info');
+                    return;
+                }
+                terminal.log(`CURRENT MISSION: ${stratagem.activeScenario.title}`, 'system');
+                terminal.log(`Time Remaining: ${stratagem.activeScenario.timeLeft}s`, 'warning');
+            } else {
+                terminal.log('Usage: daedalus [list|start <ID>|status]', 'warning');
             }
         }
     );
