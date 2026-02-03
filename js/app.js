@@ -31,6 +31,7 @@ import { RiadUI } from './riad-ui.js';
 import { AstrolabeUI } from './astrolabe-ui.js';
 import { StratagemEngine } from './stratagem.js';
 import { StratagemUI } from './stratagem-ui.js';
+import { SettingsUI } from './settings-ui.js';
 
 document.addEventListener('DOMContentLoaded', async () => {
     // Service Worker Registration
@@ -75,6 +76,12 @@ document.addEventListener('DOMContentLoaded', async () => {
     };
 
     const resonanceEngine = new ResonanceEngine();
+    const settings = new SettingsUI(ui, resonanceEngine);
+    const settingsBtn = document.getElementById('settings-trigger');
+    if (settingsBtn) {
+        settingsBtn.addEventListener('click', () => settings.show());
+    }
+
     const horizonEngine = new HorizonEngine();
     const codex = new CodexEngine();
     const spectra = new SpectraEngine();
@@ -1274,7 +1281,7 @@ document.addEventListener('DOMContentLoaded', async () => {
         window.citadel = citadel;
         window.prometheus = prometheus;
         window.stratagem = stratagem;
-        console.log("%c DEBUG MODE ACTIVE // GLOBAL EXPOSURE ENABLED ", "background: #c67605; color: #000; padding: 4px; font-weight: bold;");
+        console.warn("%c DEBUG MODE ACTIVE // GLOBAL EXPOSURE ENABLED ", "background: #c67605; color: #000; padding: 4px; font-weight: bold;");
     }
 
     // --- Prometheus Draft Logic ---

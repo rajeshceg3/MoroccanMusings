@@ -2470,3 +2470,133 @@ body.stratagem-active .color-wash {
     background: #f55;
     color: #000;
 }
+
+/* --- SETTINGS UI --- */
+.settings-overlay {
+    display: flex;
+    justify-content: center;
+    align-items: center;
+    background: rgba(0, 0, 0, 0.85);
+    z-index: 9000;
+}
+
+.settings-overlay.hidden {
+    display: none;
+}
+
+.settings-container {
+    background: #0a1015;
+    border: 2px solid var(--ochre-gold);
+    box-shadow: 0 0 50px rgba(198, 118, 5, 0.2);
+    width: 90%;
+    max-width: 400px;
+    padding: 0;
+}
+
+.settings-header {
+    background: rgba(198, 118, 5, 0.15);
+    padding: 1rem;
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    border-bottom: 1px solid var(--ochre-gold);
+}
+
+.settings-title {
+    font-family: 'Share Tech Mono', monospace;
+    color: var(--ochre-gold);
+    font-weight: bold;
+    letter-spacing: 1px;
+}
+
+.settings-close-btn {
+    background: transparent;
+    border: 1px solid var(--ochre-gold);
+    color: var(--ochre-gold);
+    width: 30px;
+    height: 30px;
+    cursor: pointer;
+    transition: all 0.2s;
+    font-family: 'Share Tech Mono', monospace;
+}
+
+.settings-close-btn:hover {
+    background: var(--ochre-gold);
+    color: #000;
+}
+
+.settings-content {
+    padding: 1.5rem;
+}
+
+.setting-row {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    margin-bottom: 1rem;
+    font-family: 'Share Tech Mono', monospace;
+    font-size: 0.9rem;
+    color: #ccc;
+    border-bottom: 1px dashed #334455;
+    padding-bottom: 0.5rem;
+}
+
+.setting-row label {
+    cursor: pointer;
+}
+
+/* Custom Checkbox */
+.setting-row input[type="checkbox"] {
+    accent-color: var(--ochre-gold);
+    width: 1.2rem;
+    height: 1.2rem;
+    cursor: pointer;
+}
+
+/* --- ACCESSIBILITY OVERRIDES --- */
+
+/* Reduced Motion Override */
+body.reduce-motion *,
+body.reduce-motion *::before,
+body.reduce-motion *::after {
+    animation-duration: 0.01ms !important;
+    animation-iteration-count: 1 !important;
+    transition-duration: 0.01ms !important;
+    scroll-behavior: auto !important;
+}
+
+/* High Contrast Override */
+body.high-contrast {
+    --ochre-gold: #ffff00; /* Yellow */
+    --sand: #ffffff;
+    background-color: #000000;
+}
+
+body.high-contrast .tapestry-btn,
+body.high-contrast .guide-btn,
+body.high-contrast .settings-close-btn {
+    border: 2px solid #ffff00;
+    color: #ffff00;
+    background: #000;
+}
+
+body.high-contrast .tapestry-btn:hover,
+body.high-contrast .guide-btn:hover {
+    background: #ffff00;
+    color: #000;
+}
+
+body.high-contrast .astrolabe-ring {
+    border-color: #fff;
+    border-width: 2px;
+}
+
+body.high-contrast .astrolabe-marker {
+    color: #fff;
+    font-weight: bold;
+}
+
+body.high-contrast .settings-container {
+    border: 4px solid #ffff00;
+    background: #000;
+}

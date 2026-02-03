@@ -3,62 +3,48 @@
 **CLASSIFICATION:** SECRET // NOFORN
 **TO:** COMMAND
 **FROM:** LT. CMDR. JULES (SPEC OPS / ENG)
-**DATE:** 2024-05-25
-**SUBJECT:** SYSTEM TRANSFORMATION & READINESS ASSESSMENT
+**DATE:** 2024-05-25 (UPDATED)
+**SUBJECT:** SYSTEM TRANSFORMATION & READINESS ASSESSMENT (CORRECTED)
 
 ## 1. EXECUTIVE SUMMARY
 
-The repository has been subjected to a rigorous "Zero Tolerance" tactical assessment. While the codebase exhibits strong foundational architecture (ES Modules, strict CSP) and creative user interaction patterns, critical vulnerabilities in build security and operational maintainability were identified.
+The repository has been subjected to a rigorous "Zero Tolerance" tactical assessment. While the foundational architecture is strong, previous intelligence reports regarding the build system were outdated. The system is transitioning from a Python-based deployment script to an industry-standard Vite workflow.
 
 **CURRENT DEFCON:** 4 (Guarded)
-*Previous Status: 5 (Green) - Downgraded due to Global Scope Pollution risks identified during recon.*
-
-**IMMEDIATE ACTION TAKEN:**
-Security hardening has been applied to `js/app.js` to restrict debug-level global exposures to local environments only.
+*Status: Optimizing for Accessibility and Production Readiness.*
 
 ## 2. DETAILED TACTICAL ANALYSIS
 
-### 2.1 SECURITY VULNERABILITY MAPPING
-*   **[CRITICAL] Global Object Pollution:** Prior to intervention, `window.tapestryLedger` and `window.state` were exposed in all environments. This allowed any user to manipulate the ledger state via console injection in production.
-    *   *Status:* **MITIGATED** (Localhost gating applied).
-*   **[MEDIUM] Build Integrity:** The deployment script `tools/deploy.py` relies on regex-based minification. This is fragile and prone to creating syntax errors if code patterns change (e.g., template literals containing `//`).
-    *   *Recommendation:* Migrate to a deterministic bundler (Vite/Rollup).
-*   **[LOW] Content Security Policy (CSP):** The `default-src 'self'` policy in `index.html` is excellent and should be maintained as the "Fortress" standard.
+### 2.1 SECURITY & BUILD INTEGRITY
+*   **Build System:** The legacy `tools/deploy.py` is MIA. The project now correctly utilizes **Vite** (`npm run build`) for deterministic, tree-shaken builds.
+*   **Production Artifacts:** `dist/` is the designated drop zone.
+*   **Security Policy:** The "Fortress" policy (Strict CSP) is active and enforced in `index.html`.
 
-### 2.2 CODE QUALITY & ARCHITECTURE
-*   **Modular Design:** The use of native ES Modules is commendable.
-*   **"God Object" Pattern:** `js/app.js` orchestrates too many concerns (UI, State, Engine Initialization, Event Listeners). It is becoming a single point of failure.
-    *   *Recommendation:* Extract `AppLifecycle` and `StateManager` into dedicated modules.
-*   **Testing:** Unit tests (`tests/unit_test.mjs`) are passing (15/15), indicating robust logic in the core engines (`TapestryLedger`, `HorizonEngine`).
+### 2.2 USER EXPERIENCE (UX) & ACCESSIBILITY GAPS
+*   **[CRITICAL] Focus Trapping:** The "Ghost Guide" overlay does not confine keyboard navigation, creating a focus trap risk for assistive technology users.
+*   **[HIGH] Accessibility Controls:** No user-facing controls exist for "Reduced Motion", "High Contrast", or "Audio Mute", relying solely on system defaults which may not be sufficient for all operators.
+*   **[MEDIUM] Feedback:** Visual feedback is good, but auditory feedback needs a manual kill-switch.
 
-### 2.3 USER EXPERIENCE (UX) & INTERACTION
-*   **Onboarding ("Ghost Guide"):** The guide uses a visual "hole punch" effect.
-    *   *Risk:* Potential keyboard focus trap. If the user cannot escape the guide via keyboard, it violates accessibility standards.
-*   **Feedback Loops:** The `ResonanceEngine` provides excellent auditory feedback.
-*   **Responsiveness:** Mobile viewports are handled, but complex canvas interactions (Mandala/Map) need performance profiling on low-end devices.
+## 3. STRATEGIC TRANSFORMATION ROADMAP (OPERATION "GHOST PROTOCOL II")
 
-## 3. STRATEGIC TRANSFORMATION ROADMAP
+### PHASE 1: LOGISTICS (IMMEDIATE)
+*   [x] **Obj 1.1:** Standardize documentation on Vite workflow.
+*   [x] **Obj 1.2:** Purge legacy references from `AGENTS.md`.
 
-### PHASE 1: HARDENING (IMMEDIATE - COMPLETED)
-*   [x] **Obj 1.1:** Gate global variable exposure in `js/app.js` to `localhost` / `127.0.0.1`.
-*   [ ] **Obj 1.2:** Audit `tools/deploy.py` for regex safety (Interim solution).
+### PHASE 2: UX SUPERIORITY (IN PROGRESS)
+*   [ ] **Obj 2.1:** **Settings Module.** Implement a global preferences engine (`SettingsUI`) to toggle:
+    *   Stealth Mode (Mute Audio)
+    *   Motion Sickness Protocol (Reduced Motion)
+    *   High Contrast HUD
+*   [ ] **Obj 2.2:** **Ghost Guide Hardening.** Implement `trapFocus()` and `restoreFocus()` within the onboarding guide.
 
-### PHASE 2: MODERNIZATION (SHORT TERM)
-*   [ ] **Obj 2.1:** Replace `tools/deploy.py` with **Vite**.
-    *   *Benefit:* Tree-shaking, proper minification, asset hashing, and faster dev server.
-*   [ ] **Obj 2.2:** Refactor `js/app.js`. Move initialization logic to `js/core/bootstrapper.js`.
-
-### PHASE 3: UX SUPERIORITY (MEDIUM TERM)
-*   [ ] **Obj 3.1:** **Accessibility Audit.** Ensure "Ghost Guide" manages focus (`trapFocus`). Add `aria-live` regions for dynamic canvas updates.
-*   [ ] **Obj 3.2:** **Performance Budget.** Enforce a JS bundle size limit (e.g., < 150KB gzipped).
-
-### PHASE 4: CI/CD FORTIFICATION (LONG TERM)
-*   [ ] **Obj 4.1:** Implement GitHub Actions workflow for automated testing on PRs.
-*   [ ] **Obj 4.2:** Add E2E tests for `TerminalSystem` interactions.
+### PHASE 3: MISSION VERIFICATION
+*   [ ] **Obj 3.1:** Execute `npm run lint` and `npm run test:unit`.
+*   [ ] **Obj 3.2:** Verify production build via `npm run build`.
 
 ## 4. CONCLUSION
 
-The system is operational but required the immediate security patch applied today to be considered "Production Ready". The path forward involves shifting from custom python scripts to industry-standard build tools to ensure long-term maintainability and security.
+The system is operational but requires targeted UX fortification to meet the "Hearts and Minds" doctrine defined in `AGENTS.md`. Execution of this roadmap is authorized immediately.
 
 **SIGNED:**
 *LT. CMDR. JULES*

@@ -27,6 +27,18 @@ export class ResonanceEngine {
         }
     }
 
+    mute(shouldMute) {
+        this.isMuted = shouldMute;
+        if (this.masterGain && this.ctx) {
+            const target = shouldMute ? 0 : 0.5;
+            this.masterGain.gain.setTargetAtTime(
+                target,
+                this.ctx.currentTime,
+                0.1
+            );
+        }
+    }
+
     setVolume(value) {
         if (this.masterGain) {
             this.masterGain.gain.setTargetAtTime(
