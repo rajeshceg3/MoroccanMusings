@@ -27,6 +27,7 @@ export class StratagemEngine {
         this.isActive = false;
         this.tickCount = 0;
         this.history = []; // { tick, defcon, balance, threatCount }
+        this.activeScenario = null; // { id, objectives, constraints, timeLeft }
     }
 
     /**
@@ -40,37 +41,55 @@ export class StratagemEngine {
         this.isActive = true;
         this.tickCount = 0;
         this.history = [];
+        this.activeScenario = null;
 
+        await this._setupSandbox(
+            liveState.ledger.getSnapshot(),
+            liveState.citadel ? liveState.citadel.getSnapshot() : [],
+            liveState.vanguard ? liveState.vanguard.getSnapshot() : []
+        );
+    }
+
+    /**
+     * Initializes the simulation from a static scenario definition (Project DAEDALUS).
+     * @param {Object} scenarioData - The scenario definition
+     */
+    async loadScenario(scenarioData) {
+        this.isActive = true;
+        this.tickCount = 0;
+        this.history = [];
+        this.activeScenario = {
+            ...scenarioData,
+            timeLeft: scenarioData.constraints.timeLimit
+        };
+
+        await this._setupSandbox(
+            scenarioData.initialThreads || [],
+            [], // Citadel starts empty
+            []  // Vanguard starts empty
+        );
+    }
+
+    async _setupSandbox(threads, zones, units) {
         // 1. Clone Ledger (Deep Copy)
-        // We instantiate a new ledger and override its IO to be ephemeral
         this.simLedger = new this.classes.TapestryLedger('stratagem_sandbox');
         this.simLedger._save = async () => {}; // Disable LocalStorage IO
-
-        const threads = liveState.ledger.getSnapshot();
-        await this.simLedger.loadSnapshot(threads); // Load data
+        await this.simLedger.loadSnapshot(threads);
 
         // 2. Clone Citadel
         this.simCitadel = new this.classes.CitadelEngine(this.locations);
-        this.simCitadel.save = () => {}; // Disable LocalStorage IO
-
-        const zones = liveState.citadel ? liveState.citadel.getSnapshot() : [];
+        this.simCitadel.save = () => {};
         this.simCitadel.loadSnapshot(zones);
 
-        // 3. Clone Horizon (Stateless-ish, but needed for analysis)
+        // 3. Clone Horizon
         this.simHorizon = new this.classes.HorizonEngine();
 
-        // 4. Clone Sentinel (Stateless, depends on Horizon)
+        // 4. Clone Sentinel
         this.simSentinel = new this.classes.SentinelEngine(this.simHorizon);
 
         // 5. Clone Vanguard
-        // Vanguard needs Sentinel, Aegis (Mocked), and Ledger
-        // We assume Aegis is not critical for movement/combat simulation, or we mock it.
-        const mockAegis = {
-            // Minimal interface if needed by Vanguard
-        };
-
+        const mockAegis = {};
         this.simVanguard = new this.classes.VanguardEngine(this.simSentinel, mockAegis, this.simLedger);
-        const units = liveState.vanguard ? liveState.vanguard.getSnapshot() : [];
         this.simVanguard.loadSnapshot(units);
 
         // Initial Assessment
@@ -85,12 +104,26 @@ export class StratagemEngine {
 
         this.tickCount++;
 
-        // 1. Update Units
+        // 1. Update Scenario Timer
+        if (this.activeScenario) {
+            this.activeScenario.timeLeft--;
+            if (this.activeScenario.timeLeft <= 0) {
+                this._endScenario('TIMEOUT');
+                return;
+            }
+        }
+
+        // 2. Update Units
         // Note: Vanguard uses the Ledger reference passed in constructor, which is our simLedger
         this.simVanguard.tick();
 
-        // 2. Record State
+        // 3. Record State
         this._recordHistory();
+
+        // 4. Check Objectives
+        if (this.activeScenario) {
+            this._checkObjectives();
+        }
     }
 
     /**
@@ -131,6 +164,19 @@ export class StratagemEngine {
     }
 
     /**
+     * Commands a simulated unit to move to a location.
+     * @param {string} unitId
+     * @param {Object} coords - {x, y}
+     */
+    commandUnit(unitId, coords) {
+        if (!this.isActive || !this.simVanguard) return;
+        const unit = this.simVanguard.getUnits().find(u => u.id === unitId);
+        if (unit) {
+            unit.command(coords);
+        }
+    }
+
+    /**
      * Commits the current simulation state to the live reality.
      * WARNING: This overwrites the live state.
      * @param {TapestryLedger} liveLedger
@@ -154,9 +200,50 @@ export class StratagemEngine {
 
     abort() {
         this.isActive = false;
+        this.activeScenario = null;
         this.simLedger = null;
         this.simVanguard = null;
         this.simCitadel = null;
+    }
+
+    _checkObjectives() {
+        const report = this.simSentinel.assess(this.simLedger.getThreads());
+        const analysis = this.simHorizon.analyze(this.simLedger.getThreads());
+
+        let allMet = true;
+
+        for (const obj of this.activeScenario.objectives) {
+            let val = 0;
+            switch(obj.type) {
+                case 'DEFCON': val = report.defcon; break;
+                case 'BALANCE': val = analysis.balanceScore; break;
+                case 'THREAD_COUNT': val = this.simLedger.getThreads().length; break;
+                case 'THREAT_COUNT': val = report.threats.length; break;
+            }
+
+            let passed = false;
+            if (obj.comparator === '>=') passed = val >= obj.target;
+            else if (obj.comparator === '<=') passed = val <= obj.target;
+            else if (obj.comparator === '==') passed = val === obj.target;
+
+            if (!passed) {
+                allMet = false;
+                break;
+            }
+        }
+
+        if (allMet) {
+            this._endScenario('WIN');
+        }
+    }
+
+    _endScenario(result) {
+        this.isActive = false; // Pause simulation, but keep data for viewing
+        // Dispatch event for UI
+        const event = new CustomEvent('stratagem-scenario-end', {
+            detail: { result, scenario: this.activeScenario }
+        });
+        window.dispatchEvent(event);
     }
 
     /**

@@ -8,6 +8,10 @@ export class StratagemUI {
         this.rafId = null;
         this.isPlaying = false;
 
+        window.addEventListener('stratagem-scenario-end', (e) => {
+            this.showMissionEnd(e.detail.result);
+        });
+
         this._initDOM();
     }
 
@@ -46,6 +50,11 @@ export class StratagemUI {
             </div>
         `;
 
+        // Objectives Panel
+        const objectives = document.createElement('div');
+        objectives.id = 'stratagem-objectives';
+        objectives.className = 'stratagem-objectives hidden';
+
         // Controls (Timeline)
         const controls = document.createElement('div');
         controls.className = 'stratagem-controls';
@@ -80,7 +89,7 @@ export class StratagemUI {
 
         footer.append(btnAbort, btnCommit);
 
-        container.append(header, dashboard, controls, actions, footer);
+        container.append(header, dashboard, objectives, controls, actions, footer);
         document.body.appendChild(container);
 
         this.container = container;
@@ -90,6 +99,7 @@ export class StratagemUI {
             defcon: container.querySelector('#sim-defcon'),
             balance: container.querySelector('#sim-balance'),
             threats: container.querySelector('#sim-threats'),
+            objectives,
             btnPlay
         };
     }
@@ -204,5 +214,49 @@ export class StratagemUI {
 
         // Visual Feedback
         this.elements.defcon.className = `value defcon-${latest.defcon}`;
+
+        // Scenario Rendering
+        if (this.engine.activeScenario) {
+            this.elements.objectives.classList.remove('hidden');
+            this.elements.status.textContent = `MISSION: ${this.engine.activeScenario.title} // TIME: ${this.engine.activeScenario.timeLeft}s`;
+
+            // Render Objectives
+            const objs = this.engine.activeScenario.objectives;
+            this.elements.objectives.innerHTML = '<h3>PRIMARY OBJECTIVES</h3>' +
+                objs.map(o => `
+                    <div class="objective-item">
+                        <span class="obj-type">${o.type}</span>
+                        <span class="obj-target">${o.comparator} ${o.target}</span>
+                    </div>
+                `).join('');
+        } else {
+            this.elements.objectives.classList.add('hidden');
+            this.elements.status.textContent = 'SIMULATION ACTIVE // SANDBOX MODE';
+        }
+    }
+
+    showMissionEnd(result) {
+        this.isPlaying = false;
+
+        const overlay = document.createElement('div');
+        overlay.className = `mission-end-overlay ${result.toLowerCase()}`;
+
+        const title = document.createElement('h1');
+        title.textContent = result === 'WIN' ? 'MISSION ACCOMPLISHED' : 'MISSION FAILED';
+
+        const subtitle = document.createElement('p');
+        subtitle.textContent = result === 'WIN'
+            ? 'Objectives secured. Narrative stabilized.'
+            : 'Critical failure. System integrity compromised.';
+
+        const btn = document.createElement('button');
+        btn.textContent = 'RETURN TO BASE';
+        btn.onclick = () => {
+            overlay.remove();
+            this.abort();
+        };
+
+        overlay.append(title, subtitle, btn);
+        document.body.appendChild(overlay);
     }
 }
