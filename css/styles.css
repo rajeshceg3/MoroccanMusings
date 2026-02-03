@@ -2600,3 +2600,7 @@ body.high-contrast .settings-container {
     border: 4px solid #ffff00;
     background: #000;
 }
+
+#settings-trigger {
+    right: 5rem;
+}
