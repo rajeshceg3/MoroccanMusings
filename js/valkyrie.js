@@ -183,10 +183,20 @@ export class ValkyrieEngine {
 
     _execute(protocol) {
         protocol.lastTriggered = Date.now();
+        this.saveProtocols(); // Persist timestamp
+
         this.executionLog.push({
             id: protocol.id,
             time: new Date().toISOString()
         });
+
+        // Notify UI (Project OVERWATCH)
+        window.dispatchEvent(new CustomEvent('valkyrie-trigger', {
+            detail: {
+                protocolId: protocol.id,
+                action: protocol.action
+            }
+        }));
 
         // Execute payload
         this._executeAction(protocol.action);
@@ -229,6 +239,25 @@ export class ValkyrieEngine {
                      const type = parts[2] || 'SCOUT';
                      this.vanguard.deploy(type, region);
                      this.terminal.log(`VALKYRIE: Deployed ${type} to ${region}.`, 'success');
+                 }
+                 break;
+            case 'DEPLOY_SQUADRON':
+                 // Args: Region [Type] [Count]
+                 if (this.vanguard) {
+                     const region = parts[1] || 'coast';
+                     const type = parts[2] || 'INTERCEPTOR';
+                     const count = parseInt(parts[3]) || 3;
+                     for (let i = 0; i < count; i++) {
+                         this.vanguard.deploy(type, region);
+                     }
+                     this.terminal.log(`VALKYRIE: Deployed Squadron (${count} ${type}) to ${region}.`, 'success');
+                 }
+                 break;
+            case 'CITADEL_LOCKDOWN':
+                 this.ui.showNotification('VALKYRIE: CITADEL LOCKDOWN ACTIVE.', 'error');
+                 if (this.citadel) {
+                     // Create a global containment zone
+                     this.citadel.addZone({ x: 50, y: 50, r: 40, id: 'LOCKDOWN' });
                  }
                  break;
             case 'INTERCEPT_ALL':
