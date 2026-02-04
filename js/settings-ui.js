@@ -116,25 +116,7 @@ export class SettingsUI {
     }
 
     _handleKeydown(e) {
-        if (e.key === 'Tab') {
-            const focusableElements = this.overlay.querySelectorAll(
-                'button, [href], input, select, textarea, [tabindex]:not([tabindex="-1"])'
-            );
-            const firstElement = focusableElements[0];
-            const lastElement = focusableElements[focusableElements.length - 1];
-
-            if (e.shiftKey) {
-                if (document.activeElement === firstElement) {
-                    lastElement.focus();
-                    e.preventDefault();
-                }
-            } else {
-                if (document.activeElement === lastElement) {
-                    firstElement.focus();
-                    e.preventDefault();
-                }
-            }
-        }
+        this.ui.trapFocus(this.overlay, e);
         if (e.key === 'Escape') {
             this.hide();
         }

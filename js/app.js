@@ -1231,7 +1231,7 @@ document.addEventListener('DOMContentLoaded', async () => {
     setupTapestryInteractions();
 
     // --- Operation Ghost Guide ---
-    const ghostGuide = new GhostGuide(state, resonanceEngine, showScreen);
+    const ghostGuide = new GhostGuide(state, resonanceEngine, showScreen, ui);
     ghostGuide.init();
 
     elements.astrolabe.center.addEventListener('click', () => {
