@@ -978,6 +978,15 @@ document.addEventListener('DOMContentLoaded', async () => {
             resonanceEngine.playInteractionSound('click');
         });
 
+        // Valkyrie Interaction (Project OVERWATCH)
+        const valkyrieToggle = document.getElementById('valkyrie-toggle');
+        if (valkyrieToggle) {
+            valkyrieToggle.addEventListener('click', () => {
+                valkyrieUI.toggle();
+                resonanceEngine.playInteractionSound('click');
+            });
+        }
+
         // Prometheus Interaction
         const prometheusToggle = document.getElementById('prometheus-toggle');
         if (prometheusToggle) {

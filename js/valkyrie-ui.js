@@ -3,7 +3,33 @@ export class ValkyrieUI {
         this.engine = valkyrieEngine;
         this.overlay = null;
         this.isVisible = false;
+
+        // Regions derived from data keys (simplified)
+        this.regions = ['coast', 'medina', 'sahara', 'kasbah'];
+        this.unitTypes = ['SCOUT', 'INTERCEPTOR'];
+
+        this._bindEvents();
         this.ensureOverlay();
+    }
+
+    _bindEvents() {
+        // Listen for engine triggers
+        window.addEventListener('valkyrie-trigger', (e) => {
+            this.handleTrigger(e.detail);
+        });
+    }
+
+    handleTrigger(detail) {
+        if (!this.isVisible) return;
+
+        // Find the card and animate it
+        const cards = this.listContainer.querySelectorAll('.valkyrie-item');
+        cards.forEach(card => {
+            if (card.dataset.id === detail.protocolId) {
+                card.classList.add('pulse-active');
+                setTimeout(() => card.classList.remove('pulse-active'), 1000);
+            }
+        });
     }
 
     ensureOverlay() {
@@ -11,6 +37,7 @@ export class ValkyrieUI {
 
         this.overlay = document.createElement('div');
         this.overlay.className = 'valkyrie-overlay hidden';
+        this.overlay.id = 'valkyrie-overlay';
 
         const container = document.createElement('div');
         container.className = 'valkyrie-container';
@@ -21,12 +48,12 @@ export class ValkyrieUI {
 
         const title = document.createElement('h2');
         title.className = 'valkyrie-title';
-        title.textContent = 'PROJECT OMEGA // PROTOCOL EDITOR';
+        title.innerHTML = 'PROJECT <strong>OVERWATCH</strong> // DEFENSE GRID';
 
         const closeBtn = document.createElement('button');
         closeBtn.className = 'valkyrie-close-btn';
         closeBtn.textContent = '×';
-        closeBtn.setAttribute('data-tooltip', 'Close Protocol Editor');
+        closeBtn.setAttribute('data-tooltip', 'Close Interface');
         closeBtn.setAttribute('data-tooltip-pos', 'bottom');
         closeBtn.onclick = () => this.toggle(false);
 
@@ -37,10 +64,12 @@ export class ValkyrieUI {
         const content = document.createElement('div');
         content.className = 'valkyrie-content';
 
+        // Protocol List
         const listContainer = document.createElement('div');
         listContainer.className = 'valkyrie-list';
         this.listContainer = listContainer;
 
+        // Form Container
         const formContainer = document.createElement('div');
         formContainer.className = 'valkyrie-form';
         this.renderForm(formContainer);
@@ -66,12 +95,13 @@ export class ValkyrieUI {
     }
 
     renderProtocols() {
-        this.listContainer.replaceChildren(); // Secure clear
+        if (!this.listContainer) return;
+        this.listContainer.replaceChildren();
 
         const protocols = this.engine.getProtocols();
         if (protocols.length === 0) {
             const empty = document.createElement('div');
-            empty.textContent = 'No active protocols.';
+            empty.textContent = 'SYSTEM STANDBY. NO PROTOCOLS ACTIVE.';
             empty.className = 'valkyrie-empty';
             this.listContainer.appendChild(empty);
             return;
@@ -79,7 +109,8 @@ export class ValkyrieUI {
 
         protocols.forEach(p => {
             const item = document.createElement('div');
-            item.className = 'valkyrie-item';
+            item.className = 'valkyrie-item protocol-card';
+            item.dataset.id = p.id;
             if (!p.active) item.classList.add('disabled');
 
             const info = document.createElement('div');
@@ -87,11 +118,11 @@ export class ValkyrieUI {
 
             const name = document.createElement('div');
             name.className = 'v-name';
-            name.textContent = `${p.id}: ${p.name}`;
+            name.innerHTML = `<span class="v-id">${p.id}</span> // ${p.name}`;
 
             const cond = document.createElement('div');
             cond.className = 'v-cond';
-            cond.textContent = `IF [${p.condition}] THEN [${p.action}]`;
+            cond.innerHTML = `IF <span class="v-hl">${p.condition}</span> THEN <span class="v-hl action">${p.action}</span>`;
 
             info.appendChild(name);
             info.appendChild(cond);
@@ -100,9 +131,8 @@ export class ValkyrieUI {
             actions.className = 'valkyrie-item-actions';
 
             const toggleBtn = document.createElement('button');
-            toggleBtn.className = 'v-btn';
-            toggleBtn.textContent = p.active ? 'DISABLE' : 'ENABLE';
-            toggleBtn.setAttribute('data-tooltip', 'Enable/Disable Protocol');
+            toggleBtn.className = `v-btn ${p.active ? 'active' : ''}`;
+            toggleBtn.textContent = p.active ? 'ARMED' : 'DISARMED';
             toggleBtn.onclick = () => {
                 this.engine.toggleProtocol(p.id, !p.active);
                 this.renderProtocols();
@@ -110,10 +140,9 @@ export class ValkyrieUI {
 
             const delBtn = document.createElement('button');
             delBtn.className = 'v-btn v-del';
-            delBtn.textContent = 'DELETE';
-            delBtn.setAttribute('data-tooltip', 'Delete Protocol');
+            delBtn.textContent = 'PURGE';
             delBtn.onclick = () => {
-                if (confirm(`Delete protocol ${p.id}?`)) {
+                if (confirm(`Purge protocol ${p.id}?`)) {
                     this.engine.removeProtocol(p.id);
                     this.renderProtocols();
                 }
@@ -129,42 +158,105 @@ export class ValkyrieUI {
     }
 
     renderForm(container) {
+        container.replaceChildren();
+
         const title = document.createElement('h3');
-        title.textContent = 'DEFINE NEW PROTOCOL';
+        title.textContent = 'PROTOCOL BUILDER';
         title.className = 'valkyrie-form-title';
         container.appendChild(title);
 
         const formGrid = document.createElement('div');
         formGrid.className = 'valkyrie-form-grid';
 
-        // Inputs
-        const idInput = this.createInput('ID (Unique)', 'e.g., CODE_RED');
-        const triggerSelect = this.createSelect('Trigger', ['defcon', 'balance', 'threadCount', 'threats']);
-        const operatorSelect = this.createSelect('Operator', ['<', '>', '=', 'CONTAINS']);
-        const valueInput = this.createInput('Value', 'e.g., 3 or SURGE');
-        const actionSelect = this.createSelect('Action', [
+        // 1. Inputs (ID)
+        const idInput = this.createInput('PROTOCOL ID', 'e.g., OMEGA_RED');
+
+        // 2. Condition Logic
+        const triggerSelect = this.createSelect('TRIGGER', ['defcon', 'balance', 'threadCount', 'threats', 'zone_violation']);
+        const operatorSelect = this.createSelect('OP', ['<', '>', '=', 'CONTAINS']);
+        const valueInput = this.createInput('VALUE', 'e.g., 3, SURGE, true');
+
+        // 3. Action Logic
+        const actionSelect = this.createSelect('ACTION', [
             'ALERT_HIGH', 'ALERT_STABILITY', 'WARN_SURGE', 'SYS_LOCK', 'NOTIFY', 'LOG',
-            'DEPLOY_VANGUARD', 'INTERCEPT_ALL', 'PURGE_SECTOR'
+            'DEPLOY_VANGUARD', 'DEPLOY_SQUADRON', 'INTERCEPT_ALL', 'PURGE_SECTOR', 'CITADEL_LOCKDOWN'
         ]);
 
+        // 4. Dynamic Action Arguments
+        const argContainer = document.createElement('div');
+        argContainer.className = 'v-arg-container';
+
+        // Create Inputs for args (hidden by default)
+        const regionSelect = this.createSelect('REGION', this.regions);
+        const typeSelect = this.createSelect('UNIT TYPE', this.unitTypes);
+        const countInput = this.createInput('COUNT', '3');
+        const msgInput = this.createInput('MESSAGE', 'System Alert...');
+
+        // Initial State
+        regionSelect.container.style.display = 'none';
+        typeSelect.container.style.display = 'none';
+        countInput.container.style.display = 'none';
+        msgInput.container.style.display = 'none';
+
+        // Update args based on action
+        const updateArgs = () => {
+            const act = actionSelect.input.value;
+            // Hide all
+            regionSelect.container.style.display = 'none';
+            typeSelect.container.style.display = 'none';
+            countInput.container.style.display = 'none';
+            msgInput.container.style.display = 'none';
+
+            if (act === 'DEPLOY_VANGUARD' || act === 'PURGE_SECTOR') {
+                regionSelect.container.style.display = 'flex';
+                typeSelect.container.style.display = 'flex';
+            } else if (act === 'DEPLOY_SQUADRON') {
+                regionSelect.container.style.display = 'flex';
+                typeSelect.container.style.display = 'flex';
+                countInput.container.style.display = 'flex';
+            } else if (act === 'NOTIFY' || act === 'LOG') {
+                msgInput.container.style.display = 'flex';
+            }
+        };
+
+        actionSelect.input.addEventListener('change', updateArgs);
+        updateArgs(); // Init
+
+        // Append Basic Inputs
         formGrid.appendChild(idInput.container);
         formGrid.appendChild(triggerSelect.container);
         formGrid.appendChild(operatorSelect.container);
         formGrid.appendChild(valueInput.container);
         formGrid.appendChild(actionSelect.container);
 
+        // Append Dynamic Args
+        formGrid.appendChild(regionSelect.container);
+        formGrid.appendChild(typeSelect.container);
+        formGrid.appendChild(countInput.container);
+        formGrid.appendChild(msgInput.container);
+
+        container.appendChild(formGrid);
+
+        // Submit Button
         const createBtn = document.createElement('button');
         createBtn.textContent = 'INITIALIZE PROTOCOL';
         createBtn.className = 'valkyrie-create-btn';
-        createBtn.setAttribute('data-tooltip', 'Save New Protocol');
-
         createBtn.onclick = () => {
             const id = idInput.input.value.toUpperCase().replace(/\s/g, '_');
             const condition = `${triggerSelect.input.value} ${operatorSelect.input.value} ${valueInput.input.value}`;
-            const action = actionSelect.input.value;
+            let action = actionSelect.input.value;
+
+            // Append Args
+            if (action === 'DEPLOY_VANGUARD' || action === 'PURGE_SECTOR') {
+                action += ` ${regionSelect.input.value} ${typeSelect.input.value}`;
+            } else if (action === 'DEPLOY_SQUADRON') {
+                action += ` ${regionSelect.input.value} ${typeSelect.input.value} ${countInput.input.value}`;
+            } else if (action === 'NOTIFY' || action === 'LOG') {
+                action += ` ${msgInput.input.value}`;
+            }
 
             if (!id || !valueInput.input.value) {
-                alert('Missing required fields.');
+                alert('CRITICAL: Missing required fields.');
                 return;
             }
 
@@ -176,15 +268,15 @@ export class ValkyrieUI {
                     active: true
                 });
                 this.renderProtocols();
-                // Reset inputs
+                // Reset basic inputs
                 idInput.input.value = '';
                 valueInput.input.value = '';
+                msgInput.input.value = '';
             } catch (e) {
-                alert(e.message);
+                alert(`ERROR: ${e.message}`);
             }
         };
 
-        container.appendChild(formGrid);
         container.appendChild(createBtn);
     }
 

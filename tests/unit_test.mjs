@@ -3,6 +3,7 @@ import assert from 'node:assert';
 import { HorizonEngine } from '../js/horizon.js';
 import { SynthesisEngine } from '../js/alchemy.js';
 import { TapestryLedger } from '../js/tapestry.js';
+import { ValkyrieEngine } from '../js/valkyrie.js';
 
 // --- TACTICAL SHIMS ---
 // Simulate Browser Environment for Testing
@@ -237,6 +238,63 @@ describe('Tactical Unit Verification', () => {
              assert.strictEqual(ledger.status, 'READY');
              assert.strictEqual(ledger.getThreads().length, 1);
              assert.strictEqual(ledger.getThreads()[0].title, 'Secret Thread');
+        });
+    });
+
+    describe('ValkyrieEngine (Project OVERWATCH)', () => {
+        let engine;
+        let mockCitadel;
+        let mockVanguard;
+
+        beforeEach(() => {
+            const mockTerminal = { log: () => {} };
+            const mockUI = { showNotification: () => {} };
+            const mockLedger = { lock: () => {}, getThreads: () => [] };
+            const mockHorizon = { analyze: () => ({ balanceScore: 50 }) };
+
+            mockVanguard = {
+                deploy: (type, region) => {
+                    mockVanguard.deployed.push({type, region});
+                },
+                deployed: []
+            };
+
+            mockCitadel = {
+                addZone: (z) => {
+                    mockCitadel.zones.push(z);
+                    return z;
+                },
+                check: () => false,
+                zones: []
+            };
+
+            engine = new ValkyrieEngine(mockTerminal, mockUI, mockLedger, mockHorizon, mockVanguard, mockCitadel);
+        });
+
+        it('should initialize with default protocols', () => {
+            assert.ok(engine.getProtocols().length > 0);
+            assert.ok(engine.getProtocols().find(p => p.id === 'OMEGA_PROTOCOL'));
+        });
+
+        it('should execute CITADEL_LOCKDOWN', () => {
+            engine._executeAction('CITADEL_LOCKDOWN');
+            assert.strictEqual(mockCitadel.zones.length, 1);
+            assert.strictEqual(mockCitadel.zones[0].id, 'LOCKDOWN');
+        });
+
+        it('should execute DEPLOY_SQUADRON', () => {
+            engine._executeAction('DEPLOY_SQUADRON coast INTERCEPTOR 3');
+            assert.strictEqual(mockVanguard.deployed.length, 3);
+            assert.strictEqual(mockVanguard.deployed[0].type, 'INTERCEPTOR');
+        });
+
+        it('should add a custom protocol', () => {
+            engine.addProtocol({
+                id: 'TEST_PROTO',
+                condition: 'defcon > 1',
+                action: 'NOTIFY Test'
+            });
+            assert.ok(engine.getProtocols().find(p => p.id === 'TEST_PROTO'));
         });
     });
 

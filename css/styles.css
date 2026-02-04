@@ -2691,3 +2691,45 @@ body.high-contrast .settings-container {
     background: #fff;
     color: #000;
 }
+
+/* --- Project OVERWATCH: Valkyrie Enhancements --- */
+
+.protocol-card {
+    border-left: 3px solid #334455;
+    background: linear-gradient(90deg, rgba(255,255,255,0.02) 0%, transparent 100%);
+}
+
+.protocol-card.pulse-active {
+    animation: valkyrie-pulse 1s ease-out;
+    border-left-color: var(--ochre-gold);
+    background: linear-gradient(90deg, rgba(198, 118, 5, 0.1) 0%, transparent 100%);
+}
+
+@keyframes valkyrie-pulse {
+    0% { transform: scale(1); box-shadow: 0 0 0 rgba(198, 118, 5, 0); }
+    50% { transform: scale(1.02); box-shadow: 0 0 20px rgba(198, 118, 5, 0.3); }
+    100% { transform: scale(1); box-shadow: 0 0 0 rgba(198, 118, 5, 0); }
+}
+
+.v-id {
+    color: var(--ochre-gold);
+    font-weight: bold;
+}
+
+.v-hl {
+    color: #fff;
+    font-family: 'Share Tech Mono', monospace;
+}
+
+.v-hl.action {
+    color: #55aaff;
+}
+
+.v-arg-container {
+    display: contents; /* Let children flow into the grid */
+}
+
+/* Ensure dynamic inputs fit well */
+.valkyrie-form-grid {
+    align-items: end;
+}
