@@ -1,8 +1,9 @@
 export class GhostGuide {
-    constructor(state, resonanceEngine, showScreenCallback) {
+    constructor(state, resonanceEngine, showScreenCallback, uiSystem) {
         this.state = state;
         this.resonanceEngine = resonanceEngine;
         this.showScreen = showScreenCallback;
+        this.ui = uiSystem;
 
         this.overlay = document.getElementById('ghost-guide-overlay');
         this.guideContainer = this.overlay.querySelector('.guide-container');
@@ -145,24 +146,8 @@ export class GhostGuide {
     }
 
     _handleKeydown(e) {
-        if (e.key === 'Tab') {
-            const focusableElements = this.guideContainer.querySelectorAll(
-                'button, [href], input, select, textarea, [tabindex]:not([tabindex="-1"])'
-            );
-            const firstElement = focusableElements[0];
-            const lastElement = focusableElements[focusableElements.length - 1];
-
-            if (e.shiftKey) {
-                if (document.activeElement === firstElement) {
-                    lastElement.focus();
-                    e.preventDefault();
-                }
-            } else {
-                if (document.activeElement === lastElement) {
-                    firstElement.focus();
-                    e.preventDefault();
-                }
-            }
+        if (this.ui) {
+            this.ui.trapFocus(this.guideContainer, e);
         }
         if (e.key === 'Escape') {
             this.close();

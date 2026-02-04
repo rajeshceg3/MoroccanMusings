@@ -339,6 +339,41 @@ export class UISystem {
         });
     }
 
+    /**
+     * Centralized Focus Trap Logic
+     * @param {HTMLElement} container - The modal/overlay to trap focus within
+     * @param {KeyboardEvent} event - The keydown event
+     */
+    trapFocus(container, event) {
+        if (event.key !== 'Tab') return;
+
+        const focusableSelector = 'button, [href], input, select, textarea, [tabindex]:not([tabindex="-1"])';
+        const focusableElements = Array.from(container.querySelectorAll(focusableSelector))
+            .filter(el => !el.hasAttribute('disabled') && el.getAttribute('aria-hidden') !== 'true' && el.offsetParent !== null);
+
+        if (focusableElements.length === 0) {
+            event.preventDefault();
+            return;
+        }
+
+        const firstElement = focusableElements[0];
+        const lastElement = focusableElements[focusableElements.length - 1];
+
+        if (event.shiftKey) {
+            // Shift + Tab
+            if (document.activeElement === firstElement) {
+                lastElement.focus();
+                event.preventDefault();
+            }
+        } else {
+            // Tab
+            if (document.activeElement === lastElement) {
+                firstElement.focus();
+                event.preventDefault();
+            }
+        }
+    }
+
     showEchoInterface(mode, spectraEngine, onClose) {
         const overlay = document.getElementById('echo-overlay');
         const statusEl = document.getElementById('echo-status');
