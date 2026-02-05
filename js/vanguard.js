@@ -19,12 +19,18 @@ class VanguardUnit {
         this.battery = 100;
 
         // State Machine
-        this.status = 'IDLE'; // IDLE, MOVING, SCANNING, RETURNING, INTERCEPTING, PURGING, SYNTHESIZING
+        this.status = 'IDLE'; // IDLE, MOVING, SCANNING, RETURNING, INTERCEPTING, PURGING, SYNTHESIZING, FOLLOW
         this.target = null; // {x, y}
         this.assignedTarget = null; // Manual override
         this.interceptTarget = null; // Threat object
         this.mission = null; // { type, data }
         this.currentRegion = 'unknown';
+
+        // Squad capabilities
+        this.squadId = null;
+        this.role = 'SOLO'; // SOLO, LEADER, WINGMAN
+        this.formationOffset = { x: 0, y: 0 };
+        this.leader = null; // Reference to leader unit
 
         // Visuals
         this.heading = 0;
@@ -33,6 +39,23 @@ class VanguardUnit {
 
     hydrate(state) {
         Object.assign(this, state);
+    }
+
+    joinSquad(squadId, role, offset, leader = null) {
+        this.squadId = squadId;
+        this.role = role;
+        this.formationOffset = offset;
+        this.leader = leader;
+        if (role === 'WINGMAN') {
+            this.status = 'FOLLOW';
+        }
+    }
+
+    leaveSquad() {
+        this.squadId = null;
+        this.role = 'SOLO';
+        this.leader = null;
+        this.status = 'IDLE';
     }
 
     assignMission(type, data) {
@@ -98,6 +121,8 @@ class VanguardUnit {
             if (this.status === 'MOVING') {
                 this._checkScanOpportunies(threads);
             }
+        } else if (this.status === 'FOLLOW') {
+            this._followLeader();
         } else if (this.status === 'SCANNING') {
             this._performScan();
         } else if (this.status === 'PURGING') {
@@ -109,8 +134,27 @@ class VanguardUnit {
         this.battery -= 0.01; // Slow drain
     }
 
+    _followLeader() {
+        if (!this.leader || this.leader.status === 'OFFLINE') {
+            this.status = 'IDLE'; // Leader lost
+            return;
+        }
+
+        // Calculate target position based on leader pos + rotated offset
+        // We rotate offset by leader's heading
+        const cos = Math.cos(this.leader.heading);
+        const sin = Math.sin(this.leader.heading);
+
+        const tx = this.leader.x + (this.formationOffset.x * cos - this.formationOffset.y * sin);
+        const ty = this.leader.y + (this.formationOffset.x * sin + this.formationOffset.y * cos);
+
+        this.target = { x: tx, y: ty };
+        this._move();
+    }
+
     _decideNextMove(threats) {
         if (this.assignedTarget) return; // Do not override manual commands
+        if (this.status === 'FOLLOW') return; // Do not override formation
 
         // Interceptors prioritize threats
         if (this.type === 'INTERCEPTOR' && threats && threats.length > 0) {
@@ -216,7 +260,63 @@ export class VanguardEngine {
         this.aegis = aegis;
         this.ledger = ledger;
         this.units = [];
+        this.squads = new Map(); // id -> { id, leaderId, memberIds, type }
         this.idCounter = 1;
+    }
+
+    createSquad(unitIds, type = 'V-WING') {
+        const squadId = `SQ-${Date.now().toString(36).substring(7).toUpperCase()}`;
+        const members = this.units.filter(u => unitIds.includes(u.id));
+
+        if (members.length === 0) return null;
+
+        const leader = members[0];
+
+        // Define offsets based on type
+        // V-WING: Leader at 0,0. Wingmen back and out.
+        members.forEach((u, i) => {
+            if (i === 0) {
+                u.joinSquad(squadId, 'LEADER', {x:0, y:0});
+            } else {
+                // Alternating left/right
+                const side = i % 2 === 0 ? 1 : -1;
+                const row = Math.ceil(i/2);
+                u.joinSquad(squadId, 'WINGMAN', { x: -3 * row, y: 3 * side * row }, leader);
+            }
+        });
+
+        this.squads.set(squadId, {
+            id: squadId,
+            leaderId: leader.id,
+            memberIds: members.map(u => u.id),
+            type
+        });
+
+        return squadId;
+    }
+
+    getSquads() {
+        return Array.from(this.squads.values()).map(s => {
+            const leader = this.units.find(u => u.id === s.leaderId);
+            return {
+                ...s,
+                leader: leader, // Pass object reference for rendering
+                members: this.units.filter(u => s.memberIds.includes(u.id))
+            };
+        });
+    }
+
+    disbandSquad(squadId) {
+        if (!this.squads.has(squadId)) return false;
+        const squad = this.squads.get(squadId);
+
+        squad.memberIds.forEach(id => {
+            const u = this.units.find(unit => unit.id === id);
+            if (u) u.leaveSquad();
+        });
+
+        this.squads.delete(squadId);
+        return true;
     }
 
     deploy(type = 'SCOUT', regionName = 'coast') {

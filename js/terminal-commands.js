@@ -1162,4 +1162,71 @@ export function registerCommands(terminal, context) {
             }
         }
     );
+
+    terminal.registerCommand(
+        'legion',
+        'Swarm Intelligence Interface',
+        (args) => {
+            if (!checkAccess()) return;
+            const subcmd = args[0] || 'status';
+            const legion = context.engines.legion;
+            const legionUI = context.engines.legionUI;
+
+            if (!legion) {
+                terminal.log('Legion Engine not initialized.', 'error');
+                return;
+            }
+
+            if (subcmd === 'status') {
+                const squads = legion.getSquadStatus();
+                terminal.log('--- LEGION SWARM STATUS ---', 'system');
+                terminal.log(`Active Squads: ${squads.length}`, 'info');
+                squads.forEach(s => {
+                    terminal.log(`  [${s.id}] Leader: ${s.leader} | Size: ${s.size} | Status: ${s.status}`, 'info');
+                });
+            } else if (subcmd === 'hud') {
+                if (legionUI) {
+                    legionUI.toggle();
+                    terminal.log(`Legion HUD: ${legionUI.isVisible ? 'ACTIVE' : 'HIDDEN'}`, 'success');
+                    if (legionUI.isVisible) terminal.toggle();
+                }
+            } else if (subcmd === 'form') {
+                // legion form U1 U2 U3
+                const ids = args.slice(1);
+                if (ids.length < 2) {
+                    terminal.log('Need at least 2 units to form squad.', 'warning');
+                    return;
+                }
+                const squadId = legion.manualForm(ids);
+                if (squadId) {
+                    terminal.log(`Squad ${squadId} formed successfully.`, 'success');
+                } else {
+                    terminal.log('Failed to form squad. Check Unit IDs.', 'error');
+                }
+            } else if (subcmd === 'disband') {
+                const id = args[1];
+                if (legion.manualDisband(id)) {
+                    terminal.log(`Squad ${id} disbanded.`, 'success');
+                } else {
+                    terminal.log('Squad not found.', 'error');
+                }
+            } else if (subcmd === 'engage') {
+                // legion engage SQ-XYZ 50 50
+                const id = args[1];
+                const x = parseInt(args[2]);
+                const y = parseInt(args[3]);
+                if (!id || isNaN(x) || isNaN(y)) {
+                    terminal.log('Usage: legion engage <SQUAD_ID> <X> <Y>', 'warning');
+                    return;
+                }
+                if (legion.manualEngage(id, {x, y})) {
+                    terminal.log(`Squad ${id} moving to engage sector ${x},${y}.`, 'success');
+                } else {
+                    terminal.log('Order failed. Squad valid?', 'error');
+                }
+            } else {
+                terminal.log('Usage: legion [status|hud|form|disband|engage]', 'warning');
+            }
+        }
+    );
 }

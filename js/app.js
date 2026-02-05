@@ -32,6 +32,8 @@ import { AstrolabeUI } from './astrolabe-ui.js';
 import { StratagemEngine } from './stratagem.js';
 import { StratagemUI } from './stratagem-ui.js';
 import { SettingsUI } from './settings-ui.js';
+import { LegionEngine } from './legion.js';
+import { LegionUI } from './legion-ui.js';
 
 document.addEventListener('DOMContentLoaded', async () => {
     // Service Worker Registration
@@ -187,6 +189,10 @@ document.addEventListener('DOMContentLoaded', async () => {
     });
 
     const stratcom = new StratcomSystem(tapestryLedger, horizonEngine, sentinel, vanguard, terminal, ui);
+
+    // Initialize Legion (Swarm Intelligence)
+    const legion = new LegionEngine(vanguard, chronos, sentinel, citadel, cortex, locations);
+    const legionUI = new LegionUI(legion);
 
     // Parse Mode for Tactical Uplink
     const urlParams = new URLSearchParams(window.location.search);
@@ -1078,8 +1084,9 @@ document.addEventListener('DOMContentLoaded', async () => {
 
         const threads = tapestryLedger.getThreads();
 
-        // Update Tactical Units
+        // Update Tactical Units & Swarm Intelligence
         vanguard.tick();
+        legion.tick(tapestryLedger);
 
         // 1. Map Mode
         if (state.isMapActive) {
@@ -1093,7 +1100,8 @@ document.addEventListener('DOMContentLoaded', async () => {
                     prometheus.getDrafts(), // Pass drafts (formerly ghosts param)
                     threatReport.zones,
                     vanguard.getUnits(),
-                    citadel.getZones()
+                    citadel.getZones(),
+                    vanguard.getSquads() // Pass squads
                 );
             }
             // Force animation loop if map is active
@@ -1199,6 +1207,8 @@ document.addEventListener('DOMContentLoaded', async () => {
             prometheus,
             stratagem,
             stratagemUI,
+            legion,
+            legionUI,
             get panopticon() {
                 return panopticon;
             }
@@ -1304,6 +1314,7 @@ document.addEventListener('DOMContentLoaded', async () => {
         window.citadel = citadel;
         window.prometheus = prometheus;
         window.stratagem = stratagem;
+        window.legion = legion;
         console.warn("%c DEBUG MODE ACTIVE // GLOBAL EXPOSURE ENABLED ", "background: #c67605; color: #000; padding: 4px; font-weight: bold;");
     }
 

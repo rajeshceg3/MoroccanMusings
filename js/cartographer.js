@@ -59,13 +59,14 @@ export class MapRenderer {
         }
     }
 
-    render(threads, locations, drafts = [], threatZones = [], vanguardUnits = [], citadelZones = []) {
+    render(threads, locations, drafts = [], threatZones = [], vanguardUnits = [], citadelZones = [], squads = []) {
         this.threads = threads;
         this.locations = locations;
         this.drafts = drafts; // Renamed from ghosts to generic drafts for Prometheus, but maintaining legacy ghost structure if needed
         this.threatZones = threatZones;
         this.vanguardUnits = vanguardUnits;
         this.citadelZones = citadelZones;
+        this.squads = squads;
 
         // Update Heatmap
         this.heatmap.update(threads, locations, this.width, this.height);
@@ -198,6 +199,43 @@ export class MapRenderer {
 
         // Plot Vanguard Units (Tactical Drones)
         if (this.vanguardUnits && this.vanguardUnits.length > 0) {
+
+            // Draw Squad Connections
+            if (this.squads && this.squads.length > 0) {
+                this.ctx.save();
+                this.squads.forEach(squad => {
+                    const leader = squad.leader; // Object reference passed from engine
+                    if (!leader) return;
+
+                    const lx = (leader.x / 100) * mapWidth;
+                    const ly = (leader.y / 100) * mapHeight;
+
+                    // Label Squad
+                    this.ctx.fillStyle = '#00ff00'; // Green
+                    this.ctx.font = 'bold 10px Courier New';
+                    this.ctx.fillText(squad.id, lx + 12, ly - 12);
+
+                    // Draw lines to members
+                    if (squad.members) {
+                        this.ctx.strokeStyle = 'rgba(0, 255, 0, 0.4)';
+                        this.ctx.lineWidth = 1;
+                        this.ctx.setLineDash([2, 2]);
+
+                        squad.members.forEach(member => {
+                            if (member.id === leader.id) return;
+                            const mx = (member.x / 100) * mapWidth;
+                            const my = (member.y / 100) * mapHeight;
+
+                            this.ctx.beginPath();
+                            this.ctx.moveTo(lx, ly);
+                            this.ctx.lineTo(mx, my);
+                            this.ctx.stroke();
+                        });
+                    }
+                });
+                this.ctx.restore();
+            }
+
             this.vanguardUnits.forEach((unit) => {
                 const x = (unit.x / 100) * mapWidth;
                 const y = (unit.y / 100) * mapHeight;
@@ -397,7 +435,8 @@ export class MapRenderer {
                     this.drafts,
                     this.threatZones,
                     this.vanguardUnits,
-                    this.citadelZones
+                    this.citadelZones,
+                    this.squads
                 )
             );
         }
