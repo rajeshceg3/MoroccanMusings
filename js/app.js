@@ -34,6 +34,7 @@ import { StratagemUI } from './stratagem-ui.js';
 import { SettingsUI } from './settings-ui.js';
 import { LegionEngine } from './legion.js';
 import { LegionUI } from './legion-ui.js';
+import { SplashController } from './controllers/SplashController.js';
 
 document.addEventListener('DOMContentLoaded', async () => {
     // Service Worker Registration
@@ -87,6 +88,17 @@ document.addEventListener('DOMContentLoaded', async () => {
     const horizonEngine = new HorizonEngine();
     const codex = new CodexEngine();
     const spectra = new SpectraEngine();
+
+    const signalBtn = document.getElementById('signal-trigger');
+    if (signalBtn) {
+        signalBtn.addEventListener('click', () => {
+            ui.showEchoInterface('listen', spectra, () => {
+                // enhancing UX with terminal log on close is nice but optional
+            });
+            resonanceEngine.playInteractionSound('click');
+        });
+    }
+
     const terminal = new TerminalSystem();
     const aegis = new AegisEngine(ui, horizonEngine);
     const sentinel = new SentinelEngine(horizonEngine);
@@ -468,59 +480,6 @@ document.addEventListener('DOMContentLoaded', async () => {
         } else if (mnemosyneUI) {
             mnemosyneUI.hide();
         }
-    }
-
-    // --- Splash Screen Logic ---
-    function initSplash() {
-        // Immediate visual entry
-        requestAnimationFrame(() => {
-            elements.splash.surface.style.opacity = '1';
-        });
-
-        if (initStatus === 'LOCKED') {
-            elements.splash.calligraphy.textContent = 'SECURE ENCLAVE';
-            elements.splash.calligraphy.style.color = '#ff0055'; // Tactical Red
-            ui.showNotification(
-                'SYSTEM LOCKED. ACCESS VIA TERMINAL (` or Ctrl+Space).',
-                'error'
-            );
-        }
-
-        setTimeout(() => {
-            elements.splash.calligraphy.style.opacity = '1';
-            elements.splash.calligraphy.style.transform = 'scale(1)';
-        }, 800);
-
-        const dismissSplash = () => {
-            if (tapestryLedger.status === 'LOCKED') {
-                ui.showNotification(
-                    'AUTHENTICATION REQUIRED. ACCESS DENIED.',
-                    'error'
-                );
-                terminal.toggle(); // Force open terminal
-                return;
-            }
-
-            resonanceEngine.init(); // Initialize audio context on first gesture
-            resonanceEngine.resume();
-            elements.splash.calligraphy.style.opacity = '0';
-            showScreen('astrolabe');
-            // Remove listener to prevent multiple calls
-            window.removeEventListener('keydown', handleSplashKey);
-        };
-
-        const handleSplashKey = (e) => {
-            if (e.key === 'Enter' || e.key === ' ') {
-                dismissSplash();
-            }
-        };
-
-        // Allow interaction immediately
-        elements.screens.splash.style.cursor = 'pointer';
-        elements.screens.splash.addEventListener('click', dismissSplash, {
-            once: true
-        });
-        window.addEventListener('keydown', handleSplashKey);
     }
 
     // --- Astrolabe Logic ---
@@ -1246,7 +1205,16 @@ document.addEventListener('DOMContentLoaded', async () => {
         console.error("Panopticon Init Error:", e);
     }
 
-    initSplash();
+    const splashController = new SplashController(
+        elements,
+        ui,
+        terminal,
+        tapestryLedger,
+        resonanceEngine,
+        showScreen
+    );
+    splashController.init(initStatus);
+
     setupTapestryInteractions();
 
     // --- Operation Ghost Guide ---
