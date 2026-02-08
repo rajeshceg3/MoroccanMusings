@@ -1,14 +1,12 @@
 import './error-guard.js'; // Global error handler
 import { locations } from './data.js';
-import { TapestryLedger, MandalaRenderer } from './tapestry.js';
+import { TapestryLedger } from './tapestry.js';
 import { ResonanceEngine } from './audio-engine.js';
 import { SynthesisEngine } from './alchemy.js';
 import { HorizonEngine } from './horizon.js';
 import { CodexEngine } from './codex.js';
 import { TerminalSystem } from './terminal.js';
-import { MapRenderer } from './cartographer.js';
 import { UISystem } from './ui-system.js';
-import { OracleEngine } from './oracle.js';
 import { SpectraEngine } from './spectra.js';
 import { AegisEngine } from './aegis.js';
 import { SentinelEngine } from './sentinel.js';
@@ -18,12 +16,10 @@ import { CortexEngine } from './cortex.js';
 import { ValkyrieEngine } from './valkyrie.js';
 import { ValkyrieUI } from './valkyrie-ui.js';
 import { VanguardEngine } from './vanguard.js';
-import { SynapseRenderer } from './synapse.js';
 import { GeminiEngine } from './gemini.js';
 import { StratcomSystem } from './stratcom.js';
 import { registerCommands } from './terminal-commands.js';
 import { MnemosyneEngine } from './mnemosyne.js';
-import { MnemosyneUI } from './mnemosyne-ui.js';
 import { CitadelEngine } from './citadel.js';
 import { PrometheusEngine } from './prometheus.js';
 import { GhostGuide } from './ghost-guide.js';
@@ -35,6 +31,8 @@ import { SettingsUI } from './settings-ui.js';
 import { LegionEngine } from './legion.js';
 import { LegionUI } from './legion-ui.js';
 import { SplashController } from './controllers/SplashController.js';
+import { WeavingController } from './controllers/WeavingController.js';
+import { TapestryController } from './controllers/TapestryController.js';
 
 document.addEventListener('DOMContentLoaded', async () => {
     // Service Worker Registration
@@ -197,7 +195,7 @@ document.addEventListener('DOMContentLoaded', async () => {
         ui.hideLoading();
         ui.showNotification('STRATEGY EXECUTED. REALITY UPDATED.', 'success');
         resonanceEngine.playInteractionSound('weave');
-        renderTapestry();
+        tapestryController.render();
     });
 
     const stratcom = new StratcomSystem(tapestryLedger, horizonEngine, sentinel, vanguard, terminal, ui);
@@ -225,18 +223,12 @@ document.addEventListener('DOMContentLoaded', async () => {
     window.addEventListener('storage', async (e) => {
         if (e.key === tapestryLedger.storageKey) {
             await tapestryLedger.reload();
-            renderTapestry();
-            updateAlchemyUI();
+            tapestryController.render();
+            tapestryController.updateAlchemyUI();
             // Optional: Notify
             // ui.showNotification('Data synchronized via Uplink.', 'info');
         }
     });
-
-    let mandalaRenderer = null;
-    let mapRenderer = null;
-    let synapseRenderer = null;
-    let oracleEngine = null;
-    let mnemosyneUI = null;
 
     const elements = {
         screens: {
@@ -367,118 +359,10 @@ document.addEventListener('DOMContentLoaded', async () => {
 
         if (screenName === 'tapestry') {
             elements.screens.tapestry.classList.add('tapestry-active');
-
-            // Lazy Init Mnemosyne UI
-            if (!mnemosyneUI) {
-                mnemosyneUI = new MnemosyneUI(
-                    mnemosyneContainer,
-                    mnemosyne,
-                    tapestryLedger,
-                    (index) => handleThreadInteraction(index)
-                );
-            }
-
-            if (!mandalaRenderer) {
-                mandalaRenderer = new MandalaRenderer(elements.tapestry.canvas);
-            } else {
-                mandalaRenderer.resize();
-            }
-
-            if (!mapRenderer && elements.tapestry.mapCanvas) {
-                mapRenderer = new MapRenderer(elements.tapestry.mapCanvas);
-
-                // Wire up Map Events
-                elements.tapestry.mapCanvas.addEventListener('vanguard-command', (e) => {
-                    const { unitId, target } = e.detail;
-                    const unit = vanguard.getUnits().find(u => u.id === unitId);
-                    if (unit) {
-                        unit.command(target);
-                        resonanceEngine.playInteractionSound('click');
-                    }
-                });
-
-                elements.tapestry.mapCanvas.addEventListener('map-thread-click', (e) => {
-                    handleThreadInteraction(e.detail.index);
-                });
-
-                elements.tapestry.mapCanvas.addEventListener('citadel-zone-created', (e) => {
-                    const zone = citadel.addZone(e.detail);
-                    ui.showNotification(`CITADEL: Secure Zone ${zone.id} Established.`, 'success');
-                    renderTapestry();
-                });
-
-            elements.tapestry.mapCanvas.addEventListener('draft-selected', (e) => {
-                showDraft(e.detail);
-            });
-
-                // Initialize Oracle once map renderer is available
-                if (!oracleEngine) {
-                    oracleEngine = new OracleEngine(
-                        horizonEngine,
-                        mapRenderer,
-                        locations
-                    );
-                }
-            }
-
-            if (!synapseRenderer && elements.tapestry.canvas) {
-                // Reuse the main canvas for Synapse, logic switches in renderTapestry
-                synapseRenderer = new SynapseRenderer(elements.tapestry.canvas);
-            }
-
-            mandalaRenderer.setSelection(state.selectedThreads);
-
-            // Initial render
-            renderTapestry();
-            updateAlchemyUI();
-
-            // Sentinel Scan on screen entry
-            sentinel.assess(tapestryLedger.getThreads());
-
-            // Start animation loop if horizon is active
-            if (state.isHorizonActive) {
-                startHorizonLoop();
-            }
+            tapestryController.onShow();
         } else {
             elements.screens.tapestry.classList.remove('tapestry-active');
-            stopHorizonLoop();
-        }
-    }
-
-    function updateAlchemyUI() {
-        const slots = [elements.tapestry.slot1, elements.tapestry.slot2];
-        const threads = tapestryLedger.getThreads();
-
-        state.selectedThreads.forEach((threadIndex, i) => {
-            slots[i].classList.add('filled');
-            // Just show first letter of intention as a glyph/symbol placeholder
-            const t = threads[threadIndex];
-            slots[i].textContent = t ? t.intention[0].toUpperCase() : '?';
-        });
-
-        // Clear empty slots
-        for (let i = state.selectedThreads.length; i < 2; i++) {
-            slots[i].classList.remove('filled');
-            slots[i].textContent = i + 1;
-        }
-
-        if (state.selectedThreads.length === 2) {
-            elements.tapestry.fuseBtn.disabled = false;
-        } else {
-            elements.tapestry.fuseBtn.disabled = true;
-        }
-
-        elements.tapestry.alchemyUI.classList.toggle(
-            'visible',
-            threads.length >= 2
-        );
-
-        // Mnemosyne Logic
-        if (state.selectedThreads.length === 1 && mnemosyneUI) {
-            const threadId = tapestryLedger.getThreads()[state.selectedThreads[0]].id;
-            mnemosyneUI.render(threadId);
-        } else if (mnemosyneUI) {
-            mnemosyneUI.hide();
+            tapestryController.onHide();
         }
     }
 
@@ -487,633 +371,56 @@ document.addEventListener('DOMContentLoaded', async () => {
     astrolabeUI.init();
     const updateCenterText = astrolabeUI.updateCenterText;
 
+    const weavingController = new WeavingController({
+        state,
+        stratagem,
+        ui,
+        get panopticon() { return panopticon; },
+        resonanceEngine,
+        tapestryLedger,
+        mnemosyne,
+        aegis,
+        sentinel,
+        valkyrie,
+        citadel,
+        elements
+    });
+
+    const weaveThread = () => weavingController.weave();
+
     // --- Riad Screen Logic ---
     const riadUI = new RiadUI(elements, state, resonanceEngine, ui, chronos, tapestryLedger, { showScreen, weaveThread });
     const showRiad = riadUI.show;
     riadUI.setupInteractions();
 
-    async function weaveThread() {
-        if (state.isWeaving) return;
 
-        // Stratagem Scenario Override
-        if (stratagem.isActive) {
-             const threadData = {
-                intention: state.intention,
-                time: state.time,
-                region: state.region,
-                title: state.activeLocation.title,
-                content: state.activeLocation.narrative
-            };
-            await stratagem.addSimulatedThread(threadData);
-            ui.showNotification('SIMULATION UPDATE: Thread woven.', 'info');
-            return;
-        }
-
-        // Prevent weaving if in Replay Mode
-        if (panopticon && panopticon.isReplaying) {
-            ui.showNotification('SYSTEM HALTED: REPLAY MODE ACTIVE', 'error');
-            return;
-        }
-
-        state.isWeaving = true;
-
-        resonanceEngine.playInteractionSound('weave');
-
-        // Persist the thread
-        const newThread = await tapestryLedger.addThread({
-            intention: state.intention,
-            time: state.time,
-            region: state.region,
-            title: state.activeLocation.title,
-            content: state.activeLocation.narrative
-        });
-
-        // Update Mnemosyne Index
-        mnemosyne.addThread(newThread);
-
-        // Capture state for Panopticon (Time Travel)
-        if (panopticon) panopticon.capture();
-
-        // Trigger Aegis Tactical Analysis
-        aegis.analyze(tapestryLedger.getThreads());
-
-        // Trigger Sentinel Threat Assessment
-        const threatReport = sentinel.assess(tapestryLedger.getThreads());
-
-        // Trigger Valkyrie Response Matrix
-        valkyrie.evaluate(threatReport, tapestryLedger.getThreads());
-
-        // Check Citadel Interference
-        const zoneViolation = citadel.check(newThread);
-        if (zoneViolation) {
-             ui.showNotification(`ALERT: THREAD INTERCEPTS RESTRICTED ZONE ${zoneViolation.id}`, 'error');
-             resonanceEngine.playInteractionSound('error');
-        }
-
-        if (threatReport.status !== 'STANDBY') {
-            ui.showNotification(
-                `SENTINEL ALERT: DEFCON ${threatReport.defcon}`,
-                'warning'
-            );
-        }
-
-        const thread = document.createElement('div');
-        thread.className = 'thread-animation';
-        const startRect = elements.riad.weaveButton.getBoundingClientRect();
-        const endRect = elements.astrolabe.tapestryIcon.getBoundingClientRect();
-        const startX = startRect.left + startRect.width / 2;
-        const startY = startRect.top + startRect.height / 2;
-        const endX = endRect.left + endRect.width / 2;
-        const endY = endRect.top + endRect.height / 2;
-        const deltaX = endX - startX;
-        const deltaY = endY - startY;
-        const distance = Math.sqrt(deltaX * deltaX + deltaY * deltaY);
-        const angle = Math.atan2(deltaY, deltaX) * (180 / Math.PI);
-
-        thread.style.left = `${startX}px`;
-        thread.style.top = `${startY}px`;
-        thread.style.width = `${distance}px`;
-        thread.style.transform = `rotate(${angle}deg)`;
-        thread.style.backgroundColor =
-            elements.riad.weaveButton.dataset.color || 'var(--ochre-gold)';
-        document.body.appendChild(thread);
-
-        const prefersReducedMotion = window.matchMedia('(prefers-reduced-motion: reduce)').matches;
-        const animationDuration = prefersReducedMotion ? 0 : 600;
-        const fadeDuration = prefersReducedMotion ? 0 : 200;
-
-        thread.animate(
-            [
-                { transform: `rotate(${angle}deg) scaleX(0)` },
-                { transform: `rotate(${angle}deg) scaleX(1)` }
-            ],
-            { duration: animationDuration, easing: 'cubic-bezier(0.7, 0, 0.3, 1)' }
-        ).onfinish = () => {
-            thread.animate([{ opacity: 1 }, { opacity: 0 }], {
-                duration: fadeDuration
-            }).onfinish = () => {
-                thread.remove();
-                elements.astrolabe.tapestryIcon.classList.add(
-                    'tapestry-icon-pulse'
-                );
-                setTimeout(() => {
-                    elements.astrolabe.tapestryIcon.classList.remove(
-                        'tapestry-icon-pulse'
-                    );
-                    state.isWeaving = false; // Reset the lock
-                }, 500);
-            };
-        };
-    }
-
-    function setupTapestryInteractions() {
-        elements.astrolabe.tapestryIcon.addEventListener('click', () => {
-            showScreen('tapestry');
-        });
-
-        elements.tapestry.backButton.addEventListener('click', () => {
-            showScreen('astrolabe');
-        });
-
-        elements.tapestry.clearBtn.addEventListener('click', () => {
-            ui.showConfirm(
-                'Are you sure you want to unravel your tapestry? This cannot be undone.',
-                () => {
-                    tapestryLedger.clear();
-                    mandalaRenderer.render([]);
-                    if (mapRenderer) mapRenderer.render([], locations);
-                    ui.showNotification('Tapestry unraveled.', 'info');
-                }
-            );
-        });
-
-        elements.tapestry.exportBtn.addEventListener('click', () => {
-            const data = tapestryLedger.exportScroll();
-            const blob = new Blob([data], { type: 'application/json' });
-            const url = URL.createObjectURL(blob);
-            const a = document.createElement('a');
-            a.href = url;
-            a.download = `marq_scroll_${Date.now()}.json`;
-            a.click();
-            URL.revokeObjectURL(url);
-        });
-
-        elements.tapestry.importBtn.addEventListener('click', () => {
-            elements.tapestry.importInput.click();
-        });
-
-        elements.tapestry.importInput.addEventListener('change', async (e) => {
-            const file = e.target.files[0];
-            if (!file) return;
-            try {
-                ui.showLoading('DECODING SCROLL...');
-                const text = await file.text();
-                await tapestryLedger.importScroll(text);
-                ui.showNotification('Scroll imported successfully.', 'success');
-                renderTapestry();
-            } catch (err) {
-                ui.showNotification(`Import error: ${err.message}`, 'error');
-            } finally {
-                ui.hideLoading();
-                e.target.value = ''; // Reset
-            }
-        });
-
-        // --- CODEX INTEGRATION ---
-        elements.tapestry.forgeShardBtn.addEventListener('click', async () => {
-            try {
-                const threads = tapestryLedger.getThreads();
-                if (threads.length === 0)
-                    throw new Error('Tapestry is empty. Nothing to forge.');
-
-                ui.showLoading('ENCRYPTING SHARD...');
-                const blob = await codex.forgeShard(threads);
-                ui.hideLoading();
-
-                const url = URL.createObjectURL(blob);
-                const a = document.createElement('a');
-                a.href = url;
-                a.download = `codex_shard_${Date.now()}.png`;
-                a.click();
-                URL.revokeObjectURL(url);
-
-                ui.showNotification('Shard forged successfully.', 'success');
-                resonanceEngine.playInteractionSound('weave');
-            } catch (e) {
-                document.body.style.cursor = 'default';
-                ui.showNotification(`Forge failed: ${e.message}`, 'error');
-            }
-        });
-
-        elements.tapestry.scanShardBtn.addEventListener('click', () => {
-            elements.tapestry.shardInput.click();
-        });
-
-        elements.tapestry.shardInput.addEventListener('change', async (e) => {
-            const file = e.target.files[0];
-            if (!file) return;
-
-            try {
-                ui.showLoading('DECRYPTING SHARD...');
-                const data = await codex.scanShard(file);
-                ui.hideLoading();
-
-                // Use existing import logic
-                const tempLedger = new TapestryLedger('temp');
-                tempLedger.threads = data;
-                const jsonString = JSON.stringify(data);
-                await tapestryLedger.importScroll(jsonString);
-
-                ui.showNotification(
-                    'Shard decrypted and integrated.',
-                    'success'
-                );
-                resonanceEngine.playInteractionSound('snap');
-                renderTapestry();
-            } catch (e) {
-                document.body.style.cursor = 'default';
-                console.error(e);
-                ui.showNotification(`Scan failed: ${e.message}`, 'error');
-            }
-            e.target.value = '';
-        });
-
-        let resizeTimeout;
-        window.addEventListener('resize', () => {
-            clearTimeout(resizeTimeout);
-            resizeTimeout = setTimeout(() => {
-                if (state.activeScreen === 'tapestry') {
-                    if (mandalaRenderer) {
-                        mandalaRenderer.resize();
-                        mandalaRenderer.render(tapestryLedger.getThreads());
-                    }
-                    if (mapRenderer) {
-                        mapRenderer.resize();
-                        mapRenderer.render(
-                            tapestryLedger.getThreads(),
-                            locations
-                        );
-                    }
-                }
-            }, 100);
-        });
-
-        // Mandala Interaction (Click & Accessibility)
-        const handleThreadInteraction = (index) => {
-            const threads = tapestryLedger.getThreads();
-            if (index >= 0 && index < threads.length) {
-                // Toggle selection
-                const selectedIndex = state.selectedThreads.indexOf(index);
-                if (selectedIndex >= 0) {
-                    state.selectedThreads.splice(selectedIndex, 1);
-                } else {
-                    if (state.selectedThreads.length < 2) {
-                        state.selectedThreads.push(index);
-                    } else {
-                        // FIFO replacement if full
-                        state.selectedThreads.shift();
-                        state.selectedThreads.push(index);
-                    }
-                }
-                mandalaRenderer.setSelection(state.selectedThreads);
-                renderTapestry();
-                resonanceEngine.playInteractionSound('click');
-                updateAlchemyUI();
-            }
-        };
-
-        elements.tapestry.canvas.addEventListener('click', (e) => {
-            if (!mandalaRenderer) return;
-            // Only handle click if map is NOT active (or canvas is hidden via CSS, which we need to ensure)
-            if (state.isMapActive) return;
-
-            const index = mandalaRenderer.getThreadIndexAt(
-                e.clientX,
-                e.clientY
-            );
-            handleThreadInteraction(index);
-        });
-
-        // Listen for accessibility events from Shadow DOM
-        elements.tapestry.canvas.addEventListener(
-            'tapestry-thread-click',
-            (e) => {
-                handleThreadInteraction(e.detail.index);
-            }
-        );
-
-        // Synapse Interaction (Mouse & Zoom)
-        ['mousedown', 'mousemove', 'mouseup'].forEach(evt => {
-            elements.tapestry.canvas.addEventListener(evt, (e) => {
-                if (state.isSynapseActive && synapseRenderer) {
-                    const type = evt === 'mousedown' ? 'down' : evt === 'mousemove' ? 'move' : 'up';
-                    synapseRenderer.handleInput(type, e.clientX, e.clientY);
-
-                    if (type === 'move' && synapseRenderer.isPanning) {
-                        synapseRenderer.handlePan(e.movementX, e.movementY);
-                    }
-
-                    if (synapseRenderer.isSimulating || synapseRenderer.isPanning) {
-                         startHorizonLoop();
-                    } else if (type === 'up') {
-                        // Ensure final render
-                        requestAnimationFrame(renderTapestry);
-                    }
-                }
-            });
-        });
-
-        elements.tapestry.canvas.addEventListener('wheel', (e) => {
-            if (state.isSynapseActive && synapseRenderer) {
-                e.preventDefault();
-                synapseRenderer.handleZoom(e.deltaY, e.clientX, e.clientY);
-                requestAnimationFrame(renderTapestry);
-            }
-        }, { passive: false });
-
-        elements.tapestry.fuseBtn.addEventListener('click', async () => {
-            const threads = tapestryLedger.getThreads();
-            if (state.selectedThreads.length !== 2) return;
-
-            const t1 = threads[state.selectedThreads[0]];
-            const t2 = threads[state.selectedThreads[1]];
-
-            const phantom = await alchemy.fuse(t1, t2);
-
-            resonanceEngine.playInteractionSound('weave'); // Magical sound
-            showScreen('riad');
-            showRiad(phantom);
-
-            // Inject a special visual cue for Phantom mode
-            elements.riad.title.style.color = '#c67605'; // Gold title
-            elements.riad.subtitle.textContent = '✧ A PHANTOM REALM ✧';
-
-            // Clear selection
-            state.selectedThreads = [];
-        });
-
-        // Horizon Interaction
-        elements.tapestry.horizonToggle.addEventListener('click', () => {
-            state.isHorizonActive = !state.isHorizonActive;
-            elements.tapestry.horizonToggle.classList.toggle(
-                'active',
-                state.isHorizonActive
-            );
-            elements.tapestry.horizonDashboard.classList.toggle(
-                'visible',
-                state.isHorizonActive
-            );
-
-            if (state.isHorizonActive) {
-                updateHorizonDashboard();
-                startHorizonLoop();
-            } else {
-                stopHorizonLoop();
-                renderTapestry(); // One last render to clear ghosts
-            }
-            resonanceEngine.playInteractionSound('click');
-        });
-
-        // Map Interaction (Overwatch)
-        elements.tapestry.mapToggle.addEventListener('click', () => {
-            state.isMapActive = !state.isMapActive;
-            elements.tapestry.mapToggle.classList.toggle('active', state.isMapActive);
-
-            // Exclusive Mode Logic
-            if (state.isMapActive) {
-                state.isSynapseActive = false;
-                elements.tapestry.synapseToggle.classList.remove('active');
-
-                elements.tapestry.canvas.style.display = 'none';
-                elements.tapestry.mapCanvas.style.display = 'block';
-                if (!mapRenderer) mapRenderer = new MapRenderer(elements.tapestry.mapCanvas);
-                mapRenderer.resize();
-                mapRenderer.render(tapestryLedger.getThreads(), locations);
-            } else {
-                // Return to previous state or default?
-                // If map is off, we show mandala (or synapse if it was active? No, we turned it off).
-                // Default to Mandala.
-                elements.tapestry.canvas.style.display = 'block';
-                elements.tapestry.mapCanvas.style.display = 'none';
-                renderTapestry();
-            }
-            resonanceEngine.playInteractionSound('click');
-        });
-
-        // Synapse Interaction
-        elements.tapestry.synapseToggle.addEventListener('click', () => {
-            state.isSynapseActive = !state.isSynapseActive;
-            elements.tapestry.synapseToggle.classList.toggle('active', state.isSynapseActive);
-
-            if (state.isSynapseActive) {
-                // Disable Map
-                state.isMapActive = false;
-                elements.tapestry.mapToggle.classList.remove('active');
-                elements.tapestry.mapCanvas.style.display = 'none';
-
-                // Enable Canvas
-                elements.tapestry.canvas.style.display = 'block';
-
-                // Initialize Graph
-                const threads = tapestryLedger.getThreads();
-                // Pass Mnemosyne for semantic analysis
-                const graph = cortex.analyze(threads, mnemosyne);
-                if (!synapseRenderer) synapseRenderer = new SynapseRenderer(elements.tapestry.canvas);
-                synapseRenderer.render(graph);
-
-                startHorizonLoop(); // Start physics loop
-            } else {
-                renderTapestry(); // Back to Mandala
-                stopHorizonLoop(); // Unless Horizon is active?
-                if (state.isHorizonActive) startHorizonLoop();
-            }
-            resonanceEngine.playInteractionSound('click');
-        });
-
-        // Aegis Interaction
-        elements.tapestry.aegisToggle.addEventListener('click', () => {
-            const isVisible =
-                elements.tapestry.aegisHud.classList.toggle('visible');
-            elements.tapestry.aegisToggle.classList.toggle('active', isVisible);
-
-            if (isVisible) {
-                aegis.renderDashboard('aegis-hud');
-            }
-            resonanceEngine.playInteractionSound('click');
-        });
-
-        // Citadel Interaction
-        elements.tapestry.citadelToggle.addEventListener('click', () => {
-            if (!state.isMapActive) {
-                // Auto-switch to map if not active
-                elements.tapestry.mapToggle.click();
-            }
-            state.isCitadelActive = !state.isCitadelActive;
-            elements.tapestry.citadelToggle.classList.toggle('active', state.isCitadelActive);
-
-            if (mapRenderer) {
-                mapRenderer.setDrawMode(state.isCitadelActive);
-            }
-
-            if (state.isCitadelActive) {
-                ui.showNotification('CITADEL DEFENSE GRID: ACTIVE. DRAW ZONES.', 'info');
-            } else {
-                ui.showNotification('CITADEL DEFENSE GRID: STANDBY.', 'info');
-            }
-            resonanceEngine.playInteractionSound('click');
-        });
-
-        // Valkyrie Interaction (Project OVERWATCH)
-        const valkyrieToggle = document.getElementById('valkyrie-toggle');
-        if (valkyrieToggle) {
-            valkyrieToggle.addEventListener('click', () => {
-                valkyrieUI.toggle();
-                resonanceEngine.playInteractionSound('click');
-            });
-        }
-
-        // Prometheus Interaction
-        const prometheusToggle = document.getElementById('prometheus-toggle');
-        if (prometheusToggle) {
-            prometheusToggle.addEventListener('click', () => {
-                const isOnline = prometheusToggle.classList.toggle('active');
-                if (isOnline) {
-                    prometheus.start();
-                } else {
-                    prometheus.stop();
-                }
-                resonanceEngine.playInteractionSound('click');
-            });
-        }
-    }
-
-    // --- Horizon Logic ---
-    let horizonAnimationFrame = null;
-
-    function startHorizonLoop() {
-        if (horizonAnimationFrame) return;
-
-        const loop = () => {
-            renderTapestry();
-            if (state.activeScreen === 'tapestry' && state.isHorizonActive) {
-                horizonAnimationFrame = requestAnimationFrame(loop);
-            } else {
-                horizonAnimationFrame = null;
-            }
-        };
-        loop();
-    }
-
-    function stopHorizonLoop() {
-        if (horizonAnimationFrame) {
-            cancelAnimationFrame(horizonAnimationFrame);
-            horizonAnimationFrame = null;
-        }
-    }
-
-    function updateHorizonDashboard() {
-        const threads = tapestryLedger.getThreads();
-        const analysis = horizonEngine.analyze(threads);
-
-        elements.tapestry.horizonDominance.textContent =
-            analysis.dominance.intention !== 'None'
-                ? `${analysis.dominance.intention} (${analysis.dominance.percent}%)`
-                : 'None';
-        elements.tapestry.horizonBalanceBar.style.width = `${analysis.balanceScore}%`;
-
-        // Dynamic Insight
-        if (threads.length < 3) {
-            elements.tapestry.horizonInsight.textContent =
-                'More data needed for strategic projection.';
-        } else if (analysis.balanceScore < 40) {
-            elements.tapestry.horizonInsight.textContent = `Pattern is heavily skewed. Consider seeking ${findLeastCommon(analysis.counts)} to restore equilibrium.`;
-        } else if (analysis.streak > 2) {
-            elements.tapestry.horizonInsight.textContent = `Strong momentum in ${analysis.lastIntention}. Continuing this path will deepen the groove.`;
-        } else {
-            elements.tapestry.horizonInsight.textContent =
-                'The pattern is balanced. You are weaving a diverse tapestry.';
-        }
-    }
-
-    function findLeastCommon(counts) {
-        return Object.entries(counts).sort((a, b) => a[1] - b[1])[0][0];
-    }
-
-    function renderTapestry() {
-        // Halt render loop if Panopticon is controlling reality
-        if (panopticon && panopticon.isReplaying) return;
-
-        // Stratagem Check
-        if (stratagem.isActive) {
-            const simState = stratagem.getRenderState();
-
-            if (mapRenderer) {
-                mapRenderer.render(
-                    simState.threads,
-                    locations,
-                    [], // drafts
-                    simState.threatZones || [],
-                    simState.units,
-                    simState.zones // citadel zones
-                );
-            }
-            // Add visual overlay indicator handled by CSS/UI
-            return;
-        }
-
-        const threads = tapestryLedger.getThreads();
-
-        // Update Tactical Units & Swarm Intelligence
-        vanguard.tick();
-        legion.tick(tapestryLedger);
-
-        // 1. Map Mode
-        if (state.isMapActive) {
-            if (oracleEngine && oracleEngine.activeMode) {
-                oracleEngine.render(threads);
-            } else if (mapRenderer) {
-                const threatReport = sentinel.getReport();
-                mapRenderer.render(
-                    threads,
-                    locations,
-                    prometheus.getDrafts(), // Pass drafts (formerly ghosts param)
-                    threatReport.zones,
-                    vanguard.getUnits(),
-                    citadel.getZones(),
-                    vanguard.getSquads() // Pass squads
-                );
-            }
-            // Force animation loop if map is active
-            requestAnimationFrame(renderTapestry);
-            return;
-        }
-
-        // 2. Synapse Mode
-        if (state.isSynapseActive && synapseRenderer) {
-             // If simulating, render is called in loop
-             // We just ensure we call render which handles simulation step
-             // Note: analyze is expensive, so we only re-analyze if needed or rely on stored graph.
-             // But synapseRenderer keeps state. We just call render.
-             // If threads changed, we might need to update graph.
-             // For now, simple loop:
-             synapseRenderer.render();
-             return;
-        }
-
-        // 3. Mandala Mode (Default)
-        if (!mandalaRenderer) return;
-
-        let projections = [];
-        if (state.isHorizonActive) {
-            projections = horizonEngine.project(threads);
-        }
-
-        mandalaRenderer.render(threads, projections);
-    }
-
-    // --- Helper Functions ---
-    const handleThreadInteraction = (index) => {
-        const threads = tapestryLedger.getThreads();
-        if (index >= 0 && index < threads.length) {
-            // Toggle selection
-            const selectedIndex = state.selectedThreads.indexOf(index);
-            if (selectedIndex >= 0) {
-                state.selectedThreads.splice(selectedIndex, 1);
-            } else {
-                if (state.selectedThreads.length < 2) {
-                    state.selectedThreads.push(index);
-                } else {
-                    // FIFO replacement if full
-                    state.selectedThreads.shift();
-                    state.selectedThreads.push(index);
-                }
-            }
-            if (mandalaRenderer) mandalaRenderer.setSelection(state.selectedThreads);
-            renderTapestry();
-            resonanceEngine.playInteractionSound('click');
-            updateAlchemyUI();
-        }
-    };
+    const tapestryController = new TapestryController({
+        state,
+        elements,
+        mnemosyneContainer,
+        mnemosyne,
+        tapestryLedger,
+        vanguard,
+        resonanceEngine,
+        sentinel,
+        ui,
+        citadel,
+        horizonEngine,
+        locations,
+        get panopticon() { return panopticon; },
+        stratagem,
+        legion,
+        prometheus,
+        codex,
+        alchemy,
+        cortex,
+        aegis,
+        valkyrieUI,
+        showScreen,
+        showRiad: (...args) => showRiad(...args),
+        showDraft
+    });
+    tapestryController.init();
 
     // --- Initialization ---
     // Handle Browser Back Button
@@ -1148,7 +455,7 @@ document.addEventListener('DOMContentLoaded', async () => {
             resonance: resonanceEngine,
             horizon: horizonEngine,
             get oracle() {
-                return oracleEngine;
+                return tapestryController.oracleEngine;
             },
             spectra,
             sentinel,
@@ -1178,7 +485,7 @@ document.addEventListener('DOMContentLoaded', async () => {
             showScreen,
             showRiad,
             weaveThread,
-            renderTapestry
+            renderTapestry: tapestryController.render
         }
     });
 
@@ -1191,9 +498,9 @@ document.addEventListener('DOMContentLoaded', async () => {
             tapestryLedger,
             sentinel,
             {
-                get mandala() { return mandalaRenderer; },
-                get map() { return mapRenderer; },
-                updateAlchemy: updateAlchemyUI
+                get mandala() { return tapestryController.mandalaRenderer; },
+                get map() { return tapestryController.mapRenderer; },
+                updateAlchemy: () => tapestryController.updateAlchemyUI()
             },
             ui,
             vanguard,
@@ -1214,8 +521,6 @@ document.addEventListener('DOMContentLoaded', async () => {
         showScreen
     );
     splashController.init(initStatus);
-
-    setupTapestryInteractions();
 
     // --- Operation Ghost Guide ---
     const ghostGuide = new GhostGuide(state, resonanceEngine, showScreen, ui);
@@ -1261,16 +566,16 @@ document.addEventListener('DOMContentLoaded', async () => {
         window.state = state;
         window.codex = codex;
         Object.defineProperty(window, 'mandalaRenderer', {
-            get: () => mandalaRenderer
+            get: () => tapestryController.mandalaRenderer
         });
         Object.defineProperty(window, 'mapRenderer', {
-            get: () => mapRenderer
+            get: () => tapestryController.mapRenderer
         });
         window.ui = ui;
         window.showNotification = (msg, type) => ui.showNotification(msg, type);
         window.showScreen = showScreen;
         Object.defineProperty(window, 'oracle', {
-            get: () => oracleEngine
+            get: () => tapestryController.oracleEngine
         });
         window.aegis = aegis;
         window.sentinel = sentinel;

@@ -418,6 +418,7 @@ export class MandalaRenderer {
         this.ctx.scale(this.dpr, this.dpr);
         this.width = rect.width;
         this.height = rect.height;
+        this.lastA11yHash = null; // Force A11y update on resize
     }
 
     setSelection(indices) {
@@ -496,6 +497,7 @@ export class MandalaRenderer {
         this.a11yContainer.innerHTML = '';
         const cx = this.width / 2;
         const cy = this.height / 2;
+        const fragment = document.createDocumentFragment();
 
         threads.forEach((thread, index) => {
             const btn = document.createElement('button');
@@ -510,15 +512,7 @@ export class MandalaRenderer {
             );
 
             // Calculate approximate position for visual focus indicator (optional, mostly for tabbing)
-            // We can position them centrally or in a stack, but absolute positioning over the ring
-            // helps context if a screen reader user uses a touch explore mode.
-            // Radius = 40 + (index * 20);
-            // Since it's a ring, we just center it and give it the dimension of the ring?
-            // Or just make them 0-size at the center.
-            // Let's make them cover the ring area roughly.
             const radius = 40 + index * 20;
-            // Position at center, but we can't easily make a ring-shaped button.
-            // Best practice: Stack them logically or make them small targets at the "start" of the ring.
 
             btn.style.cssText = `
                 position: absolute;
@@ -532,9 +526,6 @@ export class MandalaRenderer {
                 cursor: pointer;
              `;
 
-            // When focused, show a ring focus via canvas or DOM?
-            // The canvas already handles selection visual.
-
             btn.addEventListener('focus', () => {
                 this.setFocus(index);
                 this.render(threads); // Re-render to show focus
@@ -546,17 +537,15 @@ export class MandalaRenderer {
             });
 
             btn.addEventListener('click', (e) => {
-                // Simulate canvas click logic
-                // We need to notify the parent app.
-                // Since we don't have a direct callback here, we dispatch a custom event on the canvas.
                 const event = new CustomEvent('tapestry-thread-click', {
                     detail: { index }
                 });
                 this.canvas.dispatchEvent(event);
             });
 
-            this.a11yContainer.appendChild(btn);
+            fragment.appendChild(btn);
         });
+        this.a11yContainer.appendChild(fragment);
     }
 
     drawMandalaLayer(thread, index, total) {
