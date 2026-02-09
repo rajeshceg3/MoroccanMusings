@@ -434,7 +434,9 @@ export class MandalaRenderer {
         const currentHash =
             threads.length +
             ':' +
-            (threads.length > 0 ? threads[threads.length - 1].hash : '');
+            (threads.length > 0 ? threads[threads.length - 1].hash : '') +
+            ':' +
+            this.selectedIndices.join(',');
         if (this.lastA11yHash !== currentHash) {
             this.updateAccessibilityTree(threads); // Sync DOM
             this.lastA11yHash = currentHash;

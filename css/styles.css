@@ -7,6 +7,10 @@
     --ease-out-quint: cubic-bezier(0.22, 1, 0.36, 1);
 }
 
+* {
+    box-sizing: border-box;
+}
+
 body {
     margin: 0;
     padding: 0;
@@ -554,6 +558,7 @@ body {
     gap: 1rem;
     flex-wrap: wrap;
     pointer-events: none;
+    z-index: 200; /* Ensure controls are above overlays */
 }
 
 .tapestry-btn {
@@ -1137,7 +1142,22 @@ body {
         border-radius: 0;
         max-height: 50vh;
         overflow-y: auto;
+        z-index: 100; /* Ensure visibility over other elements */
     }
+}
+
+#signal-trigger {
+    right: 8rem;
+    color: var(--ochre-gold);
+    border-color: var(--ochre-gold);
+    background: rgba(198, 118, 5, 0.1);
+    animation: signal-pulse-btn 3s infinite;
+}
+
+@keyframes signal-pulse-btn {
+    0% { box-shadow: 0 0 0 0 rgba(198, 118, 5, 0.4); transform: scale(1); }
+    50% { box-shadow: 0 0 15px 5px rgba(198, 118, 5, 0); transform: scale(1.05); }
+    100% { box-shadow: 0 0 0 0 rgba(198, 118, 5, 0); transform: scale(1); }
 }
 
 /* Toast Notifications */
