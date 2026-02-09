@@ -488,6 +488,11 @@ export class TapestryController {
 
         // Horizon Interaction
         elements.tapestry.horizonToggle.addEventListener('click', () => {
+            // Close Aegis HUD if open (Mobile UX)
+            if (elements.tapestry.aegisHud.classList.contains('visible')) {
+                elements.tapestry.aegisToggle.click();
+            }
+
             state.isHorizonActive = !state.isHorizonActive;
             elements.tapestry.horizonToggle.classList.toggle(
                 'active',
@@ -566,6 +571,11 @@ export class TapestryController {
 
         // Aegis Interaction
         elements.tapestry.aegisToggle.addEventListener('click', () => {
+            // Close Horizon Dashboard if open (Mobile UX)
+            if (state.isHorizonActive) {
+                elements.tapestry.horizonToggle.click();
+            }
+
             const isVisible =
                 elements.tapestry.aegisHud.classList.toggle('visible');
             elements.tapestry.aegisToggle.classList.toggle('active', isVisible);
