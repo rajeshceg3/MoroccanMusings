@@ -23,8 +23,7 @@ export class TapestryController {
     }
 
     onShow() {
-        const { state, elements, mnemosyneContainer, mnemosyne, tapestryLedger, vanguard, resonanceEngine, sentinel, ui, citadel, oracleEngine: oracleInContext, horizonEngine, locations } = this.context;
-        // oracleInContext is passed via context getter or directly?
+        const { state, elements, mnemosyneContainer, mnemosyne, tapestryLedger, vanguard, resonanceEngine, sentinel, ui, citadel, horizonEngine, locations } = this.context;
         // app.js initialized oracleEngine lazily.
 
         // Lazy Init Mnemosyne UI
@@ -282,7 +281,7 @@ export class TapestryController {
     }
 
     setupInteractions() {
-        const { elements, showScreen, ui, tapestryLedger, codex, resonanceEngine, state, alchemy, cortex, mnemosyne, aegis, valkyrieUI, prometheus, horizonEngine, locations } = this.context;
+        const { elements, showScreen, ui, tapestryLedger, codex, resonanceEngine, state, alchemy, cortex, mnemosyne, aegis, valkyrieUI, prometheus, locations } = this.context;
         const { showRiad } = this.context; // Destructure callback
 
         elements.astrolabe.tapestryIcon.addEventListener('click', () => {

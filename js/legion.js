@@ -46,8 +46,6 @@ export class LegionEngine {
 
     _maintainSquads() {
         const units = this.vanguard.getUnits();
-        const squads = this.vanguard.getSquads();
-
         // Prune empty squads (handled by Vanguard usually, but good to check)
 
         // Auto-form squads if we have enough idle solo units
@@ -56,9 +54,9 @@ export class LegionEngine {
         if (soloIdleUnits.length >= this.SQUAD_SIZE) {
             // Take first 3
             const recruitIds = soloIdleUnits.slice(0, this.SQUAD_SIZE).map(u => u.id);
-            const id = this.vanguard.createSquad(recruitIds, 'V-WING');
+            this.vanguard.createSquad(recruitIds, 'V-WING');
             // Notify?
-            // console.log(`LEGION: Formed Squad ${id}`);
+            // console.log(`LEGION: Formed Squad`);
         }
     }
 
