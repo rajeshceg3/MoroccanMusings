@@ -641,12 +641,11 @@ export class MandalaRenderer {
         const roundedIndex = Math.round(estimatedIndex);
 
         // Check if within the valid "stroke width" area of the ring
-        // The ring is at 40 + i*20. We want to accept if distance is between radius - 5 and radius + 5?
-        // Actually, previous logic < 0.5 meant +/- 10px (0.5 * 20).
-        // Let's tighten it slightly to prevent mis-clicks, but +/- 8px is good.
-        // 0.4 * 20 = 8px.
+        // The ring is at 40 + i*20.
+        // Mobile Optimization: Increased tolerance from 0.4 (8px) to 0.75 (15px)
+        // This creates a touch target of 30px, closer to the 44px recommendation.
         if (
-            Math.abs(estimatedIndex - roundedIndex) < 0.4 &&
+            Math.abs(estimatedIndex - roundedIndex) < 0.75 &&
             roundedIndex >= 0
         ) {
             return roundedIndex;

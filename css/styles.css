@@ -1509,9 +1509,11 @@ body {
 #ghost-guide-overlay {
     display: flex;
     justify-content: center;
-    align-items: center;
+    align-items: flex-end; /* Move guide to bottom */
+    padding-bottom: 5vh;
     background: transparent; /* Spotlight handles background */
     z-index: 6000;
+    pointer-events: none; /* Allow clicks to pass through */
 }
 
 #ghost-guide-overlay.hidden {
@@ -1538,6 +1540,7 @@ body {
     padding: 0;
     position: relative;
     z-index: 10;
+    pointer-events: auto; /* Capture clicks on the guide itself */
 }
 
 .guide-header {

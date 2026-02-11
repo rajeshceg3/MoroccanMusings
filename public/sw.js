@@ -1,63 +1,13 @@
+importScripts('assets-manifest.js');
 const CACHE_NAME = 'marq-v3';
-const ASSETS = [
-    './',
-    './index.html',
-    './manifest.json',
-    './assets/noise.svg',
-    './css/styles.css',
-    './css/terminal.css',
-    './js/app.js',
-    './js/bootstrap.js',
-    './js/state.js',
-    './js/data.js',
-    './js/ui-system.js',
-    './js/error-guard.js',
-    './js/tapestry.js',
-    './js/terminal.js',
-    './js/terminal-commands.js',
-    './js/crypto-guard.js',
-    './js/alchemy.js',
-    './js/horizon.js',
-    './js/audio-engine.js',
-    './js/spectra.js',
-    './js/codex.js',
-    './js/codex.worker.js',
-    './js/cartographer.js',
-    './js/oracle.js',
-    './js/aegis.js',
-    './js/chronos.js',
-    './js/citadel.js',
-    './js/cortex.js',
-    './js/gemini.js',
-    './js/heatmap.js',
-    './js/legion.js',
-    './js/mnemosyne.js',
-    './js/panopticon.js',
-    './js/prometheus.js',
-    './js/scenarios.js',
-    './js/sentinel.js',
-    './js/stratagem.js',
-    './js/stratcom.js',
-    './js/synapse.js',
-    './js/valkyrie.js',
-    './js/vanguard.js',
-    './js/astrolabe-ui.js',
-    './js/ghost-guide.js',
-    './js/legion-ui.js',
-    './js/mnemosyne-ui.js',
-    './js/riad-ui.js',
-    './js/settings-ui.js',
-    './js/stratagem-ui.js',
-    './js/valkyrie-ui.js',
-    './js/controllers/SplashController.js',
-    './js/controllers/TapestryController.js',
-    './js/controllers/WeavingController.js'
-];
+const ASSETS = self.MANIFEST || [];
 
 self.addEventListener('install', (event) => {
     event.waitUntil(
         caches.open(CACHE_NAME).then((cache) => {
-            return cache.addAll(ASSETS);
+            // Ensure manifest is loaded
+            const assetsToCache = ASSETS.length > 0 ? ASSETS : ['./'];
+            return cache.addAll(assetsToCache);
         })
     );
 });
