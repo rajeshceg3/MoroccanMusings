@@ -5,8 +5,10 @@
   "type": "module",
   "main": "js/app.js",
   "scripts": {
+    "predev": "node tools/generate-manifest.js",
     "dev": "vite",
     "start": "vite",
+    "prebuild": "node tools/generate-manifest.js",
     "build": "vite build",
     "preview": "vite preview",
     "test": "npm run test:unit",

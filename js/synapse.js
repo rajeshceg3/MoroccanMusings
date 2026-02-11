@@ -4,6 +4,50 @@
  * Force-directed graph renderer for the HTML5 Canvas.
  * Visualizes the relationships identified by CortexEngine.
  */
+
+export class SpatialHash {
+    constructor(cellSize) {
+        this.cellSize = cellSize;
+        this.cells = new Map();
+    }
+
+    getKey(x, y) {
+        return `${Math.floor(x / this.cellSize)},${Math.floor(y / this.cellSize)}`;
+    }
+
+    insert(node) {
+        const key = this.getKey(node.x, node.y);
+        if (!this.cells.has(key)) {
+            this.cells.set(key, []);
+        }
+        this.cells.get(key).push(node);
+    }
+
+    query(x, y) {
+        const cx = Math.floor(x / this.cellSize);
+        const cy = Math.floor(y / this.cellSize);
+        let neighbors = [];
+
+        for (let dx = -1; dx <= 1; dx++) {
+            for (let dy = -1; dy <= 1; dy++) {
+                const key = `${cx + dx},${cy + dy}`;
+                if (this.cells.has(key)) {
+                    // Optimization: push individual elements to avoid creating new arrays with concat
+                    const cellNodes = this.cells.get(key);
+                    for (let i = 0; i < cellNodes.length; i++) {
+                        neighbors.push(cellNodes[i]);
+                    }
+                }
+            }
+        }
+        return neighbors;
+    }
+
+    clear() {
+        this.cells.clear();
+    }
+}
+
 export class SynapseRenderer {
     constructor(canvas) {
         this.canvas = canvas;
@@ -27,6 +71,10 @@ export class SynapseRenderer {
         this.hoveredNode = null;
         this.isSimulating = false;
         this.isPanning = false;
+
+        // Optimization: Spatial Hash
+        // Cell size based on repulsion range (sqrt(100000) approx 316)
+        this.spatialHash = new SpatialHash(320);
 
         this._resize();
     }
@@ -220,22 +268,32 @@ export class SynapseRenderer {
         const cy = this.height / 2;
         const centerForce = 0.002;
 
-        // Reset forces
-        this.nodes.forEach(node => {
-            node.fx = 0;
-            node.fy = 0;
-        });
-
-        // Repulsion
+        // OPTIMIZATION: Populate Spatial Hash
+        this.spatialHash.clear();
         for (let i = 0; i < this.nodes.length; i++) {
-            for (let j = i + 1; j < this.nodes.length; j++) {
-                const a = this.nodes[i];
-                const b = this.nodes[j];
+            this.spatialHash.insert(this.nodes[i]);
+            // Reset forces
+            this.nodes[i].fx = 0;
+            this.nodes[i].fy = 0;
+        }
+
+        // Repulsion (Optimized)
+        for (let i = 0; i < this.nodes.length; i++) {
+            const a = this.nodes[i];
+
+            // Query neighbors
+            const neighbors = this.spatialHash.query(a.x, a.y);
+
+            for (let j = 0; j < neighbors.length; j++) {
+                const b = neighbors[j];
+                if (a === b) continue; // Skip self
+
                 const dx = a.x - b.x;
                 const dy = a.y - b.y;
                 let distSq = dx * dx + dy * dy;
                 if (distSq < 0.1) distSq = 0.1;
-                // Optimization: Ignore far away
+
+                // Although SpatialHash limits candidates, we still check range
                 if (distSq > 100000) continue;
 
                 const f = repulsion / distSq;
@@ -244,8 +302,6 @@ export class SynapseRenderer {
 
                 a.fx += fx;
                 a.fy += fy;
-                b.fx -= fx;
-                b.fy -= fy;
             }
         }
 
