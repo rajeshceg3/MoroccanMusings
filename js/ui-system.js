@@ -542,14 +542,28 @@ export class UISystem {
         // Link Status
         const status = document.createElement('div');
         status.className = 'uplink-status';
-        // Multi-bar signal strength indicator
-        status.innerHTML = `
-            <div class="uplink-signal">
-                <div class="uplink-bar b1"></div>
-                <div class="uplink-bar b2"></div>
-                <div class="uplink-bar b3"></div>
-            </div>
-            <span id="uplink-text">LINK INACTIVE</span>`;
+
+        // Secure DOM creation (No innerHTML)
+        const signalDiv = document.createElement('div');
+        signalDiv.className = 'uplink-signal';
+
+        const bar1 = document.createElement('div');
+        bar1.className = 'uplink-bar b1';
+        const bar2 = document.createElement('div');
+        bar2.className = 'uplink-bar b2';
+        const bar3 = document.createElement('div');
+        bar3.className = 'uplink-bar b3';
+
+        signalDiv.appendChild(bar1);
+        signalDiv.appendChild(bar2);
+        signalDiv.appendChild(bar3);
+
+        const textSpan = document.createElement('span');
+        textSpan.id = 'uplink-text';
+        textSpan.textContent = 'LINK INACTIVE';
+
+        status.appendChild(signalDiv);
+        status.appendChild(textSpan);
         document.body.appendChild(status);
 
         this.uplinkBars = status.querySelectorAll('.uplink-bar');

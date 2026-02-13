@@ -645,7 +645,7 @@ export class MandalaRenderer {
         // Mobile Optimization: Increased tolerance from 0.4 (8px) to 0.75 (15px)
         // This creates a touch target of 30px, closer to the 44px recommendation.
         if (
-            Math.abs(estimatedIndex - roundedIndex) < 0.75 &&
+            Math.abs(estimatedIndex - roundedIndex) < 1.1 &&
             roundedIndex >= 0
         ) {
             return roundedIndex;
