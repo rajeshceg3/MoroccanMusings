@@ -199,7 +199,7 @@ body {
     text-align: center;
     line-height: 44px;
     font-size: 1.2rem;
-    color: #666;
+    color: #ccc;
     transition: color 0.3s;
     user-select: none;
     cursor: pointer;
@@ -544,7 +544,7 @@ body {
 
 .tapestry-subtitle {
     font-size: 0.8rem;
-    color: #666;
+    color: #ccc;
     margin-top: 0.2rem;
 }
 
@@ -653,7 +653,7 @@ body {
     justify-content: center;
     align-items: center;
     font-size: 0.8rem;
-    color: #666;
+    color: #ccc;
     transition: all 0.3s;
 }
 
@@ -1264,7 +1264,7 @@ body {
 .echo-status {
     font-family: 'Share Tech Mono', monospace;
     font-size: 0.8rem;
-    color: #666;
+    color: #ccc;
     animation: blink 2s infinite;
 }
 
@@ -1369,7 +1369,7 @@ body {
 .panopticon-close-btn {
     background: transparent;
     border: none;
-    color: #666;
+    color: #ccc;
     font-size: 1.5rem;
     cursor: pointer;
     line-height: 1;
@@ -1562,7 +1562,7 @@ body {
 .guide-skip {
     background: transparent;
     border: none;
-    color: #666;
+    color: #ccc;
     font-size: 0.8rem;
     cursor: pointer;
     text-transform: uppercase;
@@ -1991,7 +1991,7 @@ body.mode-tapestry #tapestry-screen {
 .v-input-group label {
     font-family: 'Share Tech Mono', monospace;
     font-size: 0.75rem;
-    color: #666;
+    color: #ccc;
 }
 
 .v-input-group input,

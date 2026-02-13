@@ -1,6 +1,13 @@
-importScripts('assets-manifest.js');
+try {
+    importScripts('assets-manifest.js');
+} catch (e) {
+    console.error('Failed to load assets manifest:', e);
+    // Fallback if manifest fails
+    self.MANIFEST = ['./', 'index.html', 'css/styles.css', 'js/bootstrap.js', 'js/app.js'];
+}
+
 const CACHE_NAME = 'marq-v3';
-const ASSETS = self.MANIFEST || [];
+const ASSETS = self.MANIFEST || ['./', 'index.html', 'css/styles.css', 'js/bootstrap.js', 'js/app.js'];
 
 self.addEventListener('install', (event) => {
     event.waitUntil(
