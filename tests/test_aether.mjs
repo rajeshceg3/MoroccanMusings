@@ -7,6 +7,16 @@ import { PrometheusEngine } from '../js/prometheus.js';
 import { PanopticonEngine } from '../js/panopticon.js';
 
 // --- MOCKS ---
+// Polyfill crypto for Node 18 environments (CI)
+if (!global.crypto) {
+    try {
+        const { webcrypto } = await import('node:crypto');
+        global.crypto = webcrypto;
+    } catch (e) {
+        console.error('Failed to polyfill crypto:', e);
+    }
+}
+
 if (!global.window) {
     global.window = {
         crypto: global.crypto,
