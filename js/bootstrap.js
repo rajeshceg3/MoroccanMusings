@@ -381,11 +381,11 @@ export async function bootstrap() {
         elements.riad.simulateButton = newSimBtn;
 
         // Style
-        newWeaveBtn.innerHTML = 'INTEGRATE SIGNAL';
+        newWeaveBtn.textContent = 'INTEGRATE SIGNAL';
         newWeaveBtn.style.background = 'var(--vibrancy-amber)';
         newWeaveBtn.style.color = '#000';
 
-        newSimBtn.innerHTML = 'DISCARD';
+        newSimBtn.textContent = 'DISCARD';
         newSimBtn.style.background = 'var(--awe-red)';
 
         // Listeners
@@ -429,10 +429,14 @@ export async function bootstrap() {
         elements.riad.simulateButton = newSimBtn;
 
         // Reset Styles
-        newWeaveBtn.innerHTML = 'Weave a Thread<div class="weave-progress"></div>';
+        newWeaveBtn.textContent = 'Weave a Thread';
+        const weaveProgress = document.createElement('div');
+        weaveProgress.className = 'weave-progress';
+        newWeaveBtn.appendChild(weaveProgress);
+
         newWeaveBtn.style.background = '';
         newWeaveBtn.style.color = '';
-        newSimBtn.innerHTML = 'Simulate';
+        newSimBtn.textContent = 'Simulate';
         newSimBtn.style.background = '';
 
         riadUI.setupInteractions();
@@ -624,4 +628,7 @@ export async function bootstrap() {
         window.legion = legion;
         console.warn("%c DEBUG MODE ACTIVE // GLOBAL EXPOSURE ENABLED ", "background: #c67605; color: #000; padding: 4px; font-weight: bold;");
     }
+
+    // Signal Readiness
+    window.dispatchEvent(new CustomEvent('marq-ready'));
 }

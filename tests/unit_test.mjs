@@ -15,6 +15,17 @@ if (!global.window) {
     };
 }
 
+// Polyfill crypto for Node 18 environments (CI)
+if (!global.crypto) {
+    try {
+        const { webcrypto } = await import('node:crypto');
+        global.crypto = webcrypto;
+        global.window.crypto = webcrypto;
+    } catch (e) {
+        console.error('Failed to polyfill crypto:', e);
+    }
+}
+
 // Mock LocalStorage
 const localStorageMock = (function() {
     let store = {};
