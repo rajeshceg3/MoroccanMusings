@@ -35,8 +35,10 @@ export class GhostGuide {
 
         // Auto-show on first run
         if (!localStorage.getItem('marq_onboarded')) {
-            // Slight delay to allow splash screen to clear
-            setTimeout(() => this.show(), 2000);
+            // Event-driven initialization
+            window.addEventListener('marq-ready', () => {
+                this.show();
+            }, { once: true });
         }
     }
 
