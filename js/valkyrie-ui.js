@@ -48,7 +48,12 @@ export class ValkyrieUI {
 
         const title = document.createElement('h2');
         title.className = 'valkyrie-title';
-        title.innerHTML = 'PROJECT <strong>OVERWATCH</strong> // DEFENSE GRID';
+        // Secure text creation
+        title.appendChild(document.createTextNode('PROJECT '));
+        const strong = document.createElement('strong');
+        strong.textContent = 'OVERWATCH';
+        title.appendChild(strong);
+        title.appendChild(document.createTextNode(' // DEFENSE GRID'));
 
         const closeBtn = document.createElement('button');
         closeBtn.className = 'valkyrie-close-btn';
@@ -118,11 +123,27 @@ export class ValkyrieUI {
 
             const name = document.createElement('div');
             name.className = 'v-name';
-            name.innerHTML = `<span class="v-id">${p.id}</span> // ${p.name}`;
+            const idSpan = document.createElement('span');
+            idSpan.className = 'v-id';
+            idSpan.textContent = p.id;
+            name.appendChild(idSpan);
+            name.appendChild(document.createTextNode(` // ${p.name}`));
 
             const cond = document.createElement('div');
             cond.className = 'v-cond';
-            cond.innerHTML = `IF <span class="v-hl">${p.condition}</span> THEN <span class="v-hl action">${p.action}</span>`;
+            cond.appendChild(document.createTextNode('IF '));
+
+            const condHl = document.createElement('span');
+            condHl.className = 'v-hl';
+            condHl.textContent = p.condition;
+            cond.appendChild(condHl);
+
+            cond.appendChild(document.createTextNode(' THEN '));
+
+            const actionHl = document.createElement('span');
+            actionHl.className = 'v-hl action';
+            actionHl.textContent = p.action;
+            cond.appendChild(actionHl);
 
             info.appendChild(name);
             info.appendChild(cond);
