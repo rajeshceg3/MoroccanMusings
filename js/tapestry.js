@@ -642,10 +642,10 @@ export class MandalaRenderer {
 
         // Check if within the valid "stroke width" area of the ring
         // The ring is at 40 + i*20.
-        // Mobile Optimization: Increased tolerance from 0.4 (8px) to 0.75 (15px)
-        // This creates a touch target of 30px, closer to the 44px recommendation.
+        // Mobile Optimization: Increased tolerance to 1.25 (~50px)
+        // This ensures the touch target comfortably meets the 44px recommendation.
         if (
-            Math.abs(estimatedIndex - roundedIndex) < 1.1 &&
+            Math.abs(estimatedIndex - roundedIndex) < 1.25 &&
             roundedIndex >= 0
         ) {
             return roundedIndex;
