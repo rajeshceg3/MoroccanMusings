@@ -7,7 +7,7 @@ const __dirname = path.dirname(__filename);
 const ROOT_DIR = path.resolve(__dirname, '..');
 const OUTPUT_FILE = path.join(ROOT_DIR, 'public', 'assets-manifest.js');
 
-const DIRS_TO_SCAN = ['js', 'css', 'assets'];
+const DIRS_TO_SCAN = ['js', 'css', 'public/assets'];
 const FILES_TO_INCLUDE = ['index.html', 'manifest.json'];
 
 function scanDirectory(dir, fileList) {
@@ -29,8 +29,11 @@ function scanDirectory(dir, fileList) {
             // But verify it's not the OUTPUT_FILE or sw.js
             if (filePath === OUTPUT_FILE) return;
 
-            const relativePath = './' + path.join(dir, file).replace(/\\/g, '/');
-            fileList.push(relativePath);
+            let relativePath = path.join(dir, file).replace(/\\/g, '/');
+            if (relativePath.startsWith('public/')) {
+                relativePath = relativePath.substring(7); // Remove 'public/'
+            }
+            fileList.push('./' + relativePath);
         }
     });
 

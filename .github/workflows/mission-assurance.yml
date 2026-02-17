@@ -9,11 +9,9 @@ on:
 jobs:
   verification:
     runs-on: ubuntu-latest
-
     strategy:
       matrix:
-        node-version: [18.x, 20.x]
-
+        node-version: [20.x, 22.x]
     steps:
     - uses: actions/checkout@v4
     - name: Use Node.js ${{ matrix.node-version }}
@@ -23,4 +21,27 @@ jobs:
         cache: 'npm'
     - run: npm ci
     - run: npm run lint
-    - run: npm run test
+    - run: npm run test:unit
+    - run: npm run build
+
+  integration:
+    runs-on: ubuntu-latest
+    needs: verification
+    steps:
+    - uses: actions/checkout@v4
+    - name: Use Node.js 20.x
+      uses: actions/setup-node@v3
+      with:
+        node-version: 20.x
+        cache: 'npm'
+    - run: npm ci
+    - name: Set up Python
+      uses: actions/setup-python@v4
+      with:
+        python-version: '3.10'
+    - name: Install Python Dependencies
+      run: |
+        pip install playwright
+        playwright install chromium
+    - name: Run App Verification
+      run: python3 tests/verify_app.py

@@ -212,7 +212,7 @@ export class UISystem {
         if (report.deltas.defcon < 0) defconClass = 'negative';
 
         // Secure Text Content Update
-        defconEl.innerHTML = ''; // Clear previous
+        defconEl.textContent = ''; // Clear previous
         const defconSpan = document.createElement('span');
         defconSpan.className = defconClass;
         defconSpan.textContent = `${report.baseline.defcon} ${defconArrow} ${report.projected.defcon}`;
