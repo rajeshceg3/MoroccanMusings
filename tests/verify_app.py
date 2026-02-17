@@ -11,7 +11,7 @@ PORT = 8088  # Different port to avoid conflicts
 class ProjectRequestHandler(http.server.SimpleHTTPRequestHandler):
     def translate_path(self, path):
         # Allow serving public assets from root for testing
-        if path == '/sw.js' or path == '/manifest.json':
+        if path == '/sw.js' or path == '/manifest.json' or path.startswith('/assets/'):
             root = os.getcwd()
             return os.path.join(root, 'public', path.lstrip('/'))
         return super().translate_path(path)
