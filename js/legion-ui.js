@@ -41,7 +41,13 @@ export class LegionUI {
         `;
 
         const header = document.createElement('div');
-        header.innerHTML = '<strong>PROJECT LEGION // SWARM</strong><hr style="border-color: #004400">';
+        const title = document.createElement('strong');
+        title.textContent = 'PROJECT LEGION // SWARM';
+        const hr = document.createElement('hr');
+        hr.style.borderColor = '#004400';
+
+        header.appendChild(title);
+        header.appendChild(hr);
         this.container.appendChild(header);
 
         this.content = document.createElement('div');
@@ -54,24 +60,54 @@ export class LegionUI {
         if (!this.isVisible || !this.content) return;
 
         const squads = this.engine.getSquadStatus();
+        this.content.textContent = ''; // Clear content
 
         if (squads.length === 0) {
-            this.content.innerHTML = '<div style="color: #666">NO ACTIVE SQUADS</div>';
+            const empty = document.createElement('div');
+            empty.className = 'legion-empty';
+            empty.textContent = 'NO ACTIVE SQUADS';
+            this.content.appendChild(empty);
             return;
         }
 
-        let html = '';
         squads.forEach(s => {
             const statusColor = s.status === 'IDLE' ? '#ffff00' : s.status === 'MOVING' ? '#00ff00' : '#ff0000';
-            html += `
-                <div style="margin-bottom: 8px; border-left: 2px solid ${statusColor}; padding-left: 5px;">
-                    <div><span style="color: #fff">${s.id}</span> [Size: ${s.size}]</div>
-                    <div style="font-size: 0.9em">Status: <span style="color:${statusColor}">${s.status}</span></div>
-                    ${s.pos ? `<div style="font-size: 0.8em; color: #888">Pos: ${s.pos.x}, ${s.pos.y}</div>` : ''}
-                </div>
-            `;
-        });
 
-        this.content.innerHTML = html;
+            const squadDiv = document.createElement('div');
+            squadDiv.className = 'legion-squad';
+            squadDiv.style.borderColor = statusColor; // Keep dynamic color inline for now
+
+            // Line 1: ID and Size
+            const line1 = document.createElement('div');
+            const idSpan = document.createElement('span');
+            idSpan.className = 'legion-id';
+            idSpan.textContent = s.id;
+
+            line1.appendChild(idSpan);
+            line1.appendChild(document.createTextNode(` [Size: ${s.size}]`));
+
+            // Line 2: Status
+            const line2 = document.createElement('div');
+            line2.className = 'legion-meta';
+            line2.appendChild(document.createTextNode('Status: '));
+
+            const statusSpan = document.createElement('span');
+            statusSpan.style.color = statusColor;
+            statusSpan.textContent = s.status;
+            line2.appendChild(statusSpan);
+
+            squadDiv.appendChild(line1);
+            squadDiv.appendChild(line2);
+
+            // Line 3: Pos (if exists)
+            if (s.pos) {
+                const line3 = document.createElement('div');
+                line3.className = 'legion-pos';
+                line3.textContent = `Pos: ${s.pos.x}, ${s.pos.y}`;
+                squadDiv.appendChild(line3);
+            }
+
+            this.content.appendChild(squadDiv);
+        });
     }
 }

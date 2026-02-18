@@ -2764,3 +2764,32 @@ body.high-contrast .settings-container {
 .valkyrie-form-grid {
     align-items: end;
 }
+
+/* Legion UI Enhancements (Op Iron Dome) */
+.legion-empty {
+    color: #ccc;
+    font-style: italic;
+    text-align: center;
+    padding: 1rem;
+}
+
+.legion-squad {
+    margin-bottom: 8px;
+    border-left: 2px solid;
+    padding-left: 5px;
+    /* Default border color handled inline or dynamic class */
+}
+
+.legion-id {
+    color: #fff;
+    font-weight: bold;
+}
+
+.legion-meta {
+    font-size: 0.9em;
+}
+
+.legion-pos {
+    font-size: 0.8em;
+    color: #aaa; /* High contrast fix */
+}

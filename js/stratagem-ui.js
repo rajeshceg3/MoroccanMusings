@@ -23,32 +23,48 @@ export class StratagemUI {
         // Header
         const header = document.createElement('div');
         header.className = 'stratagem-header';
-        header.innerHTML = `
-            <div class="stratagem-title">PROJECT <strong>STRATAGEM</strong> // WAR GAMES</div>
-            <div class="stratagem-status" id="stratagem-status">SIMULATION STANDBY</div>
-        `;
+
+        // Secure Header Creation
+        const titleDiv = document.createElement('div');
+        titleDiv.className = 'stratagem-title';
+        titleDiv.appendChild(document.createTextNode('PROJECT '));
+        const strong = document.createElement('strong');
+        strong.textContent = 'STRATAGEM';
+        titleDiv.appendChild(strong);
+        titleDiv.appendChild(document.createTextNode(' // WAR GAMES'));
+
+        const statusDiv = document.createElement('div');
+        statusDiv.className = 'stratagem-status';
+        statusDiv.id = 'stratagem-status';
+        statusDiv.textContent = 'SIMULATION STANDBY';
+
+        header.appendChild(titleDiv);
+        header.appendChild(statusDiv);
 
         // Dashboard (Stats)
         const dashboard = document.createElement('div');
         dashboard.className = 'stratagem-dashboard';
-        dashboard.innerHTML = `
-            <div class="stat-box">
-                <span class="label">TICK</span>
-                <span class="value" id="sim-tick">0</span>
-            </div>
-            <div class="stat-box">
-                <span class="label">DEFCON</span>
-                <span class="value" id="sim-defcon">-</span>
-            </div>
-            <div class="stat-box">
-                <span class="label">BALANCE</span>
-                <span class="value" id="sim-balance">-</span>
-            </div>
-             <div class="stat-box">
-                <span class="label">THREATS</span>
-                <span class="value" id="sim-threats">-</span>
-            </div>
-        `;
+
+        // Helper to create stat boxes securely
+        const createStatBox = (label, id) => {
+            const box = document.createElement('div');
+            box.className = 'stat-box';
+            const lbl = document.createElement('span');
+            lbl.className = 'label';
+            lbl.textContent = label;
+            const val = document.createElement('span');
+            val.className = 'value';
+            val.id = id;
+            val.textContent = '-';
+            box.appendChild(lbl);
+            box.appendChild(val);
+            return box;
+        };
+
+        dashboard.appendChild(createStatBox('TICK', 'sim-tick'));
+        dashboard.appendChild(createStatBox('DEFCON', 'sim-defcon'));
+        dashboard.appendChild(createStatBox('BALANCE', 'sim-balance'));
+        dashboard.appendChild(createStatBox('THREATS', 'sim-threats'));
 
         // Objectives Panel
         const objectives = document.createElement('div');
@@ -220,15 +236,30 @@ export class StratagemUI {
             this.elements.objectives.classList.remove('hidden');
             this.elements.status.textContent = `MISSION: ${this.engine.activeScenario.title} // TIME: ${this.engine.activeScenario.timeLeft}s`;
 
-            // Render Objectives
-            const objs = this.engine.activeScenario.objectives;
-            this.elements.objectives.innerHTML = '<h3>PRIMARY OBJECTIVES</h3>' +
-                objs.map(o => `
-                    <div class="objective-item">
-                        <span class="obj-type">${o.type}</span>
-                        <span class="obj-target">${o.comparator} ${o.target}</span>
-                    </div>
-                `).join('');
+            // Render Objectives Securely
+            this.elements.objectives.textContent = ''; // Clear
+
+            const h3 = document.createElement('h3');
+            h3.textContent = 'PRIMARY OBJECTIVES';
+            this.elements.objectives.appendChild(h3);
+
+            this.engine.activeScenario.objectives.forEach(o => {
+                const item = document.createElement('div');
+                item.className = 'objective-item';
+
+                const typeSpan = document.createElement('span');
+                typeSpan.className = 'obj-type';
+                typeSpan.textContent = o.type;
+
+                const targetSpan = document.createElement('span');
+                targetSpan.className = 'obj-target';
+                targetSpan.textContent = `${o.comparator} ${o.target}`;
+
+                item.appendChild(typeSpan);
+                item.appendChild(targetSpan);
+                this.elements.objectives.appendChild(item);
+            });
+
         } else {
             this.elements.objectives.classList.add('hidden');
             this.elements.status.textContent = 'SIMULATION ACTIVE // SANDBOX MODE';
