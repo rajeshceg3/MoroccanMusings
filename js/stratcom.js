@@ -74,7 +74,14 @@ export class StratcomSystem {
             const threads = this.ledger.getThreads();
             const analysis = this.horizon.analyze(threads);
             if (this.elements.balance) {
-                 this.elements.balance.innerHTML = `<span class="highlight">${analysis.balanceScore}%</span> // ${analysis.dominance.intention.toUpperCase()}`;
+                 this.elements.balance.textContent = ''; // Clear
+
+                 const highlight = document.createElement('span');
+                 highlight.className = 'highlight';
+                 highlight.textContent = `${analysis.balanceScore}%`;
+
+                 this.elements.balance.appendChild(highlight);
+                 this.elements.balance.appendChild(document.createTextNode(` // ${analysis.dominance.intention.toUpperCase()}`));
             }
         }
 
@@ -82,25 +89,54 @@ export class StratcomSystem {
         if (this.vanguard) {
             const units = this.vanguard.getUnits();
             if (this.elements.units) {
-                this.elements.units.innerHTML = '';
+                this.elements.units.textContent = ''; // Clear
+
                 if (units.length === 0) {
-                    this.elements.units.innerHTML = '<div class="unit-item empty">NO ASSETS DEPLOYED</div>';
+                    const emptyState = document.createElement('div');
+                    emptyState.className = 'unit-item empty';
+                    emptyState.textContent = 'NO ASSETS DEPLOYED';
+                    this.elements.units.appendChild(emptyState);
                 } else {
                     units.forEach(u => {
                         const el = document.createElement('div');
                         el.className = 'unit-item';
-                        // Simple battery bar
+
+                        // Row 1
+                        const row1 = document.createElement('div');
+                        row1.className = 'unit-row';
+
+                        const idSpan = document.createElement('span');
+                        idSpan.className = 'unit-id';
+                        idSpan.textContent = `[${u.id}]`;
+
+                        const typeSpan = document.createElement('span');
+                        typeSpan.className = 'unit-type';
+                        typeSpan.textContent = u.type;
+
+                        row1.appendChild(idSpan);
+                        row1.appendChild(typeSpan);
+
+                        // Row 2
+                        const row2 = document.createElement('div');
+                        row2.className = 'unit-row';
+
+                        const statusSpan = document.createElement('span');
+                        statusSpan.className = 'unit-status';
+                        statusSpan.textContent = u.status;
+
+                        const batSpan = document.createElement('span');
+                        batSpan.className = 'unit-bat';
+                        batSpan.textContent = `${Math.floor(u.battery)}%`;
+
+                        // Simple battery bar color logic
                         const battColor = u.battery < 20 ? '#ff0055' : u.battery < 50 ? '#ffaa00' : '#55ffaa';
-                        el.innerHTML = `
-                            <div class="unit-row">
-                                <span class="unit-id">[${u.id}]</span>
-                                <span class="unit-type">${u.type}</span>
-                            </div>
-                            <div class="unit-row">
-                                <span class="unit-status">${u.status}</span>
-                                <span class="unit-bat" style="color:${battColor}">${Math.floor(u.battery)}%</span>
-                            </div>
-                        `;
+                        batSpan.style.color = battColor;
+
+                        row2.appendChild(statusSpan);
+                        row2.appendChild(batSpan);
+
+                        el.appendChild(row1);
+                        el.appendChild(row2);
                         this.elements.units.appendChild(el);
                     });
                 }
@@ -110,7 +146,7 @@ export class StratcomSystem {
         // 4. Log Widget (Mirror Terminal)
         if (this.elements.log && this.terminal && this.terminal.output) {
              const lines = Array.from(this.terminal.output.children).slice(-6); // Last 6 lines
-             this.elements.log.innerHTML = '';
+             this.elements.log.textContent = ''; // Clear
              lines.forEach(line => {
                  const clone = line.cloneNode(true);
                  this.elements.log.appendChild(clone);

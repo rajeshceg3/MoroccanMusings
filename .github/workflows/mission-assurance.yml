@@ -21,6 +21,28 @@ jobs:
       with:
         node-version: ${{ matrix.node-version }}
         cache: 'npm'
-    - run: npm ci
-    - run: npm run lint
-    - run: npm run test
+
+    - name: Set up Python
+      uses: actions/setup-python@v4
+      with:
+        python-version: '3.x'
+
+    - name: Install Dependencies
+      run: |
+        npm ci
+        python -m pip install --upgrade pip
+        pip install playwright
+
+    - name: Install Playwright Browsers
+      run: |
+        npx playwright install --with-deps
+        python -m playwright install --with-deps
+
+    - name: Static Analysis (Lint)
+      run: npm run lint
+
+    - name: Unit Verification
+      run: npm run test:unit
+
+    - name: Integration Drills (E2E)
+      run: npm run test:e2e
