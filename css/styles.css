@@ -28,10 +28,10 @@ body {
 }
 
 :focus-visible {
-    outline: 2px solid var(--ochre-gold);
+    outline: 3px solid var(--ochre-gold);
     outline-offset: 4px;
     border-radius: 2px;
-    box-shadow: 0 0 10px var(--ochre-gold);
+    box-shadow: 0 0 15px var(--ochre-gold);
 }
 
 /* Screen Management */
@@ -566,8 +566,12 @@ body {
     background: rgba(255, 255, 255, 0.1);
     border: 1px solid rgba(255, 255, 255, 0.2);
     color: #ccc;
-    padding: 0.5rem 1rem;
-    border-radius: 20px;
+    padding: 0.8rem 1.2rem;
+    min-height: 44px;
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    border-radius: 22px;
     cursor: pointer;
     font-size: 0.8rem;
     backdrop-filter: blur(5px);

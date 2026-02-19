@@ -55,8 +55,6 @@ export class LegionEngine {
             // Take first 3
             const recruitIds = soloIdleUnits.slice(0, this.SQUAD_SIZE).map(u => u.id);
             this.vanguard.createSquad(recruitIds, 'V-WING');
-            // Notify?
-            // console.log(`LEGION: Formed Squad`);
         }
     }
 

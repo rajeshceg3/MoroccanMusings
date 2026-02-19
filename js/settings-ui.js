@@ -50,48 +50,65 @@ export class SettingsUI {
     }
 
     _createModal() {
-        // Create the modal structure in memory
         this.overlay = document.createElement('div');
         this.overlay.className = 'overlay hidden settings-overlay';
         this.overlay.id = 'settings-overlay';
-
-        // A11y attributes
         this.overlay.setAttribute('role', 'dialog');
         this.overlay.setAttribute('aria-modal', 'true');
         this.overlay.setAttribute('aria-label', 'System Preferences');
 
-        this.overlay.innerHTML = `
-            <div class="settings-container">
-                <div class="settings-header">
-                    <div class="settings-title">SYSTEM PREFERENCES</div>
-                    <button class="settings-close-btn" aria-label="Close Settings">X</button>
-                </div>
-                <div class="settings-content">
-                    <div class="setting-row">
-                        <label for="setting-audio">STEALTH MODE (MUTE)</label>
-                        <input type="checkbox" id="setting-audio" ${this.prefs.muted ? 'checked' : ''}>
-                    </div>
-                    <div class="setting-row">
-                        <label for="setting-motion">MOTION SICKNESS PROTOCOL</label>
-                        <input type="checkbox" id="setting-motion" ${this.prefs.reducedMotion ? 'checked' : ''}>
-                    </div>
-                    <div class="setting-row">
-                        <label for="setting-contrast">HIGH CONTRAST HUD</label>
-                        <input type="checkbox" id="setting-contrast" ${this.prefs.highContrast ? 'checked' : ''}>
-                    </div>
-                </div>
-            </div>
-        `;
+        const container = document.createElement('div');
+        container.className = 'settings-container';
 
+        // Header
+        const header = document.createElement('div');
+        header.className = 'settings-header';
+
+        const title = document.createElement('div');
+        title.className = 'settings-title';
+        title.textContent = 'SYSTEM PREFERENCES';
+
+        const closeBtn = document.createElement('button');
+        closeBtn.className = 'settings-close-btn';
+        closeBtn.setAttribute('aria-label', 'Close Settings');
+        closeBtn.textContent = 'X';
+        closeBtn.onclick = () => this.hide();
+
+        header.append(title, closeBtn);
+
+        // Content
+        const content = document.createElement('div');
+        content.className = 'settings-content';
+
+        const createRow = (label, id, checked, key) => {
+            const row = document.createElement('div');
+            row.className = 'setting-row';
+
+            const lbl = document.createElement('label');
+            lbl.setAttribute('for', id);
+            lbl.textContent = label;
+
+            const input = document.createElement('input');
+            input.type = 'checkbox';
+            input.id = id;
+            input.checked = checked;
+            input.addEventListener('change', () => this.toggle(key));
+
+            row.append(lbl, input);
+            return row;
+        };
+
+        content.append(
+            createRow('STEALTH MODE (MUTE)', 'setting-audio', this.prefs.muted, 'muted'),
+            createRow('MOTION SICKNESS PROTOCOL', 'setting-motion', this.prefs.reducedMotion, 'reducedMotion'),
+            createRow('HIGH CONTRAST HUD', 'setting-contrast', this.prefs.highContrast, 'highContrast')
+        );
+
+        container.append(header, content);
+        this.overlay.appendChild(container);
         document.body.appendChild(this.overlay);
-        this.container = this.overlay.querySelector('.settings-container');
 
-        // Bind Events
-        this.overlay.querySelector('.settings-close-btn').addEventListener('click', () => this.hide());
-
-        this.overlay.querySelector('#setting-audio').addEventListener('change', () => this.toggle('muted'));
-        this.overlay.querySelector('#setting-motion').addEventListener('change', () => this.toggle('reducedMotion'));
-        this.overlay.querySelector('#setting-contrast').addEventListener('change', () => this.toggle('highContrast'));
+        this.container = container;
     }
 
     show() {
