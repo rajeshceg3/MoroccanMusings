@@ -4,6 +4,7 @@
     --tadelakt-red: #b85b47;
     --atlas-stone: #8d8d8d;
     --sand: #e6dcc3;
+    --vibrancy-amber: #ffaa00;
     --ease-out-quint: cubic-bezier(0.22, 1, 0.36, 1);
 }
 
@@ -1491,6 +1492,11 @@ body {
     background: rgba(85, 255, 170, 0.1);
     border-color: #55ffaa;
     color: #55ffaa;
+}
+
+.fork-btn {
+    border-color: var(--vibrancy-amber);
+    color: var(--vibrancy-amber);
 }
 
 .panopticon-metadata {

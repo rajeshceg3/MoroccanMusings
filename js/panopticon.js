@@ -154,7 +154,10 @@ export class PanopticonEngine {
 
         const title = document.createElement('span');
         title.className = 'panopticon-title';
-        title.innerHTML = 'PROJECT <strong>AETHER</strong> // TEMPORAL OPS';
+        title.textContent = 'PROJECT ';
+        const strong = document.createElement('strong');
+        strong.textContent = 'AETHER';
+        title.append(strong, ' // TEMPORAL OPS');
 
         const status = document.createElement('span');
         status.id = 'panopticon-status';
@@ -178,6 +181,7 @@ export class PanopticonEngine {
         const scrubber = document.createElement('input');
         scrubber.type = 'range';
         scrubber.id = 'panopticon-scrubber';
+        scrubber.setAttribute('aria-label', 'Timeline Scrubber');
         scrubber.min = '0';
         scrubber.max = '0';
         scrubber.value = '0';
@@ -208,8 +212,7 @@ export class PanopticonEngine {
         const btnNext = createBtn('panopticon-next', 'STEP ❯');
 
         const btnFork = createBtn('panopticon-fork', '⑂ FORK');
-        btnFork.style.borderColor = 'var(--vibrancy-amber)';
-        btnFork.style.color = 'var(--vibrancy-amber)';
+        btnFork.classList.add('fork-btn');
         btnFork.setAttribute('data-tooltip', 'Create Branch Point');
         btnFork.disabled = true;
 
