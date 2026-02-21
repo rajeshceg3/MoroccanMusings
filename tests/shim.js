@@ -49,14 +49,13 @@ if (!global.document) {
     };
 }
 
-if (!global.CustomEvent) {
-    global.CustomEvent = class CustomEvent {
-        constructor(type, detail) {
-            this.type = type;
-            this.detail = detail;
-        }
-    };
-}
+// Always force CustomEvent polyfill to ensure consistent behavior across Node versions
+global.CustomEvent = class CustomEvent {
+    constructor(type, options = {}) {
+        this.type = type;
+        this.detail = options.detail;
+    }
+};
 
 if (!global.localStorage) {
     let store = {};
