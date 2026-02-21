@@ -12,7 +12,7 @@
     "build": "vite build",
     "preview": "vite preview",
     "test": "npm run test:unit",
-    "test:unit": "node tests/unit_test.mjs && node tests/test_aether.mjs",
+    "test:unit": "node --test tests/*.mjs",
     "test:e2e": "python3 tests/verify_app.py",
     "lint": "eslint js/",
     "format": "prettier --write '**/*.{js,css,html,md}'"

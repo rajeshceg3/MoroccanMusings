@@ -1,5 +1,6 @@
 import { test } from 'node:test';
 import assert from 'node:assert';
+import '../tests/shim.js'; // Tactical Shim
 import { StratcomSystem } from '../js/stratcom.js';
 
 // Mock Dependencies
@@ -30,6 +31,7 @@ const createMockElement = (id) => {
         get innerHTML() { return this._innerHTML; },
         set innerHTML(val) { this._innerHTML = val; },
         textContent: '',
+        style: {},
         classList: {
             remove: () => {},
             add: () => {}
@@ -37,7 +39,7 @@ const createMockElement = (id) => {
         addEventListener: () => {},
         appendChild: function(child) {
              // specific logic to simulate adding html
-             this._innerHTML += child.innerHTML;
+             this._innerHTML += (child.innerHTML || child.textContent || '');
         },
         cloneNode: () => createMockElement()
     };
@@ -50,7 +52,8 @@ global.document = {
         }
         return mockDOM[id];
     },
-    createElement: () => createMockElement()
+    createElement: () => createMockElement(),
+    createTextNode: (text) => ({ textContent: text })
 };
 global.setInterval = (fn) => fn(); // Run once immediately
 global.clearInterval = () => {};

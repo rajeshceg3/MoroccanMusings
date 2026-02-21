@@ -739,7 +739,7 @@ body {
 }
 
 .stat-label {
-    color: #888;
+    color: #aaa;
 }
 .stat-value {
     color: #fff;
@@ -820,7 +820,7 @@ body {
 
 .aegis-section-title {
     font-size: 0.7rem;
-    color: #888;
+    color: #aaa;
     text-transform: uppercase;
     letter-spacing: 1px;
     margin-bottom: 0.8rem;
@@ -1090,7 +1090,7 @@ body {
 }
 
 .sim-row span:first-child {
-    color: #888;
+    color: #aaa;
 }
 
 .sim-row span:last-child {
@@ -1939,7 +1939,7 @@ body.mode-tapestry #tapestry-screen {
 }
 
 .v-cond {
-    color: #888;
+    color: #aaa;
     font-size: 0.8rem;
 }
 
