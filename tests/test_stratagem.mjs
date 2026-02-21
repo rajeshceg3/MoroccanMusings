@@ -1,5 +1,6 @@
 import { test, describe, it, beforeEach } from 'node:test';
 import assert from 'node:assert';
+import '../tests/shim.js'; // Tactical Shim - Must be first
 import { StratagemEngine } from '../js/stratagem.js';
 import { TapestryLedger } from '../js/tapestry.js';
 import { VanguardEngine } from '../js/vanguard.js';
@@ -7,7 +8,6 @@ import { CitadelEngine } from '../js/citadel.js';
 import { SentinelEngine } from '../js/sentinel.js';
 import { HorizonEngine } from '../js/horizon.js';
 import { locations } from '../js/data.js';
-import '../tests/shim.js'; // Tactical Shim
 
 // Extend shim
 global.window.locations = locations;

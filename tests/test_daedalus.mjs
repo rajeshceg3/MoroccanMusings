@@ -1,3 +1,4 @@
+import '../tests/shim.js'; // Tactical Shim - Must be first
 import { StratagemEngine } from '../js/stratagem.js';
 import { TapestryLedger } from '../js/tapestry.js';
 import { SentinelEngine } from '../js/sentinel.js';
@@ -6,7 +7,6 @@ import { VanguardEngine } from '../js/vanguard.js';
 import { CitadelEngine } from '../js/citadel.js';
 import test from 'node:test';
 import assert from 'node:assert';
-import '../tests/shim.js'; // Tactical Shim
 
 // Mock Browser Globals Overrides
 global.window.dispatchEvent = () => {};

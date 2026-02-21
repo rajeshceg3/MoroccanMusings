@@ -4,9 +4,17 @@
 
 import { webcrypto } from 'node:crypto';
 
+// Strict polyfill for Node 18 (and others)
+if (!globalThis.crypto) {
+    globalThis.crypto = webcrypto;
+}
+if (!global.crypto) {
+    global.crypto = webcrypto;
+}
+
 if (!global.window) {
     global.window = {
-        crypto: global.crypto || webcrypto,
+        crypto: global.crypto,
         dispatchEvent: (event) => {},
         addEventListener: () => {},
         removeEventListener: () => {},
@@ -14,10 +22,6 @@ if (!global.window) {
         innerWidth: 1024,
         innerHeight: 768,
     };
-}
-
-if (!global.crypto) {
-    global.crypto = webcrypto;
 }
 
 if (!global.document) {
