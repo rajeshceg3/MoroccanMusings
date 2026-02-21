@@ -6,22 +6,10 @@ import { VanguardEngine } from '../js/vanguard.js';
 import { CitadelEngine } from '../js/citadel.js';
 import test from 'node:test';
 import assert from 'node:assert';
+import '../tests/shim.js'; // Tactical Shim
 
-// Mock Browser Globals
-global.window = {
-    dispatchEvent: () => {}
-};
-global.localStorage = {
-    getItem: () => null,
-    setItem: () => {},
-    removeItem: () => {}
-};
-global.CustomEvent = class CustomEvent {
-    constructor(type, detail) {
-        this.type = type;
-        this.detail = detail.detail;
-    }
-};
+// Mock Browser Globals Overrides
+global.window.dispatchEvent = () => {};
 
 const mockLocations = {
     'serenity.coast.dawn': { coordinates: { x: 10, y: 10 }, region: 'coast' },
