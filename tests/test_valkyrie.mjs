@@ -1,4 +1,5 @@
 
+import '../tests/shim.js'; // Tactical Shim
 import { ValkyrieEngine } from '../js/valkyrie.js';
 import assert from 'assert';
 

@@ -1,5 +1,6 @@
 import { test, describe, it, beforeEach } from 'node:test';
 import assert from 'node:assert';
+import '../tests/shim.js'; // Tactical Shim - Must be first
 import { StratagemEngine } from '../js/stratagem.js';
 import { TapestryLedger } from '../js/tapestry.js';
 import { VanguardEngine } from '../js/vanguard.js';
@@ -8,41 +9,16 @@ import { SentinelEngine } from '../js/sentinel.js';
 import { HorizonEngine } from '../js/horizon.js';
 import { locations } from '../js/data.js';
 
-// --- TACTICAL SHIMS ---
-if (!global.window) {
-    global.window = {
-        crypto: global.crypto,
-        btoa: global.btoa,
-        atob: global.atob,
-        locations: locations
-    };
-}
+// Extend shim
+global.window.locations = locations;
+if (!global.window.btoa) global.window.btoa = (str) => Buffer.from(str).toString('base64');
+if (!global.window.atob) global.window.atob = (str) => Buffer.from(str, 'base64').toString('binary');
 
-// Mock LocalStorage
-const localStorageMock = (function() {
-    let store = {};
-    return {
-        getItem: function(key) {
-            return store[key] || null;
-        },
-        setItem: function(key, value) {
-            store[key] = value.toString();
-        },
-        clear: function() {
-            store = {};
-        },
-        removeItem: function(key) {
-            delete store[key];
-        }
-    };
-})();
-global.localStorage = localStorageMock;
-
-// Mock Crypto (SubtleCrypto)
-if (!global.crypto.subtle) {
-    // Basic shim for SHA-256 if running in environment without full crypto
-    // Node 18+ has global.crypto.subtle
-}
+// Mock LocalStorage (Already shimmed, but we can override if specific behavior needed)
+// The shim provides a basic one. The test uses a closure mock.
+// We can use the global.localStorage from the shim, but the test might expect to spy on it or clear it.
+// The shim's localStorage has a `clear()` method.
+const localStorageMock = global.localStorage;
 
 describe('Project STRATAGEM: Strategic Simulation Engine', () => {
 

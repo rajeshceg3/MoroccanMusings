@@ -1,9 +1,14 @@
 import { test, describe, it, before, beforeEach } from 'node:test';
 import assert from 'node:assert';
+import '../tests/shim.js'; // Tactical Shim
 import { ValkyrieEngine } from '../js/valkyrie.js';
 
 // --- MOCKS ---
-// Mock LocalStorage
+// Mock LocalStorage (Override global shim for this test specifically if needed, or rely on shim)
+// We'll keep the mock here as it's used in beforeEach to clear state, but we can simplify.
+const localStorageMock = global.localStorage;
+
+/*
 const localStorageMock = (function() {
     let store = {};
     return {
@@ -22,6 +27,7 @@ const localStorageMock = (function() {
     };
 })();
 global.localStorage = localStorageMock;
+*/
 
 const terminalMock = {
     logs: [],

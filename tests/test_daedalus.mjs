@@ -1,3 +1,4 @@
+import '../tests/shim.js'; // Tactical Shim - Must be first
 import { StratagemEngine } from '../js/stratagem.js';
 import { TapestryLedger } from '../js/tapestry.js';
 import { SentinelEngine } from '../js/sentinel.js';
@@ -7,21 +8,8 @@ import { CitadelEngine } from '../js/citadel.js';
 import test from 'node:test';
 import assert from 'node:assert';
 
-// Mock Browser Globals
-global.window = {
-    dispatchEvent: () => {}
-};
-global.localStorage = {
-    getItem: () => null,
-    setItem: () => {},
-    removeItem: () => {}
-};
-global.CustomEvent = class CustomEvent {
-    constructor(type, detail) {
-        this.type = type;
-        this.detail = detail.detail;
-    }
-};
+// Mock Browser Globals Overrides
+global.window.dispatchEvent = () => {};
 
 const mockLocations = {
     'serenity.coast.dawn': { coordinates: { x: 10, y: 10 }, region: 'coast' },
