@@ -1,88 +1,89 @@
-# TACTICAL TRANSFORMATION ROADMAP: OPERATION CODE FORTRESS
+# TACTICAL TRANSFORMATION ROADMAP
 
 **CLASSIFICATION:** SECRET // NOFORN
-**DATE:** 2026-01-25
+**DATE:** 2026-05-22
 **OFFICER:** LT. CMDR. JULES
-**SUBJECT:** COMPREHENSIVE REPOSITORY TRANSFORMATION & READINESS ASSESSMENT
+**SUBJECT:** MISSION CRITICAL ASSESSMENT & EXECUTION STRATEGY
 
-## 1. MISSION OVERVIEW
+## 1. EXECUTIVE SUMMARY (SITREP)
 
-The objective of this operation is to elevate the "MoroccanMusings" (MARQ) repository from a developmental prototype to a mission-critical, production-ready system. The focus is on absolute code reliability, maximum operational efficiency, and comprehensive security hardening, with a paramount emphasis on User Experience (UX).
+**CURRENT MISSION STATUS:** **AMBER** (CAUTION ADVISED)
 
-## 2. SITUATION REPORT (SITREP)
+The "MoroccanMusings" (Marq) system demonstrates exceptional core logic integrity, with 100% unit test coverage (71/71 passing). Security hardening (Operation Iron Dome) has successfully neutralized XSS vectors. However, critical deficiencies in **User Experience (UX)** and **Deployment Logistics** currently prevent a "MISSION GREEN" (Production Ready) designation.
 
-**Current Status:** DEFCON 4 (ELEVATED READINESS)
-**Operational Capacity:** 85%
+**IMMEDIATE THREATS:**
+1.  **UX FRATRICIDE:** Visual conflict between `#settings-trigger` and `#signal-trigger` renders the interface amateurish and potentially unusable on specific viewports.
+2.  **LOGISTICS FAILURE:** The `tools/deploy.py` script, mandated by `README.md`, is MIA. Production builds are currently unmanaged.
 
-Initial tactical strikes have been executed to neutralize immediate threats to stability and usability.
+## 2. DETAILED TACTICAL ASSESSMENT
 
-### 2.1 Secured Objectives (COMPLETED ACTIONS)
-*   **[INFRASTRUCTURE] Supply Line Restoration:** Restored critical dependencies (`@eslint/js`) ensuring static analysis capabilities are fully operational. Linting checks now pass with zero casualties.
-*   **[UX] Operation Visual Superiority:** Neutralized hostile low-contrast elements (`#555`) in `css/styles.css`. Replaced with standard-issue High Visibility Grey (`#aaa`), achieving WCAG AA compliance (>4.5:1 contrast ratio). Verified via visual reconnaissance.
-*   **[DEVOPS] Deployment Protocol:** Fabricated and secured `tools/deploy.py`. The script now utilizes `subprocess` with `shell=False` to prevent command injection vectors, ensuring a reproducible and secure build process.
+### 2.1 Code Quality & Integrity (STATUS: GREEN)
+*   **Test Coverage:** 100% Pass Rate (71 tests).
+*   **Linting:** Enforced via `eslint.config.js`.
+*   **Architecture:** Modular ES6+ structure is robust and maintainable.
+*   **State Management:** Centralized `state.js` provides clear command and control.
 
-### 2.2 Active Threats (GAP ANALYSIS)
-Despite initial successes, the following vulnerabilities jeopardize mission success:
+### 2.2 Security Posture (STATUS: GREEN-MINUS)
+*   **XSS Mitigation:** `innerHTML` usage has been effectively purged from `Panopticon`, `Valkyrie`, and `UISystem`.
+*   **CSP:** Strict Content Security Policy is in place in `index.html`.
+*   **Vulnerability:** Missing deployment script creates a risk of non-deterministic builds (human error).
 
-*   **[SECURITY] HTTP Security Headers:** The application lacks a robust Content Security Policy (CSP), HSTS, and X-Frame-Options configuration in its serving logic.
-*   **[INFRASTRUCTURE] Containerization:** No Dockerfile exists to standardize the deployment environment across different theaters of operation.
-*   **[PERFORMANCE] Asset Optimization:** Image assets and large JavaScript bundles are not yet fully optimized for low-bandwidth environments (e.g., field operations).
-*   **[MONITORING] Telemetry Blackout:** Absence of real-time error tracking (Sentry/LogRocket) means we are flying blind regarding client-side failures in the wild.
+### 2.3 User Experience (UX) (STATUS: RED)
+*   **Critical Visual Defect:**
+    *   `#settings-trigger` (Right: 5rem) and `#signal-trigger` (Right: 8rem) have insufficient clearance.
+    *   Button Width: 50px. Gap: 48px (3rem).
+    *   **Result:** Overlap of ~2px. Unacceptable precision failure.
+*   **Mobile Responsiveness:**
+    *   Current media queries (`max-width: 768px`) handle dashboard docking.
+    *   **Risk:** Button crowding on small screens (<375px) due to absolute positioning.
 
-## 3. STRATEGIC ROADMAP
+### 2.4 Operational Logistics (STATUS: RED)
+*   **Deployment:** `README.md` references `python3 tools/deploy.py`. This asset is missing.
+*   **Impact:** Cannot guarantee reproducible production artifacts.
 
-### PHASE 1: STABILIZATION (COMPLETE)
-**Objective:** Secure the perimeter and ensure baseline functionality.
-*   ✅ Restore Dependencies (`npm install`)
-*   ✅ Enforce Code Quality (`npm run lint`)
-*   ✅ Establish Build Protocol (`tools/deploy.py`)
-*   ✅ Verify Unit Integrity (`npm run test:unit`)
+## 3. GAP ANALYSIS
 
-### PHASE 2: HARDENING (IMMEDIATE PRIORITY)
-**Objective:** Fortify the application against external threats.
-1.  **Containerization:**
-    *   **Action:** Draft `Dockerfile` and `.dockerignore`.
-    *   **Standard:** Multi-stage build (Node.js builder -> Nginx alpine runner).
-2.  **Security Headers:**
-    *   **Action:** Configure Nginx/Vite headers to enforce strict CSP.
-    *   **Standard:** `default-src 'self'; script-src 'self' 'unsafe-inline' (for now); object-src 'none'`.
-3.  **Dependency Auditing:**
-    *   **Action:** Execute `npm audit` and resolve all High/Critical vulnerabilities.
+| COMPONENT | REQUIREMENT | CURRENT STATE | DELTA |
+|-----------|-------------|---------------|-------|
+| **UX** | Zero Visual Defects | Button Overlap Detected | **CRITICAL** |
+| **UX** | Mobile Optimization | Potential Crowding | **HIGH** |
+| **OPS** | Automated Deployment | Script Missing | **CRITICAL** |
+| **SEC** | Deterministic Build | Manual Build Required | **HIGH** |
+| **CODE** | 100% Test Pass | 100% Test Pass | NONE |
 
-### PHASE 3: OPTIMIZATION (TACTICAL PRIORITY)
-**Objective:** Maximize speed and efficiency.
-1.  **Bundle Analysis:**
-    *   **Action:** Implement `rollup-plugin-visualizer` to identify heavy dependencies.
-    *   **Target:** Reduce main bundle size by 20%.
-2.  **Asset Compression:**
-    *   **Action:** Implement an image optimization pipeline (WebP conversion).
+## 4. STRATEGIC EXECUTION ROADMAP
 
-### PHASE 4: UX ELEVATION (CONTINUOUS)
-**Objective:** "Leave No User Behind."
-1.  **Accessibility Audit:**
-    *   **Action:** Run automated AXE scans on all routes.
-    *   **Target:** 100% WCAG AA Compliance.
-2.  **Interaction Design:**
-    *   **Action:** Standardize all touch targets to minimum 44x44px (verified in `MandalaRenderer`, requires audit for HTML controls).
+### PHASE 1: OPERATION "VISUAL SUPERIORITY" (IMMEDIATE)
+**Objective:** Restore visual integrity and optimize UX.
 
-## 4. TACTICAL RECOMMENDATIONS
+1.  **Neutralize CSS Conflict:**
+    *   Adjust `#signal-trigger` position to `right: 9rem` (or calculate precise gap: 5rem + 50px + margin).
+    *   *Tactical Adjustment:* Set `#settings-trigger` to `right: 5.5rem` and `#signal-trigger` to `right: 9.5rem` to ensure breathing room.
+2.  **Mobile Hardening:**
+    *   Implement `@media (max-width: 400px)` rules to scale down `.help-btn` size or adjust spacing.
 
-### 4.1 Code Quality
-*   **Strict Mode:** Enforce strict typing via JSDoc or migrate to TypeScript for mission-critical modules (`TapestryLedger`, `CryptoGuard`).
-*   **Testing:** Expand E2E coverage using Playwright to simulate hostile user behavior (fuzz testing).
+### PHASE 2: OPERATION "LOGISTICS RESTORATION" (PRIORITY)
+**Objective:** Re-establish automated deployment capabilities.
 
-### 4.2 Security
-*   **Secrets Management:** Ensure no API keys or sensitive data are hardcoded. Use `dotenv` for local development and environment variables for production.
-*   **Input Sanitation:** Although `innerHTML` usage has been minimized, a global audit of `DOMPurify` integration is recommended for any future rich-text requirements.
+1.  **Reconstruct `deploy.py`:**
+    *   Create a Python script that wraps `vite build`.
+    *   Ensure it cleans `dist/`.
+    *   Ensure it runs `generate-manifest.js`.
+    *   Ensure it verifies the build outcome.
 
-### 4.3 Deployment
-*   **CI/CD Pipeline:** specific GitHub Actions workflows are present but need to be connected to a production environment (e.g., AWS S3 + CloudFront or Vercel).
+### PHASE 3: OPERATION "FINAL POLISH" (SECONDARY)
+**Objective:** Enhance user interaction flow.
 
-## 5. CONCLUSION
+1.  **Accessibility Audit:** Verify tab order with the new button positions.
+2.  **Performance Check:** Verify Lighthouse score > 90.
 
-The repository has been successfully stabilized. The initial deployment protocol is secure and functional. The codebase is cleaner and more readable. We are now positioned to execute Phase 2 (Hardening).
+## 5. MISSION ORDERS
 
-**READY TO ENGAGE.**
+**TO:** ENGINEERING TEAM (AGENT JULES)
+**FROM:** COMMAND
 
-**SIGNED:**
-*LT. CMDR. JULES*
+1.  **EXECUTE PHASE 1:** Fix the CSS overlap immediately.
+2.  **EXECUTE PHASE 2:** Create `tools/deploy.py`.
+3.  **REPORT:** Submit changes for final review.
+
+**END REPORT**
