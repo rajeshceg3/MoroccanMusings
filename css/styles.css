@@ -1152,7 +1152,7 @@ body {
 }
 
 #signal-trigger {
-    right: 8rem;
+    right: 10rem;
     color: var(--ochre-gold);
     border-color: var(--ochre-gold);
     background: rgba(198, 118, 5, 0.1);
@@ -2643,7 +2643,7 @@ body.high-contrast .settings-container {
 }
 
 #settings-trigger {
-    right: 5rem;
+    right: 6rem;
 }
 
 /* --- Project DAEDALUS: Scenario UI --- */

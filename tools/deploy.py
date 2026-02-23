@@ -1,44 +1,53 @@
-import subprocess
-import sys
+#!/usr/bin/env python3
 import os
-import shutil
+import sys
+import subprocess
+import time
 
-def run_command(command_list):
+def log(msg, type="INFO"):
+    colors = {
+        "INFO": "\033[94m", # Blue
+        "SUCCESS": "\033[92m", # Green
+        "WARN": "\033[93m", # Yellow
+        "ERROR": "\033[91m", # Red
+    }
+    end = "\033[0m"
+    print(f"{colors.get(type, '')}[{type}] {msg}{end}")
+
+def main():
+    log("Initializing Operation Supply Line...", "INFO")
+
+    # Check for npm
+    if subprocess.call(["which", "npm"], stdout=subprocess.DEVNULL) != 0:
+        log("npm not found. Aborting mission.", "ERROR")
+        sys.exit(1)
+
+    # Clean previous build
+    if os.path.exists("dist"):
+        log("Clearing previous artifacts...", "INFO")
+        subprocess.run(["rm", "-rf", "dist"])
+
+    # Execute Build
+    log("Engaging build sequence...", "INFO")
+    start_time = time.time()
     try:
-        # Security hardening: Avoid shell=True to prevent injection
-        # Use shutil.which to find executable if not absolute path
-        cmd = command_list[0]
-        if not os.path.isabs(cmd):
-            executable = shutil.which(cmd)
-            if not executable:
-                print(f"Error: Command '{cmd}' not found in PATH.")
-                sys.exit(1)
-            command_list[0] = executable
-
-        print(f"Executing: {' '.join(command_list)}")
-        subprocess.check_call(command_list, shell=False)
+        # Use shell=False for security, but ensure PATH is correct
+        result = subprocess.run(["npm", "run", "build"], check=True, capture_output=True, text=True)
+        log("Build execution complete.", "SUCCESS")
+        # print(result.stdout)
     except subprocess.CalledProcessError as e:
-        print(f"Error executing command: {' '.join(command_list)}")
+        log("Build failed. Mission Critical Error.", "ERROR")
+        print(e.stderr)
         sys.exit(1)
 
-def deploy():
-    print("Initiating Deployment Protocol...")
-
-    # Clean install
-    print("Restoring Supply Lines (npm ci)...")
-    run_command(["npm", "ci"])
-
-    # Build
-    print("Compiling Artifacts (npm run build)...")
-    run_command(["npm", "run", "build"])
-
-    # Verify
-    if os.path.exists("dist") and os.path.isdir("dist"):
-        print("Payload Verified: dist/ directory created.")
-        print("Deployment Protocol Complete. System Ready.")
-    else:
-        print("Critical Failure: dist/ directory missing.")
+    # Verify Artifacts
+    if not os.path.exists("dist/index.html"):
+        log("Artifact verification failed: dist/index.html missing.", "ERROR")
         sys.exit(1)
+
+    duration = time.time() - start_time
+    log(f"Deployment payload secured in {duration:.2f}s.", "SUCCESS")
+    log("System is READY for production deployment.", "SUCCESS")
 
 if __name__ == "__main__":
-    deploy()
+    main()
