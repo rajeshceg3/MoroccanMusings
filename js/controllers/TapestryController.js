@@ -1,4 +1,5 @@
-import { MandalaRenderer, TapestryLedger } from '../tapestry.js';
+import { TapestryLedger } from '../tapestry.js';
+import { MandalaRenderer } from '../mandala.js';
 import { MapRenderer } from '../cartographer.js';
 import { SynapseRenderer } from '../synapse.js';
 import { OracleEngine } from '../oracle.js';
@@ -104,6 +105,7 @@ export class TapestryController {
     }
 
     loop() {
+        if (this.isRenderError) return;
         this.render();
         if (this.context.state.activeScreen === 'tapestry' && this.context.state.isHorizonActive) {
             this.horizonAnimationFrame = requestAnimationFrame(this.loop);
@@ -214,70 +216,77 @@ export class TapestryController {
     }
 
     render() {
-        const { panopticon, stratagem, tapestryLedger, vanguard, legion, state, sentinel, prometheus, citadel, horizonEngine, locations } = this.context;
+        if (this.isRenderError) return;
+        try {
+            const { panopticon, stratagem, tapestryLedger, vanguard, legion, state, sentinel, prometheus, citadel, horizonEngine, locations } = this.context;
 
-        // Halt render loop if Panopticon is controlling reality
-        if (panopticon && panopticon.isReplaying) return;
+            // Halt render loop if Panopticon is controlling reality
+            if (panopticon && panopticon.isReplaying) return;
 
-        // Stratagem Check
-        if (stratagem.isActive) {
-            const simState = stratagem.getRenderState();
+            // Stratagem Check
+            if (stratagem.isActive) {
+                const simState = stratagem.getRenderState();
 
-            if (this.mapRenderer) {
-                this.mapRenderer.render(
-                    simState.threads,
-                    locations,
-                    [], // drafts
-                    simState.threatZones || [],
-                    simState.units,
-                    simState.zones // citadel zones
-                );
+                if (this.mapRenderer) {
+                    this.mapRenderer.render(
+                        simState.threads,
+                        locations,
+                        [], // drafts
+                        simState.threatZones || [],
+                        simState.units,
+                        simState.zones // citadel zones
+                    );
+                }
+                return;
             }
-            return;
-        }
 
-        const threads = tapestryLedger.getThreads();
+            const threads = tapestryLedger.getThreads();
 
-        // Update Tactical Units & Swarm Intelligence
-        vanguard.tick();
-        legion.tick(tapestryLedger);
+            // Update Tactical Units & Swarm Intelligence
+            vanguard.tick();
+            legion.tick(tapestryLedger);
 
-        // 1. Map Mode
-        if (state.isMapActive) {
-            if (this.oracleEngine && this.oracleEngine.activeMode) {
-                this.oracleEngine.render(threads);
-            } else if (this.mapRenderer) {
-                const threatReport = sentinel.getReport();
-                this.mapRenderer.render(
-                    threads,
-                    locations,
-                    prometheus.getDrafts(),
-                    threatReport.zones,
-                    vanguard.getUnits(),
-                    citadel.getZones(),
-                    vanguard.getSquads()
-                );
+            // 1. Map Mode
+            if (state.isMapActive) {
+                if (this.oracleEngine && this.oracleEngine.activeMode) {
+                    this.oracleEngine.render(threads);
+                } else if (this.mapRenderer) {
+                    const threatReport = sentinel.getReport();
+                    this.mapRenderer.render(
+                        threads,
+                        locations,
+                        prometheus.getDrafts(),
+                        threatReport.zones,
+                        vanguard.getUnits(),
+                        citadel.getZones(),
+                        vanguard.getSquads()
+                    );
+                }
+                // Force animation loop if map is active
+                requestAnimationFrame(this.render);
+                return;
             }
-            // Force animation loop if map is active
-            requestAnimationFrame(this.render);
-            return;
+
+            // 2. Synapse Mode
+            if (state.isSynapseActive && this.synapseRenderer) {
+                 this.synapseRenderer.render();
+                 return;
+            }
+
+            // 3. Mandala Mode (Default)
+            if (!this.mandalaRenderer) return;
+
+            let projections = [];
+            if (state.isHorizonActive) {
+                projections = horizonEngine.project(threads);
+            }
+
+            this.mandalaRenderer.render(threads, projections);
+        } catch (e) {
+            console.error("CRITICAL RENDER FAILURE:", e);
+            this.isRenderError = true;
+            this.context.ui.showNotification("VISUAL SYSTEM CRITICAL ERROR. RENDERER HALTED.", "error");
         }
-
-        // 2. Synapse Mode
-        if (state.isSynapseActive && this.synapseRenderer) {
-             this.synapseRenderer.render();
-             return;
-        }
-
-        // 3. Mandala Mode (Default)
-        if (!this.mandalaRenderer) return;
-
-        let projections = [];
-        if (state.isHorizonActive) {
-            projections = horizonEngine.project(threads);
-        }
-
-        this.mandalaRenderer.render(threads, projections);
     }
 
     setupInteractions() {

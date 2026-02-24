@@ -629,6 +629,16 @@ export async function bootstrap() {
         console.warn("%c DEBUG MODE ACTIVE // GLOBAL EXPOSURE ENABLED ", "background: #c67605; color: #000; padding: 4px; font-weight: bold;");
     }
 
+    // Boot Sequence Visual
+    console.log(
+        "%c PROJECT MARQ // INITIALIZED ",
+        "background: #c67605; color: #000; font-size: 14px; font-weight: bold; padding: 5px; border: 2px solid #fff;"
+    );
+    console.log(
+        "%c TACTICAL SYSTEMS: ONLINE ",
+        "color: #55ffaa; font-family: monospace;"
+    );
+
     // Signal Readiness
     window.dispatchEvent(new CustomEvent('marq-ready'));
 }
