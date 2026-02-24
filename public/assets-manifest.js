@@ -24,6 +24,7 @@ self.MANIFEST = [
     "./js/horizon.js",
     "./js/legion-ui.js",
     "./js/legion.js",
+    "./js/mandala.js",
     "./js/mnemosyne-ui.js",
     "./js/mnemosyne.js",
     "./js/oracle.js",
