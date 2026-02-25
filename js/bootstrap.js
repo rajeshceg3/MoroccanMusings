@@ -553,6 +553,7 @@ export async function bootstrap() {
         );
     } catch (e) {
         console.error("Panopticon Init Error:", e);
+        ui.showNotification('PANOPTICON SYSTEM FAILURE. REPLAY OFFLINE.', 'error');
     }
 
     const splashController = new SplashController(

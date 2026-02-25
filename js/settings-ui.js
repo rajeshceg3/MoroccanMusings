@@ -104,6 +104,31 @@ export class SettingsUI {
             createRow('HIGH CONTRAST HUD', 'setting-contrast', this.prefs.highContrast, 'highContrast')
         );
 
+        // Reset Guide Button (Tactical Refresh)
+        const resetContainer = document.createElement('div');
+        resetContainer.style.marginTop = '2rem';
+        resetContainer.style.borderTop = '1px dashed #334455';
+        resetContainer.style.paddingTop = '1rem';
+        resetContainer.style.textAlign = 'center';
+
+        const resetBtn = document.createElement('button');
+        resetBtn.className = 'tapestry-btn'; // Re-use existing style
+        resetBtn.textContent = 'RESET OPERATIONAL GUIDE';
+        resetBtn.setAttribute('aria-label', 'Reset Onboarding Guide');
+        resetBtn.style.width = '100%';
+        resetBtn.style.borderColor = '#ffaa00';
+        resetBtn.style.color = '#ffaa00';
+
+        resetBtn.onclick = () => {
+            if (confirm('CONFIRM: RESET MISSION PARAMETERS? (Reloads Interface)')) {
+                localStorage.removeItem('marq_onboarded');
+                window.location.reload();
+            }
+        };
+
+        resetContainer.appendChild(resetBtn);
+        content.appendChild(resetContainer);
+
         container.append(header, content);
         this.overlay.appendChild(container);
         document.body.appendChild(this.overlay);
