@@ -66,29 +66,29 @@ self.addEventListener('fetch', (event) => {
             })
         );
     } else {
-        // Core Logic/UI: Stale-While-Revalidate
+        // Core Logic/UI: Network-First (Mission Critical)
+        // Ensures operators always receive the latest tactical software.
+        // Fallback to cache only if offline.
         event.respondWith(
-            caches.match(event.request).then((cachedResponse) => {
-                const fetchPromise = fetch(event.request).then(
-                    (networkResponse) => {
-                        // Update the cache with the fresh response
-                        if (
-                            networkResponse &&
-                            networkResponse.status === 200 &&
-                            networkResponse.type === 'basic'
-                        ) {
-                            const responseToCache = networkResponse.clone();
-                            caches.open(CACHE_NAME).then((cache) => {
-                                cache.put(event.request, responseToCache);
-                            });
-                        }
-                        return networkResponse;
+            fetch(event.request)
+                .then((networkResponse) => {
+                    // Update the cache with the fresh response
+                    if (
+                        networkResponse &&
+                        networkResponse.status === 200 &&
+                        networkResponse.type === 'basic'
+                    ) {
+                        const responseToCache = networkResponse.clone();
+                        caches.open(CACHE_NAME).then((cache) => {
+                            cache.put(event.request, responseToCache);
+                        });
                     }
-                );
-
-                // Return cached response immediately if available, otherwise wait for network
-                return cachedResponse || fetchPromise;
-            })
+                    return networkResponse;
+                })
+                .catch(() => {
+                    // Network failed, fallback to cache (Offline Mode)
+                    return caches.match(event.request);
+                })
         );
     }
 });
