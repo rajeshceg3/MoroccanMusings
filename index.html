@@ -21,8 +21,29 @@
         <link rel="manifest" href="manifest.json" />
         <link rel="stylesheet" href="css/styles.css" />
         <link rel="stylesheet" href="css/terminal.css" />
+        <script>
+            // CRITICAL BOOT ERROR TRAP
+            window.addEventListener('error', function(e) {
+                // If UI system hasn't loaded yet, takeover splash
+                if (!window.ui) {
+                    var splash = document.getElementById('splash-screen');
+                    if (splash) {
+                        splash.innerHTML = '<div style="color: #ff0055; text-align: center; font-family: monospace; padding: 2rem; font-size: 1.2rem; background: #000;">SYSTEM FAILURE: ' + e.message + '<br><br>TACTICAL REBOOT REQUIRED.</div>';
+                        splash.style.opacity = '1';
+                        splash.style.zIndex = '99999';
+                    }
+                }
+            });
+        </script>
     </head>
     <body>
+        <noscript>
+            <div style="position: fixed; top: 0; left: 0; width: 100%; height: 100%; background: #000; color: #c67605; display: flex; flex-direction: column; justify-content: center; align-items: center; font-family: monospace; z-index: 100000; text-align: center; padding: 2rem;">
+                <h1 style="font-size: 2rem; border-bottom: 2px solid #c67605; margin-bottom: 1rem;">MISSION CRITICAL FAILURE</h1>
+                <p>JAVASCRIPT PROTOCOLS DISABLED.</p>
+                <p>ENABLE JAVASCRIPT TO INITIALIZE TACTICAL INTERFACE.</p>
+            </div>
+        </noscript>
         <div id="terminal-container"></div>
 
         <!-- DOM Structure remains identical -->

@@ -600,7 +600,9 @@ export async function bootstrap() {
     });
 
     // --- DEBUG / TESTING EXPOSURE ---
-    if (window.location.hostname === 'localhost' || window.location.hostname === '127.0.0.1' || window.location.protocol === 'file:') {
+    const isDev = import.meta.env?.DEV ?? (window.location.hostname === 'localhost' || window.location.hostname === '127.0.0.1' || window.location.protocol === 'file:');
+
+    if (isDev) {
         window.tapestryLedger = tapestryLedger;
         window.state = state;
         window.codex = codex;
