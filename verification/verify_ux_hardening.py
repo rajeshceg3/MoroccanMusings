@@ -5,7 +5,7 @@ import os
 import time
 from playwright.sync_api import sync_playwright
 
-PORT = 8090
+PORT = 8095
 
 class ProjectRequestHandler(http.server.SimpleHTTPRequestHandler):
     def translate_path(self, path):
