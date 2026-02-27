@@ -15,6 +15,10 @@ export class TapestryController {
         this.mnemosyneUI = null;
         this.horizonAnimationFrame = null;
 
+        // Memoization Cache
+        this._cachedProjections = null;
+        this._lastProjectionsVersion = null;
+
         this.render = this.render.bind(this);
         this.loop = this.loop.bind(this);
     }
@@ -278,7 +282,18 @@ export class TapestryController {
 
             let projections = [];
             if (state.isHorizonActive) {
-                projections = horizonEngine.project(threads);
+                // MEMOIZATION: Only recalculate if threads have changed
+                // Using a simple heuristic: count + hash of last thread
+                const currentHash = threads.length > 0 ? threads[threads.length - 1].hash : 'GENESIS';
+                const threadsVersion = `${threads.length}-${currentHash}`;
+
+                if (this._lastProjectionsVersion === threadsVersion && this._cachedProjections) {
+                    projections = this._cachedProjections;
+                } else {
+                    projections = horizonEngine.project(threads);
+                    this._cachedProjections = projections;
+                    this._lastProjectionsVersion = threadsVersion;
+                }
             }
 
             this.mandalaRenderer.render(threads, projections);
