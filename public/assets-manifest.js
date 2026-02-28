@@ -5,6 +5,7 @@ self.MANIFEST = [
     "./js/app.js",
     "./js/astrolabe-ui.js",
     "./js/audio-engine.js",
+    "./js/boot-trap.js",
     "./js/bootstrap.js",
     "./js/cartographer.js",
     "./js/chronos.js",
