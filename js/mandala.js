@@ -102,7 +102,7 @@ export class MandalaRenderer {
 
     updateAccessibilityTree(threads) {
         // Clear existing buttons
-        this.a11yContainer.innerHTML = '';
+        this.a11yContainer.textContent = '';
         const cx = this.width / 2;
         const cy = this.height / 2;
         const fragment = document.createDocumentFragment();
