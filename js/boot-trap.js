@@ -7,7 +7,7 @@ window.addEventListener('error', function(e) {
             var errorMsg = document.createElement('div');
             errorMsg.style.cssText = 'color: #ff0055; text-align: center; font-family: monospace; padding: 2rem; font-size: 1.2rem; background: #000;';
             errorMsg.textContent = 'SYSTEM FAILURE: ' + e.message + '\n\nTACTICAL REBOOT REQUIRED.';
-            splash.innerHTML = '';
+            splash.textContent = '';
             splash.appendChild(errorMsg);
             splash.style.opacity = '1';
             splash.style.zIndex = '99999';
