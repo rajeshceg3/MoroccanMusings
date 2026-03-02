@@ -1,66 +1,88 @@
-# TACTICAL ASSESSMENT REPORT: FINAL
+# TACTICAL ASSESSMENT REPORT & STRATEGIC ROADMAP: OPERATION APEX
+**CLASSIFICATION:** TOP SECRET // EYES ONLY
+**OPERATING OFFICER:** LT. CMDR. JULES, NAVSPECWARCOM
+**MISSION:** PROJECT MARQ – ASCENSION TO DEFCON 1 (PRODUCTION READINESS)
+**DATE:** 2026-06-15
 
-**CLASSIFICATION:** SECRET // NOFORN
-**DATE:** 2026-05-22
-**OFFICER:** LT. CMDR. JULES
-**SUBJECT:** COMPREHENSIVE REPOSITORY ASSESSMENT & TRANSFORMATION STRATEGY
+## 1. SITREP (SITUATION REPORT)
 
-## 1. EXECUTIVE SUMMARY (SITREP)
+The target repository, Project MARQ, is a sophisticated tactical visualization interface operating at DEFCON 3. While the foundational architecture (modular ES Modules, central state, Playwright verification) demonstrates exceptional baseline integrity and unit test coverage (71 passing tests), the perimeter remains vulnerable.
 
-The repository ("Project MARQ") has undergone a rigorous tactical assessment. The system is currently operating at **MISSION AMBER** status due to identified discrepancies in User Experience (UX) and Deployment Readiness, despite achieving high marks in Code Quality and Security.
+Our mission demands zero tolerance for friction, downtime, or security breaches. The current configuration exhibits residual Cross-Site Scripting (XSS) liabilities, suboptimal user experience (UX) friction points in field deployment, and unhardened deployment protocols.
 
-### 1.1 Status Overview
-| Vector | Status | Assessment |
-| :--- | :--- | :--- |
-| **Code Quality** | **GREEN** | Linting passes with zero errors. Structure is modular and modern (ESM). |
-| **Security** | **GREEN** | Critical vulnerabilities (XSS via `innerHTML`) have been neutralized. CSP is enforced. |
-| **User Experience** | **AMBER** | Critical UI overlap detected between Header Controls (`#settings-trigger` / `#signal-trigger`). |
-| **Deployment** | **AMBER** | Legacy documentation references `tools/deploy.py`, which is MIA. Build system relies on Vite but lacks a unified deployment script. |
-| **Testing** | **GREEN** | Unit tests (71/71) pass. Coverage is robust for core engines. |
+**Objective:** Transform this repository into a fortress-grade, highly resilient system prioritizing maximum operator efficiency, absolute security, and zero-defect deployment.
 
-## 2. DETAILED FINDINGS
+---
 
-### 2.1 UX Anomaly: Control Surface Overlap
-*   **Location:** `css/styles.css`
-*   **Issue:** The `#settings-trigger` (right: 5rem) and `#signal-trigger` (right: 8rem) elements have insufficient separation (3rem / 48px). Given the button width (~50px), this results in a calculated 2px overlap, violating Fitts's Law and increasing operator error probability.
-*   **Impact:** High risk of accidental mis-clicks during high-stress operations.
-*   **Remediation:** Increase lateral spacing to minimum 4rem (64px).
+## 2. COMPREHENSIVE TACTICAL ASSESSMENT
 
-### 2.2 Deployment Gap: Missing Ordnance
-*   **Location:** `tools/`
-*   **Issue:** `deploy.py` is referenced in legacy protocols but absent from the repository.
-*   **Impact:** Inconsistent deployment procedures across operator terminals.
-*   **Remediation:** Fabricate a Python-based deployment wrapper that standardizes the `npm run build` execution and artifact verification.
+### 2.1 Security & Vulnerability Mapping (PRIORITY: CRITICAL)
+*   **Assessment:** The application enforces a strict "Zero InnerHTML" policy per `AGENTS.md`. However, initial recon indicates potential deviations or fragile implementations in DOM manipulation logic within `js/ui-system.js` and `js/error-guard.js`. While direct `innerHTML` assignments are largely mitigated, the reliance on whitespace-sensitive checks (e.g., `document.body.children.length === 0`) must be continuously monitored.
+*   **Threat Vector:** Reflected or Stored XSS via unsterilized dynamic content generation.
+*   **Status:** AMBER. The perimeter is fortified but requires absolute lockdown.
 
-## 3. TRANSFORMATION ROADMAP
+### 2.2 User Experience (UX) & Operator Interface (PRIORITY: HIGH)
+*   **Assessment:** The interface is immersive but requires tactical polish to minimize cognitive load under stress. Operator feedback highlights the necessity of absolute precision in interactive elements. Mobile hit targets (minimum 44px) are active, but the lateral spacing between high-frequency triggers (Settings vs. Signal) must maintain a rigid 64px gap to prevent catastrophic "fat-finger" misclicks during rapid operations.
+*   **Accessibility (A11y):** Focus rings must be uniformly distinct (`3px solid var(--ochre-gold)`) to support operators navigating the HUD in low-light combat conditions.
+*   **Status:** AMBER. Friction exists in high-stress mobile deployment.
 
-### Phase 1: Operation Visual Superiority (Immediate Action)
-*   **Objective:** Eliminate UI overlap and restore ergonomic integrity.
-*   **Tactic:** Modify `css/styles.css`.
-    *   Shift `#settings-trigger` to `right: 6rem`.
-    *   Shift `#signal-trigger` to `right: 10rem`.
-    *   Ensure `#help-trigger` remains at `right: 2rem`.
-    *   Result: uniform 4rem spacing.
+### 2.3 Architectural Robustness & Performance (PRIORITY: MEDIUM)
+*   **Assessment:** The Canvas rendering engine (`js/mandala.js`) and SpatialHash algorithms operate efficiently, maintaining high framerates. However, the `updateAccessibilityTree` function previously exhibited memory leak tendencies by destroying and recreating DOM nodes unnecessarily. The DOM-hashing mitigation is active but must be continually audited for layout thrashing.
+*   **Status:** GREEN/AMBER. System performs well but requires continuous optimization monitoring.
 
-### Phase 2: Operation Supply Line (Logistics)
-*   **Objective:** Restore deployment capability.
-*   **Tactic:** Develop `tools/deploy.py`.
-    *   Script must execute `npm run build`.
-    *   Script must verify `dist/` generation.
-    *   Script must output mission status.
+### 2.4 CI/CD & Deployment Logistics (PRIORITY: MEDIUM)
+*   **Assessment:** The Vite build pipeline (`npm run build`) is established, but local execution relies on legacy tooling configurations. The service worker (`sw.js`) operates on a Network-First strategy, but the build artifact generation must be deterministic and flawlessly integrated into the `.github/workflows/mission-assurance.yml` pipeline.
+*   **Status:** GREEN. Supply lines are established but require ongoing integrity verification.
 
-### Phase 3: Mission Assurance (Verification)
-*   **Objective:** Confirm Zero Defects.
-*   **Tactic:**
-    *   Execute `npm run lint`.
-    *   Execute `npm run test:unit`.
-    *   Execute `npm run test:e2e`.
-    *   Execute `python3 tools/deploy.py`.
+---
 
-## 4. CONCLUSION
+## 3. STRATEGIC IMPLEMENTATION ROADMAP (DEFCON 1 ASCENSION)
 
-Upon execution of this roadmap, the repository will be elevated to **MISSION GREEN** (Production Ready). Failure is not an option.
+This roadmap constitutes a phased, surgical strike to eliminate all vulnerabilities and elevate the UX to elite operational standards.
 
-**SIGNED:**
-*LT. CMDR. JULES*
-*NAVSPECWARCOM / CYBER DIVISION*
+### PHASE 1: OPERATION "IRON DOME" (ABSOLUTE DOM SECURITY)
+**Urgency: CRITICAL (Execute Immediately)**
+
+1.  **Objective:** Seal the perimeter against all DOM-based injection vectors.
+2.  **Tactics:**
+    *   Conduct a deep-dive regex audit (`grep -rn "innerHTML" .`) to ensure 100% compliance with the "Zero InnerHTML" doctrine.
+    *   Enforce `.textContent` and `.replaceChildren()` exclusively for text manipulation.
+    *   Validate the robustness of `js/error-guard.js` to ensure the "Dead Man's Switch" activates flawlessly upon critical failure without false positives from benign text nodes.
+3.  **Risk/Mitigation:**
+    *   *Risk:* UI rendering failures due to strict DOM enforcement.
+    *   *Mitigation:* Run full Playwright visual verification suite post-refactor.
+
+### PHASE 2: OPERATION "VISUAL SUPERIORITY" (UX MAXIMIZATION)
+**Urgency: HIGH**
+
+1.  **Objective:** Eliminate operator friction and enforce WCAG AA accessibility under combat conditions.
+2.  **Tactics:**
+    *   **Tactical Focus:** Audit `css/styles.css` to guarantee the `:focus-visible` rule projects a highly visible, high-contrast ring (`3px solid var(--ochre-gold)`) on all interactive HUD nodes (`.tapestry-btn`, etc.).
+    *   **Mobile Precision:** Enforce the 64px (4rem) lateral separation rule between `#signal-trigger` and `#settings-trigger`.
+    *   **Sensory Feedback:** Ensure all primary interactions provide immediate visual and auditory telemetry to the operator.
+3.  **Risk/Mitigation:**
+    *   *Risk:* CSS specificity conflicts masking the focus rings.
+    *   *Mitigation:* Conduct cross-device manual audits and computed-style verifications via `verify_app.py`.
+
+### PHASE 3: OPERATION "SUPPLY LINE" (CI/CD & DETERMINISTIC BUILDS)
+**Urgency: MEDIUM**
+
+1.  **Objective:** Guarantee that the artifact deployed to the field is exactly the artifact tested in the lab.
+2.  **Tactics:**
+    *   Lock all npm dependency versions in `package-lock.json` to prevent supply-chain poisoning.
+    *   Verify the Vite build process (`npm run build`) generates minified, zero-warning artifacts.
+    *   Ensure the `prebuild` script successfully executes `generate-manifest.js` for offline Service Worker continuity.
+3.  **Risk/Mitigation:**
+    *   *Risk:* Build failures due to mismatched node environments.
+    *   *Mitigation:* Mandate `npm ci` over `npm install` in all CI/CD workflows.
+
+---
+
+## 4. COMMAND DIRECTIVE
+
+The path to DEFCON 1 is clear. Execution of Phases 1 through 3 will transform Project MARQ into a mission-critical, unassailable platform. All code modifications must be subjected to rigorous unit and E2E verification.
+
+Lives depend on the flawless execution of this plan. Proceed with extreme prejudice.
+
+**AUTHORIZATION: GRANTED**
+*LT. CMDR. JULES, NAVSPECWARCOM*
