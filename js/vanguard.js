@@ -220,6 +220,7 @@ class VanguardUnit {
 
         // Fix for flaky tests: don't randomly switch to scanning during unit tests
         // where we assert on 'MOVING' status
+        // eslint-disable-next-line no-undef
         if (typeof process !== 'undefined' && process.env && process.env.NODE_ENV === 'test') {
             return;
         }
