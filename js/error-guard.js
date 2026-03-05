@@ -1,6 +1,8 @@
+window.__error_rendered__ = false;
 window.onerror = function(message, source, lineno, colno, error) {
     console.error("CRITICAL FAILURE:", message, source, lineno);
-    if (document.body.children.length === 0) {
+    if (!window.__error_rendered__) {
+        window.__error_rendered__ = true;
         const container = document.createElement('div');
         container.style.cssText = 'color: #c67605; font-family: monospace; padding: 2rem; text-align: center;';
 
